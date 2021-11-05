@@ -103,7 +103,7 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	case tea.WindowSizeMsg:
-		top, right, bottom, left := lipgloss.NewStyle().Margin(1, 2).GetMargin()
+		top, right, bottom, left := lipgloss.NewStyle().Margin(2, 2).GetMargin()
 		m.list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
 	}
 
