@@ -1,0 +1,13 @@
+# @genqlient(omitempty: true)
+query ModVersions (
+    $modId: ModID!,
+    $filter: VersionFilter
+) {
+    getMod(modId: $modId) {
+        id
+        versions (filter: $filter) {
+            id
+            version
+        }
+    }
+}

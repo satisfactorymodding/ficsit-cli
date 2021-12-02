@@ -1,21 +1,24 @@
 package cmd
 
 import (
+	"io"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/pkg/errors"
+
 	"github.com/pterm/pterm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/satisfactorymodding/ficsit-cli/tea"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"path"
-	"time"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "ficsit",
 	Short: "cli mod manager for satisfactory",
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		viper.SetConfigName("config")
 		viper.AddConfigPath(".")
 		viper.SetEnvPrefix("ficsit")
@@ -30,24 +33,50 @@ var rootCmd = &cobra.Command{
 
 		zerolog.SetGlobalLevel(level)
 
+		writers := make([]io.Writer, 0)
 		if viper.GetBool("pretty") {
 			pterm.EnableStyling()
-			log.Logger = zerolog.New(os.Stdout).With().Timestamp().Logger().Output(zerolog.ConsoleWriter{
-				Out:        os.Stdout,
-				TimeFormat: time.RFC3339,
-			})
 		} else {
 			pterm.DisableStyling()
 		}
+
+		if !viper.GetBool("quiet") {
+			writers = append(writers, zerolog.ConsoleWriter{
+				Out:        os.Stdout,
+				TimeFormat: time.RFC3339,
+			})
+		}
+
+		if viper.GetString("log-file") != "" {
+			logFile, err := os.OpenFile(viper.GetString("log-file"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+			if err != nil {
+				return errors.Wrap(err, "failed to open log file")
+			}
+
+			writers = append(writers, logFile)
+		}
+
+		log.Logger = zerolog.New(io.MultiWriter(writers...)).With().Timestamp().Logger()
+
+		return nil
 	},
 }
 
 func Execute() {
 	// Execute tea as default
 	cmd, _, err := rootCmd.Find(os.Args[1:])
+
+	cli := len(os.Args) >= 2 && os.Args[1] == "cli"
 	if (len(os.Args) <= 1 || os.Args[1] != "help") && (err != nil || cmd == rootCmd) {
-		tea.RunTea()
-		return
+		args := append([]string{"cli"}, os.Args[1:]...)
+		rootCmd.SetArgs(args)
+		cli = true
+	}
+
+	// Always be quiet in CLI mode
+	if cli {
+		viper.Set("quiet", true)
 	}
 
 	if err := rootCmd.Execute(); err != nil {
@@ -62,12 +91,28 @@ func init() {
 	}
 
 	rootCmd.PersistentFlags().String("log", "info", "The log level to output")
+	rootCmd.PersistentFlags().String("log-file", "", "File to output logs to")
+	rootCmd.PersistentFlags().Bool("quiet", false, "Do not log anything to console")
 	rootCmd.PersistentFlags().Bool("pretty", true, "Whether to render pretty terminal output")
 
-	rootCmd.PersistentFlags().String("cache-dir", path.Join(baseCacheDir, "ficsit"), "The cache directory")
+	rootCmd.PersistentFlags().Bool("dry-run", false, "Dry-run. Do not save any changes")
+
+	rootCmd.PersistentFlags().String("cache-dir", filepath.Clean(filepath.Join(baseCacheDir, "ficsit")), "The cache directory")
+	rootCmd.PersistentFlags().String("profiles-file", "profiles.json", "The profiles file")
+	rootCmd.PersistentFlags().String("installations-file", "installations.json", "The installations file")
+
+	rootCmd.PersistentFlags().String("api", "https://api.ficsit.app/v2/query", "URL for API")
 
 	_ = viper.BindPFlag("log", rootCmd.PersistentFlags().Lookup("log"))
+	_ = viper.BindPFlag("log-file", rootCmd.PersistentFlags().Lookup("log-file"))
+	_ = viper.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
 	_ = viper.BindPFlag("pretty", rootCmd.PersistentFlags().Lookup("pretty"))
 
+	_ = viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
+
 	_ = viper.BindPFlag("cache-dir", rootCmd.PersistentFlags().Lookup("cache-dir"))
+	_ = viper.BindPFlag("profiles-file", rootCmd.PersistentFlags().Lookup("profiles-file"))
+	_ = viper.BindPFlag("installations-file", rootCmd.PersistentFlags().Lookup("installations-file"))
+
+	_ = viper.BindPFlag("api", rootCmd.PersistentFlags().Lookup("api"))
 }

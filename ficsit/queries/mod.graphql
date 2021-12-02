@@ -1,0 +1,18 @@
+query GetMod ($modId: ModID!) {
+    getMod(modId: $modId) {
+        id
+        mod_reference
+        name
+        views
+        downloads
+        authors {
+            role
+            user {
+                username
+            }
+        }
+        full_description
+        source_url
+        created_at
+    }
+}

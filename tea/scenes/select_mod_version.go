@@ -2,6 +2,7 @@ package scenes
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -14,27 +15,26 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
-var _ tea.Model = (*modsList)(nil)
+var _ tea.Model = (*selectModVersionList)(nil)
 
-type modsList struct {
+type selectModVersionList struct {
 	root   components.RootModel
 	list   list.Model
 	parent tea.Model
 	items  chan []list.Item
 }
 
-func NewMods(root components.RootModel, parent tea.Model) tea.Model {
-	// TODO Color mods that are installed in current profile
+func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
 	l := list.NewModel([]list.Item{}, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.SetSpinner(spinner.MiniDot)
-	l.Title = "Mods"
+	l.Title = fmt.Sprintf("Versions (%s)", mod.Name)
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
 
-	m := &modsList{
+	m := &selectModVersionList{
 		root:   root,
 		list:   l,
 		parent: parent,
@@ -43,43 +43,43 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 
 	go func() {
 		items := make([]list.Item, 0)
-		allMods := make([]ficsit.ModsGetModsModsMod, 0)
+		allVersions := make([]ficsit.ModVersionsGetModVersionsVersion, 0)
 		offset := 0
 		for {
-			mods, err := ficsit.Mods(context.TODO(), root.GetAPIClient(), ficsit.ModFilter{
+			versions, err := ficsit.ModVersions(context.TODO(), root.GetAPIClient(), mod.ID, ficsit.VersionFilter{
 				Limit:    100,
 				Offset:   offset,
-				Order_by: ficsit.ModFieldsLastVersionDate,
 				Order:    ficsit.OrderDesc,
+				Order_by: ficsit.VersionFieldsCreatedAt,
 			})
 
 			if err != nil {
-				panic(err) // TODO Handle Error
+				panic(err) // TODO
 			}
 
-			if len(mods.GetMods.Mods) == 0 {
+			if len(versions.GetMod.Versions) == 0 {
 				break
 			}
 
-			allMods = append(allMods, mods.GetMods.Mods...)
+			allVersions = append(allVersions, versions.GetMod.Versions...)
 
-			for i := 0; i < len(mods.GetMods.Mods); i++ {
+			for i := 0; i < len(versions.GetMod.Versions); i++ {
 				currentOffset := offset
 				currentI := i
 				items = append(items, utils.SimpleItem{
-					Title: mods.GetMods.Mods[i].Name,
+					Title: versions.GetMod.Versions[i].Version,
 					Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-						mod := allMods[currentOffset+currentI]
-						return NewModMenu(root, currentModel, utils.Mod{
-							Name:      mod.Name,
-							ID:        mod.Id,
-							Reference: mod.Mod_reference,
-						}), nil
+						version := allVersions[currentOffset+currentI]
+						err := root.GetCurrentProfile().AddMod(mod.Reference, version.Version)
+						if err != nil {
+							panic(err) // TODO
+						}
+						return currentModel.(selectModVersionList).parent, nil
 					},
 				})
 			}
 
-			offset += len(mods.GetMods.Mods)
+			offset += len(versions.GetMod.Versions)
 		}
 
 		m.items <- items
@@ -88,11 +88,11 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	return m
 }
 
-func (m modsList) Init() tea.Cmd {
+func (m selectModVersionList) Init() tea.Cmd {
 	return utils.Ticker()
 }
 
-func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	log.Info().Msg(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -150,6 +150,6 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m modsList) View() string {
+func (m selectModVersionList) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
 }

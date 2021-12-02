@@ -1,0 +1,47 @@
+project_name: ficsit
+
+before:
+  hooks:
+    - go generate -x -tags tools ./...
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - ppc64le
+    goarm:
+      - 7
+
+universal_binaries:
+  - replace: true
+
+archives:
+  - format: binary
+    allow_different_binary_count: true
+
+nfpms:
+  - formats:
+      - apk
+      - deb
+      - rpm
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

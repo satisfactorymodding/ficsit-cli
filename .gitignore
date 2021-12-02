@@ -109,3 +109,9 @@ modules.xml
 .idea/sonarlint
 
 # End of https://www.gitignore.io/api/go,jetbrains+all
+
+dist/
+/testdata
+/.graphqlconfig
+schema.graphql
+*.log

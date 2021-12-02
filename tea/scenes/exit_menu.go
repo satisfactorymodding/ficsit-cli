@@ -10,61 +10,32 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
-var _ tea.Model = (*mainMenu)(nil)
+var _ tea.Model = (*exitMenu)(nil)
 
-type mainMenu struct {
+type exitMenu struct {
 	root components.RootModel
 	list list.Model
 }
 
-func NewMainMenu(root components.RootModel) tea.Model {
+func NewExitMenu(root components.RootModel) tea.Model {
 	model := mainMenu{
 		root: root,
 	}
 
 	items := []list.Item{
 		utils.SimpleItem{
-			Title: "Installations",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewInstallations(root, currentModel)
-				return newModel, newModel.Init()
-			},
-		},
-		utils.SimpleItem{
-			Title: "Profiles",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewProfiles(root, currentModel)
-				return newModel, newModel.Init()
-			},
-		},
-		utils.SimpleItem{
-			Title: "Mods",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewMods(root, currentModel)
-				return newModel, newModel.Init()
-			},
-		},
-		utils.SimpleItem{
-			Title: "Apply Changes",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				// TODO Apply changes to all changed profiles
-				return nil, nil
-			},
-		},
-		utils.SimpleItem{
-			Title: "Save",
+			Title: "Exit Saving Changes",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					panic(err) // TODO Handle Error
+					panic(err) // TODO
 				}
-				return nil, nil
+				return currentModel, tea.Quit
 			},
 		},
 		utils.SimpleItem{
-			Title: "Exit",
+			Title: "Exit Discarding Changes",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewExitMenu(root)
-				return newModel, newModel.Init()
+				return currentModel, tea.Quit
 			},
 		},
 	}
@@ -72,39 +43,31 @@ func NewMainMenu(root components.RootModel) tea.Model {
 	model.list = list.NewModel(items, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
-	model.list.Title = "Main Menu"
+	model.list.Title = "Save Changes?"
 	model.list.Styles = utils.ListStyles
+	model.list.DisableQuitKeybindings()
 	model.list.SetSize(model.list.Width(), model.list.Height())
 
 	return model
 }
 
-func (m mainMenu) Init() tea.Cmd {
+func (m exitMenu) Init() tea.Cmd {
 	return nil
 }
 
-func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m exitMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	log.Warn().Msg(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
 		case KeyControlC:
 			return m, tea.Quit
-		case "q":
-			newModel := NewExitMenu(m.root)
-			return newModel, newModel.Init()
 		case KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem)
 			if ok {
 				if i.Activate != nil {
-					newModel, cmd := i.Activate(msg, m)
-					if newModel != nil || cmd != nil {
-						if newModel == nil {
-							newModel = m
-						}
-						return newModel, cmd
-					}
-					return m, nil
+					i.Activate(msg, m)
+					return m, tea.Quit
 				}
 			}
 			return m, tea.Quit
@@ -122,6 +85,6 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m mainMenu) View() string {
+func (m exitMenu) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
 }

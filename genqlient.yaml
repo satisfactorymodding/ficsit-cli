@@ -1,0 +1,23 @@
+# https://github.com/Khan/genqlient/blob/main/docs/genqlient.yaml
+schema: schema.graphql
+operations:
+- ficsit/queries/*.graphql
+generated: ficsit/types.go
+package: ficsit
+bindings:
+  UserID:
+    type: string
+  ModReference:
+    type: string
+  BootstrapVersionID:
+    type: string
+  ModID:
+    type: string
+  VersionID:
+    type: string
+  GuideID:
+    type: string
+  SMLVersionID:
+    type: string
+  Date:
+    type: time.Time

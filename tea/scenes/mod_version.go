@@ -10,80 +10,68 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
-var _ tea.Model = (*mainMenu)(nil)
+var _ tea.Model = (*modVersionMenu)(nil)
 
-type mainMenu struct {
-	root components.RootModel
-	list list.Model
+type modVersionMenu struct {
+	root   components.RootModel
+	list   list.Model
+	parent tea.Model
 }
 
-func NewMainMenu(root components.RootModel) tea.Model {
-	model := mainMenu{
-		root: root,
+func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
+	model := modMenu{
+		root:   root,
+		parent: parent,
 	}
 
 	items := []list.Item{
 		utils.SimpleItem{
-			Title: "Installations",
+			Title: "Select Version",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewInstallations(root, currentModel)
+				newModel := NewModVersionList(root, currentModel.(modMenu).parent, mod)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem{
-			Title: "Profiles",
+			Title: "Enter Custom SemVer",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewProfiles(root, currentModel)
+				newModel := NewModSemver(root, currentModel.(modMenu).parent, mod)
 				return newModel, newModel.Init()
 			},
 		},
-		utils.SimpleItem{
-			Title: "Mods",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewMods(root, currentModel)
-				return newModel, newModel.Init()
+	}
+
+	if root.GetCurrentProfile().HasMod(mod.Reference) {
+		items = append([]list.Item{
+			utils.SimpleItem{
+				Title: "Latest",
+				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
+					if err != nil {
+						panic(err) // TODO Handle Error
+					}
+					return currentModel.(modMenu).parent, nil
+				},
 			},
-		},
-		utils.SimpleItem{
-			Title: "Apply Changes",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				// TODO Apply changes to all changed profiles
-				return nil, nil
-			},
-		},
-		utils.SimpleItem{
-			Title: "Save",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				if err := root.GetGlobal().Save(); err != nil {
-					panic(err) // TODO Handle Error
-				}
-				return nil, nil
-			},
-		},
-		utils.SimpleItem{
-			Title: "Exit",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewExitMenu(root)
-				return newModel, newModel.Init()
-			},
-		},
+		}, items...)
 	}
 
 	model.list = list.NewModel(items, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
-	model.list.Title = "Main Menu"
+	model.list.Title = mod.Name
 	model.list.Styles = utils.ListStyles
 	model.list.SetSize(model.list.Width(), model.list.Height())
+	model.list.KeyMap.Quit.SetHelp("q", "back")
 
 	return model
 }
 
-func (m mainMenu) Init() tea.Cmd {
+func (m modVersionMenu) Init() tea.Cmd {
 	return nil
 }
 
-func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m modVersionMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	log.Warn().Msg(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -91,8 +79,11 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyControlC:
 			return m, tea.Quit
 		case "q":
-			newModel := NewExitMenu(m.root)
-			return newModel, newModel.Init()
+			if m.parent != nil {
+				m.parent.Update(m.root.Size())
+				return m.parent, nil
+			}
+			return m, tea.Quit
 		case KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem)
 			if ok {
@@ -100,6 +91,7 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					newModel, cmd := i.Activate(msg, m)
 					if newModel != nil || cmd != nil {
 						if newModel == nil {
+							newModel.Update(m.root.Size())
 							newModel = m
 						}
 						return newModel, cmd
@@ -122,6 +114,6 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m mainMenu) View() string {
+func (m modVersionMenu) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
 }

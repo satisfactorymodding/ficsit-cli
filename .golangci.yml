@@ -1,0 +1,40 @@
+linters-settings:
+  wrapcheck:
+    ignoreSigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - .Wrap(
+      - .Wrapf(
+      - .WithMessage(
+      - .WithMessagef(
+      - .WithStack(
+
+    ignorePackageGlobs:
+      - github.com/satisfactorymodding/ficsit-cli/*
+
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+    - bidichk
+    - contextcheck
+    - durationcheck
+    - errorlint
+    - goconst
+    - goimports
+    - revive
+    - ifshort
+    - misspell
+    - prealloc
+    - whitespace
+    - wrapcheck
