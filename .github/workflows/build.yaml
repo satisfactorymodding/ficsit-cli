@@ -23,6 +23,9 @@ jobs:
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
+        with:
+          skip-pkg-cache: true
+          skip-build-cache: true
 
       - name: Build
         run: go build -v -o ficsit-cli .
