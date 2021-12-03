@@ -20,6 +20,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Download GQL schema
+        run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
