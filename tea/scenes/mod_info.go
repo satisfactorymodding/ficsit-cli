@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PuerkitoBio/goquery"
+
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -173,6 +175,13 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			converter := md.NewConverter("", true, nil)
+			converter.AddRules(md.Rule{
+				Filter: []string{"#text"},
+				Replacement: func(content string, selec *goquery.Selection, options *md.Options) *string {
+					text := selec.Text()
+					return &text
+				},
+			})
 
 			markdownDescription, err := converter.ConvertString(mod.Full_description)
 			if err != nil {
