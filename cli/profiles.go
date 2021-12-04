@@ -12,10 +12,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-const defaultProfileName = "Default"
+const DefaultProfileName = "Default"
 
 var defaultProfile = Profile{
-	Name: defaultProfileName,
+	Name: DefaultProfileName,
 }
 
 type ProfilesVersion int
@@ -28,9 +28,9 @@ const (
 )
 
 type Profiles struct {
-	Version         ProfilesVersion `json:"version"`
-	Profiles        []*Profile      `json:"profiles"`
-	SelectedProfile string          `json:"selected_profile"`
+	Version         ProfilesVersion     `json:"version"`
+	Profiles        map[string]*Profile `json:"profiles"`
+	SelectedProfile string              `json:"selected_profile"`
 }
 
 type Profile struct {
@@ -66,8 +66,10 @@ func InitProfiles() (*Profiles, error) {
 		}
 
 		emptyProfiles := Profiles{
-			Version:  nextProfilesVersion - 1,
-			Profiles: []*Profile{&defaultProfile},
+			Version: nextProfilesVersion - 1,
+			Profiles: map[string]*Profile{
+				DefaultProfileName: &defaultProfile,
+			},
 		}
 
 		if err := emptyProfiles.Save(); err != nil {
@@ -90,12 +92,14 @@ func InitProfiles() (*Profiles, error) {
 	}
 
 	if len(profiles.Profiles) == 0 {
-		profiles.Profiles = []*Profile{&defaultProfile}
-		profiles.SelectedProfile = defaultProfileName
+		profiles.Profiles = map[string]*Profile{
+			DefaultProfileName: &defaultProfile,
+		}
+		profiles.SelectedProfile = DefaultProfileName
 	}
 
-	if profiles.SelectedProfile == "" {
-		profiles.SelectedProfile = profiles.Profiles[0].Name
+	if profiles.SelectedProfile == "" || profiles.Profiles[profiles.SelectedProfile] == nil {
+		profiles.SelectedProfile = DefaultProfileName
 	}
 
 	return &profiles, nil
@@ -125,38 +129,53 @@ func (p *Profiles) Save() error {
 }
 
 // AddProfile adds a new profile with the given name to the profiles list.
-func (p *Profiles) AddProfile(name string) *Profile {
-	profile := &Profile{
+func (p *Profiles) AddProfile(name string) (*Profile, error) {
+	if _, ok := p.Profiles[name]; ok {
+		return nil, fmt.Errorf("profile with name %s already exists", name)
+	}
+
+	p.Profiles[name] = &Profile{
 		Name: name,
 	}
 
-	p.Profiles = append(p.Profiles, profile)
-
-	return profile
+	return p.Profiles[name], nil
 }
 
 // DeleteProfile deletes the profile with the given name.
-func (p *Profiles) DeleteProfile(name string) {
-	i := 0
-	for _, profile := range p.Profiles {
-		if profile.Name == name {
-			break
+func (p *Profiles) DeleteProfile(name string) error {
+	if _, ok := p.Profiles[name]; ok {
+		delete(p.Profiles, name)
+
+		if p.SelectedProfile == name {
+			p.SelectedProfile = DefaultProfileName
 		}
 
-		i++
+		return nil
 	}
 
-	if i < len(p.Profiles) {
-		p.Profiles = append(p.Profiles[:i], p.Profiles[i+1:]...)
-	}
+	return fmt.Errorf("profile with name %s does not exist", name)
 }
 
 // GetProfile returns the profile with the given name or nil if it doesn't exist.
 func (p *Profiles) GetProfile(name string) *Profile {
-	for _, profile := range p.Profiles {
-		if profile.Name == name {
-			return profile
-		}
+	return p.Profiles[name]
+}
+
+func (p *Profiles) RenameProfile(oldName string, newName string) error {
+	if _, ok := p.Profiles[newName]; ok {
+		return fmt.Errorf("profile with name %s already exists", newName)
+	}
+
+	if _, ok := p.Profiles[oldName]; !ok {
+		return fmt.Errorf("profile with name %s does not exist", oldName)
+	}
+
+	p.Profiles[oldName].Name = newName
+	p.Profiles[newName] = p.Profiles[oldName]
+	delete(p.Profiles, oldName)
+
+	if p.SelectedProfile == oldName {
+		p.SelectedProfile = newName
 	}
 
 	return nil

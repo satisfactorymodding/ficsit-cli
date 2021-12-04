@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/PuerkitoBio/goquery"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -185,12 +187,14 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			markdownDescription, err := converter.ConvertString(mod.Full_description)
 			if err != nil {
-				panic(err) // TODO Handle Error
+				log.Error().Err(err).Msg("failed to convert html to markdown")
+				markdownDescription = mod.Full_description
 			}
 
 			description, err := glamour.Render(markdownDescription, "dark")
 			if err != nil {
-				panic(err) // TODO Handle Error
+				log.Error().Err(err).Msg("failed to render markdown")
+				description = mod.Full_description
 			}
 
 			bottomPart := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, strings.TrimSpace(description))

@@ -8,8 +8,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/rs/zerolog/log"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -33,6 +31,7 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
+	l.DisableQuitKeybindings()
 
 	m := &selectModVersionList{
 		root:   root,
@@ -93,7 +92,6 @@ func (m selectModVersionList) Init() tea.Cmd {
 }
 
 func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Info().Msg(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -119,7 +117,7 @@ func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			}
-			return m, tea.Quit
+			return m, nil
 		default:
 			var cmd tea.Cmd
 			m.list, cmd = m.list.Update(msg)

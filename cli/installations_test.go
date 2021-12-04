@@ -22,7 +22,8 @@ func TestAddInstallation(t *testing.T) {
 	testza.AssertNoError(t, err)
 
 	profileName := "InstallationTest"
-	profile := ctx.Profiles.AddProfile(profileName)
+	profile, err := ctx.Profiles.AddProfile(profileName)
+	testza.AssertNoError(t, err)
 	testza.AssertNoError(t, profile.AddMod("AreaActions", ">=1.6.5"))
 	testza.AssertNoError(t, profile.AddMod("ArmorModules__Modpack_All", ">=1.4.1"))
 

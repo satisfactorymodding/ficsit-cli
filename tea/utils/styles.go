@@ -6,9 +6,10 @@ import (
 )
 
 var (
-	ListStyles list.Styles
-	LabelStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("202"))
-	TitleStyle = list.DefaultStyles().Title.Background(lipgloss.Color("22"))
+	ListStyles        list.Styles
+	LabelStyle        = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("202"))
+	TitleStyle        = list.DefaultStyles().Title.Background(lipgloss.Color("22"))
+	NonListTitleStyle = TitleStyle.Copy().MarginLeft(2).Background(lipgloss.Color("22"))
 )
 
 func init() {

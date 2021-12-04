@@ -12,20 +12,16 @@ import (
 )
 
 type rootModel struct {
-	currentProfile      *cli.Profile
-	currentInstallation *cli.Installation
-	global              *cli.GlobalContext
-	apiClient           graphql.Client
-	currentSize         tea.WindowSizeMsg
-	headerComponent     tea.Model
+	global          *cli.GlobalContext
+	apiClient       graphql.Client
+	currentSize     tea.WindowSizeMsg
+	headerComponent tea.Model
 }
 
 func newModel(global *cli.GlobalContext) *rootModel {
 	m := &rootModel{
-		global:              global,
-		currentProfile:      global.Profiles.GetProfile(global.Profiles.SelectedProfile),
-		currentInstallation: global.Installations.GetInstallation(global.Installations.SelectedInstallation),
-		apiClient:           ficsit.InitAPI(),
+		global:    global,
+		apiClient: ficsit.InitAPI(),
 		currentSize: tea.WindowSizeMsg{
 			Width:  20,
 			Height: 14,
@@ -38,21 +34,19 @@ func newModel(global *cli.GlobalContext) *rootModel {
 }
 
 func (m *rootModel) GetCurrentProfile() *cli.Profile {
-	return m.currentProfile
+	return m.global.Profiles.GetProfile(m.global.Profiles.SelectedProfile)
 }
 
 func (m *rootModel) SetCurrentProfile(profile *cli.Profile) error {
-	m.currentProfile = profile
 	m.global.Profiles.SelectedProfile = profile.Name
 	return m.global.Save()
 }
 
 func (m *rootModel) GetCurrentInstallation() *cli.Installation {
-	return m.currentInstallation
+	return m.global.Installations.GetInstallation(m.global.Installations.SelectedInstallation)
 }
 
 func (m *rootModel) SetCurrentInstallation(installation *cli.Installation) error {
-	m.currentInstallation = installation
 	m.global.Installations.SelectedInstallation = installation.Path
 	return m.global.Save()
 }
@@ -82,7 +76,7 @@ func (m *rootModel) GetGlobal() *cli.GlobalContext {
 }
 
 func RunTea(global *cli.GlobalContext) error {
-	if err := tea.NewProgram(scenes.NewMainMenu(newModel(global))).Start(); err != nil {
+	if err := tea.NewProgram(scenes.NewMainMenu(newModel(global)), tea.WithAltScreen(), tea.WithMouseCellMotion()).Start(); err != nil {
 		return errors.Wrap(err, "internal tea error")
 	}
 	return nil

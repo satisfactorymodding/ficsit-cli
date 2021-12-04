@@ -10,8 +10,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/rs/zerolog/log"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -55,7 +53,16 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
+	l.DisableQuitKeybindings()
+
 	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithHelp("s", "sort")),
+			key.NewBinding(key.WithHelp("o", "order")),
+		}
+	}
+
+	l.AdditionalFullHelpKeys = func() []key.Binding {
 		return []key.Binding{
 			key.NewBinding(key.WithHelp("s", "sort")),
 			key.NewBinding(key.WithHelp("o", "order")),
@@ -101,6 +108,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortFieldList.Styles = utils.ListStyles
 	sortFieldList.SetSize(l.Width(), l.Height())
 	sortFieldList.KeyMap.Quit.SetHelp("q", "back")
+	sortFieldList.DisableQuitKeybindings()
 
 	sortOrderList := list.NewModel([]list.Item{
 		utils.SimpleItem{
@@ -131,6 +139,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortOrderList.Styles = utils.ListStyles
 	sortOrderList.SetSize(l.Width(), l.Height())
 	sortOrderList.KeyMap.Quit.SetHelp("q", "back")
+	sortOrderList.DisableQuitKeybindings()
 
 	m := &modsList{
 		root:          root,
@@ -196,7 +205,9 @@ func (m modsList) Init() tea.Cmd {
 }
 
 func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Info().Msg(spew.Sdump(msg))
+	// List enables its own keybindings when they were previously disabled
+	m.list.DisableQuitKeybindings()
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.list.SettingFilter() {

@@ -8,37 +8,34 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
-var _ tea.Model = (*modSemver)(nil)
+var _ tea.Model = (*newProfile)(nil)
 
-type modSemver struct {
+type newProfile struct {
 	root   components.RootModel
 	parent tea.Model
 	input  textinput.Model
 	title  string
-	mod    utils.Mod
 }
 
-func NewModSemver(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
-	model := modSemver{
+func NewNewProfile(root components.RootModel, parent tea.Model) tea.Model {
+	model := newProfile{
 		root:   root,
 		parent: parent,
 		input:  textinput.NewModel(),
-		title:  lipgloss.NewStyle().Padding(0, 2).Render(utils.TitleStyle.Render(mod.Name)),
-		mod:    mod,
+		title:  utils.NonListTitleStyle.Render("New Profile"),
 	}
 
-	model.input.Placeholder = ">=1.2.3"
 	model.input.Focus()
 	model.input.Width = root.Size().Width
 
 	return model
 }
 
-func (m modSemver) Init() tea.Cmd {
+func (m newProfile) Init() tea.Cmd {
 	return nil
 }
 
-func (m modSemver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -47,11 +44,11 @@ func (m modSemver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyEscape:
 			return m.parent, nil
 		case KeyEnter:
-			err := m.root.GetCurrentProfile().AddMod(m.mod.Reference, m.input.Value())
-			if err != nil {
+			if _, err := m.root.GetGlobal().Profiles.AddProfile(m.input.Value()); err != nil {
 				panic(err) // TODO Handle Error
 			}
-			return m.parent, nil
+
+			return m.parent, updateProfileListCmd
 		default:
 			var cmd tea.Cmd
 			m.input, cmd = m.input.Update(msg)
@@ -64,7 +61,7 @@ func (m modSemver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m modSemver) View() string {
+func (m newProfile) View() string {
 	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
 }

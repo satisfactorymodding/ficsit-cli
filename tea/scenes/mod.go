@@ -1,10 +1,11 @@
 package scenes
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -49,7 +50,10 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
 					if err != nil {
-						panic(err) // TODO Handle Error
+						menu := currentModel.(exitMenu)
+						log.Error().Err(err).Msg(ErrorFailedAddMod)
+						cmd := menu.list.NewStatusMessage(ErrorFailedAddMod)
+						return currentModel, cmd
 					}
 					return currentModel.(modMenu).parent, nil
 				},
@@ -79,6 +83,8 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	model.list.Styles = utils.ListStyles
 	model.list.SetSize(model.list.Width(), model.list.Height())
 	model.list.KeyMap.Quit.SetHelp("q", "back")
+	model.list.StatusMessageLifetime = time.Second * 3
+	model.list.DisableQuitKeybindings()
 
 	return model
 }
@@ -88,7 +94,6 @@ func (m modMenu) Init() tea.Cmd {
 }
 
 func (m modMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Warn().Msg(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -115,7 +120,7 @@ func (m modMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			}
-			return m, tea.Quit
+			return m, nil
 		default:
 			var cmd tea.Cmd
 			m.list, cmd = m.list.Update(msg)

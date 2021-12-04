@@ -1,10 +1,11 @@
 package scenes
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/rs/zerolog/log"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -27,7 +28,11 @@ func NewExitMenu(root components.RootModel) tea.Model {
 			ItemTitle: "Exit Saving Changes",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					panic(err) // TODO
+					message := "failed to save"
+					menu := currentModel.(exitMenu)
+					log.Error().Err(err).Msg(message)
+					cmd := menu.list.NewStatusMessage(message)
+					return currentModel, cmd
 				}
 				return currentModel, tea.Quit
 			},
@@ -47,6 +52,7 @@ func NewExitMenu(root components.RootModel) tea.Model {
 	model.list.Styles = utils.ListStyles
 	model.list.DisableQuitKeybindings()
 	model.list.SetSize(model.list.Width(), model.list.Height())
+	model.list.StatusMessageLifetime = time.Second * 3
 
 	return model
 }
@@ -56,7 +62,6 @@ func (m exitMenu) Init() tea.Cmd {
 }
 
 func (m exitMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Warn().Msg(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {

@@ -67,6 +67,9 @@ func Execute() {
 	// Execute tea as default
 	cmd, _, err := rootCmd.Find(os.Args[1:])
 
+	// Allow opening via explorer
+	cobra.MousetrapHelpText = ""
+
 	cli := len(os.Args) >= 2 && os.Args[1] == "cli"
 	if (len(os.Args) <= 1 || os.Args[1] != "help") && (err != nil || cmd == rootCmd) {
 		args := append([]string{"cli"}, os.Args[1:]...)
