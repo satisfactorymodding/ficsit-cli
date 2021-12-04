@@ -3,6 +3,7 @@ module github.com/satisfactorymodding/ficsit-cli
 go 1.17
 
 require (
+	github.com/JohannesKaufmann/html-to-markdown v1.3.0
 	github.com/Khan/genqlient v0.3.0
 	github.com/MarvinJWendt/testza v0.2.10
 	github.com/charmbracelet/bubbles v0.9.0
@@ -18,10 +19,12 @@ require (
 )
 
 require (
+	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/agnivade/levenshtein v1.0.3 // indirect
 	github.com/alecthomas/chroma v0.8.2 // indirect
 	github.com/alexflint/go-arg v1.4.2 // indirect
 	github.com/alexflint/go-scalar v1.0.0 // indirect
+	github.com/andybalholm/cascadia v1.1.0 // indirect
 	github.com/atomicgo/cursor v0.0.1 // indirect
 	github.com/atotto/clipboard v0.1.2 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect

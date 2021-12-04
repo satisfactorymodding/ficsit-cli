@@ -26,6 +26,7 @@ universal_binaries:
 archives:
   - format: binary
     allow_different_binary_count: true
+    name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
 
 nfpms:
   - formats:

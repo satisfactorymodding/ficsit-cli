@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -171,7 +172,14 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				sidebar += utils.LabelStyle.Render(author.User.Username) + " - " + author.Role
 			}
 
-			description, err := glamour.Render(mod.Full_description, "dark")
+			converter := md.NewConverter("", true, nil)
+
+			markdownDescription, err := converter.ConvertString(mod.Full_description)
+			if err != nil {
+				panic(err) // TODO Handle Error
+			}
+
+			description, err := glamour.Render(markdownDescription, "dark")
 			if err != nil {
 				panic(err) // TODO Handle Error
 			}
