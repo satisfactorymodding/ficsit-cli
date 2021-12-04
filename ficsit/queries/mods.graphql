@@ -6,6 +6,8 @@ query Mods ($filter: ModFilter) {
             id
             name
             mod_reference
+            last_version_date
+            created_at
         }
     }
 }

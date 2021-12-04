@@ -25,7 +25,7 @@ type selectModVersionList struct {
 }
 
 func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
-	l := list.NewModel([]list.Item{}, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
+	l := list.NewModel([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.SetSpinner(spinner.MiniDot)
@@ -67,7 +67,7 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 				currentOffset := offset
 				currentI := i
 				items = append(items, utils.SimpleItem{
-					Title: versions.GetMod.Versions[i].Version,
+					ItemTitle: versions.GetMod.Versions[i].Version,
 					Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 						version := allVersions[currentOffset+currentI]
 						err := root.GetCurrentProfile().AddMod(mod.Reference, version.Version)

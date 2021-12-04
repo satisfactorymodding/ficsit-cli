@@ -29,7 +29,12 @@ archives:
     name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
 
 nfpms:
-  - formats:
+  - vendor: Satisfactory Modding
+    homepage: https://ficsit.app/
+    maintainer: Satisfactory Modding Team <support@ficsit.app>
+    description: CLI tool for Ficsit (Satisfactory Modding)
+    license: GNU General Public License v3.0
+    formats:
       - apk
       - deb
       - rpm

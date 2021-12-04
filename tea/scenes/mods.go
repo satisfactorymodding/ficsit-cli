@@ -2,6 +2,8 @@ package scenes
 
 import (
 	"context"
+	"github.com/charmbracelet/bubbles/key"
+	"sort"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -21,24 +23,114 @@ type modsList struct {
 	list   list.Model
 	parent tea.Model
 	items  chan []list.Item
+
+	sortingField string
+	sortingOrder string
+
+	showSortFieldList bool
+	sortFieldList     list.Model
+
+	showSortOrderList bool
+	sortOrderList     list.Model
 }
 
 func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	// TODO Color mods that are installed in current profile
-	l := list.NewModel([]list.Item{}, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
+	l := list.NewModel([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
-	l.SetFilteringEnabled(false)
+	l.SetShowFilter(true)
+	l.SetFilteringEnabled(true)
 	l.SetSpinner(spinner.MiniDot)
 	l.Title = "Mods"
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithHelp("s", "sort")),
+			key.NewBinding(key.WithHelp("o", "order")),
+		}
+	}
+
+	sortFieldList := list.NewModel([]list.Item{
+		utils.SimpleItem{
+			ItemTitle: "Name",
+			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				m := currentModel.(modsList)
+				m.sortingField = "name"
+				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+				m.list.ResetSelected()
+				return m, cmd
+			},
+		},
+		utils.SimpleItem{
+			ItemTitle: "Last Version Date",
+			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				m := currentModel.(modsList)
+				m.sortingField = "last_version_date"
+				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+				m.list.ResetSelected()
+				return m, cmd
+			},
+		},
+		utils.SimpleItem{
+			ItemTitle: "Creation Date",
+			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				m := currentModel.(modsList)
+				m.sortingField = "created_at"
+				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+				m.list.ResetSelected()
+				return m, cmd
+			},
+		},
+	}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	sortFieldList.SetShowStatusBar(true)
+	sortFieldList.SetShowFilter(false)
+	sortFieldList.SetFilteringEnabled(false)
+	sortFieldList.Title = "Mods"
+	sortFieldList.Styles = utils.ListStyles
+	sortFieldList.SetSize(l.Width(), l.Height())
+	sortFieldList.KeyMap.Quit.SetHelp("q", "back")
+
+	sortOrderList := list.NewModel([]list.Item{
+		utils.SimpleItem{
+			ItemTitle: "Ascending",
+			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				m := currentModel.(modsList)
+				m.sortingOrder = "asc"
+				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+				m.list.ResetSelected()
+				return m, cmd
+			},
+		},
+		utils.SimpleItem{
+			ItemTitle: "Descending",
+			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				m := currentModel.(modsList)
+				m.sortingOrder = "desc"
+				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+				m.list.ResetSelected()
+				return m, cmd
+			},
+		},
+	}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	sortOrderList.SetShowStatusBar(true)
+	sortOrderList.SetShowFilter(false)
+	sortOrderList.SetFilteringEnabled(false)
+	sortOrderList.Title = "Mods"
+	sortOrderList.Styles = utils.ListStyles
+	sortOrderList.SetSize(l.Width(), l.Height())
+	sortOrderList.KeyMap.Quit.SetHelp("q", "back")
 
 	m := &modsList{
-		root:   root,
-		list:   l,
-		parent: parent,
-		items:  make(chan []list.Item),
+		root:          root,
+		list:          l,
+		parent:        parent,
+		items:         make(chan []list.Item),
+		sortingField:  "last_version_date",
+		sortingOrder:  "desc",
+		sortFieldList: sortFieldList,
+		sortOrderList: sortOrderList,
 	}
 
 	go func() {
@@ -67,7 +159,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 				currentOffset := offset
 				currentI := i
 				items = append(items, utils.SimpleItem{
-					Title: mods.GetMods.Mods[i].Name,
+					ItemTitle: mods.GetMods.Mods[i].Name,
 					Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 						mod := allMods[currentOffset+currentI]
 						return NewModMenu(root, currentModel, utils.Mod{
@@ -76,6 +168,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 							Reference: mod.Mod_reference,
 						}), nil
 					},
+					Extra: allMods[currentOffset+currentI],
 				})
 			}
 
@@ -96,43 +189,66 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	log.Info().Msg(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.list.SettingFilter() {
+			var cmd tea.Cmd
+			m.list, cmd = m.list.Update(msg)
+			return m, cmd
+		}
+
 		switch keypress := msg.String(); keypress {
+		case "s":
+			m.showSortFieldList = !m.showSortFieldList
+			return m, nil
+		case "o":
+			m.showSortOrderList = !m.showSortOrderList
+			return m, nil
 		case KeyControlC:
 			return m, tea.Quit
 		case "q":
+			if m.showSortFieldList {
+				m.showSortFieldList = false
+				return m, nil
+			}
+
+			if m.showSortOrderList {
+				m.showSortOrderList = false
+				return m, nil
+			}
+
 			if m.parent != nil {
 				m.parent.Update(m.root.Size())
 				return m.parent, nil
 			}
 			return m, tea.Quit
 		case KeyEnter:
+			if m.showSortFieldList {
+				m.showSortFieldList = false
+				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItem)
+				if ok {
+					return m.processActivation(i, msg)
+				}
+				return m, nil
+			}
+
+			if m.showSortOrderList {
+				m.showSortOrderList = false
+				i, ok := m.sortOrderList.SelectedItem().(utils.SimpleItem)
+				if ok {
+					return m.processActivation(i, msg)
+				}
+				return m, nil
+			}
+
 			i, ok := m.list.SelectedItem().(utils.SimpleItem)
 			if ok {
-				if i.Activate != nil {
-					newModel, cmd := i.Activate(msg, m)
-					if newModel != nil || cmd != nil {
-						if newModel == nil {
-							newModel = m
-						}
-						return newModel, cmd
-					}
-					return m, nil
-				}
+				return m.processActivation(i, msg)
 			}
-			return m, tea.Quit
-		default:
-			var cmd tea.Cmd
-			m.list, cmd = m.list.Update(msg)
-			return m, cmd
+			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		top, right, bottom, left := lipgloss.NewStyle().Margin(m.root.Height(), 2, 0).GetMargin()
 		m.list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
 		m.root.SetSize(msg)
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.list, cmd = m.list.Update(msg)
-		return m, cmd
 	case utils.TickMsg:
 		select {
 		case items := <-m.items:
@@ -147,9 +263,111 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	return m, nil
+	if m.showSortFieldList {
+		var cmd tea.Cmd
+		m.sortFieldList, cmd = m.sortFieldList.Update(msg)
+		return m, cmd
+	} else if m.showSortOrderList {
+		var cmd tea.Cmd
+		m.sortOrderList, cmd = m.sortOrderList.Update(msg)
+		return m, cmd
+	}
+
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
 }
 
 func (m modsList) View() string {
-	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
+	var bottom string
+	if m.showSortFieldList {
+		bottom = m.sortFieldList.View()
+	} else if m.showSortOrderList {
+		bottom = m.sortOrderList.View()
+	} else {
+		bottom = m.list.View()
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), bottom)
+}
+
+func sortItems(items []list.Item, field string, direction string) []list.Item {
+	sortedItems := make([]list.Item, len(items))
+	copy(sortedItems, items)
+
+	switch field {
+	case "last_version_date":
+		switch direction {
+		case "asc":
+			sort.Slice(sortedItems, func(i, j int) bool {
+				a := sortedItems[i].(utils.SimpleItem)
+				b := sortedItems[j].(utils.SimpleItem)
+				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
+				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
+				return aMod.Last_version_date.Before(bMod.Last_version_date)
+			})
+		default:
+			sort.Slice(sortedItems, func(i, j int) bool {
+				a := sortedItems[i].(utils.SimpleItem)
+				b := sortedItems[j].(utils.SimpleItem)
+				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
+				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
+				return aMod.Last_version_date.After(bMod.Last_version_date)
+			})
+		}
+	case "created_at":
+		switch direction {
+		case "asc":
+			sort.Slice(sortedItems, func(i, j int) bool {
+				a := sortedItems[i].(utils.SimpleItem)
+				b := sortedItems[j].(utils.SimpleItem)
+				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
+				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
+				return aMod.Created_at.Before(bMod.Created_at)
+			})
+		default:
+			sort.Slice(sortedItems, func(i, j int) bool {
+				a := sortedItems[i].(utils.SimpleItem)
+				b := sortedItems[j].(utils.SimpleItem)
+				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
+				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
+				return aMod.Created_at.After(bMod.Created_at)
+			})
+		}
+	case "name":
+		switch direction {
+		case "asc":
+			sort.Slice(sortedItems, func(i, j int) bool {
+				a := sortedItems[i].(utils.SimpleItem)
+				b := sortedItems[j].(utils.SimpleItem)
+				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
+				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
+				return aMod.Name < bMod.Name
+			})
+		default:
+			sort.Slice(sortedItems, func(i, j int) bool {
+				a := sortedItems[i].(utils.SimpleItem)
+				b := sortedItems[j].(utils.SimpleItem)
+				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
+				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
+				return aMod.Name > bMod.Name
+			})
+		}
+	}
+
+	return sortedItems
+}
+
+func (m modsList) processActivation(item utils.SimpleItem, msg tea.Msg) (tea.Model, tea.Cmd) {
+	if item.Activate != nil {
+		newModel, cmd := item.Activate(msg, m)
+		if newModel != nil || cmd != nil {
+			if newModel == nil {
+				newModel = m
+			}
+			return newModel, cmd
+		}
+		return m, nil
+	}
+	return m, nil
 }

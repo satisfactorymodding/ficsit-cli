@@ -26,14 +26,14 @@ func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) t
 
 	items := []list.Item{
 		utils.SimpleItem{
-			Title: "Select Version",
+			ItemTitle: "Select Version",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				newModel := NewModVersionList(root, currentModel.(modMenu).parent, mod)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem{
-			Title: "Enter Custom SemVer",
+			ItemTitle: "Enter Custom SemVer",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				newModel := NewModSemver(root, currentModel.(modMenu).parent, mod)
 				return newModel, newModel.Init()
@@ -44,7 +44,7 @@ func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) t
 	if root.GetCurrentProfile().HasMod(mod.Reference) {
 		items = append([]list.Item{
 			utils.SimpleItem{
-				Title: "Latest",
+				ItemTitle: "Latest",
 				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
 					if err != nil {
@@ -56,7 +56,7 @@ func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) t
 		}, items...)
 	}
 
-	model.list = list.NewModel(items, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
+	model.list = list.NewModel(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = mod.Name

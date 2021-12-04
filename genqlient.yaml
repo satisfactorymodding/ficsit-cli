@@ -21,3 +21,4 @@ bindings:
     type: string
   Date:
     type: time.Time
+    unmarshaler: github.com/satisfactorymodding/ficsit-cli/ficsit/utils.UnmarshalDateTime

@@ -24,35 +24,35 @@ func NewMainMenu(root components.RootModel) tea.Model {
 
 	items := []list.Item{
 		utils.SimpleItem{
-			Title: "Installations",
+			ItemTitle: "Installations",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				newModel := NewInstallations(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem{
-			Title: "Profiles",
+			ItemTitle: "Profiles",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				newModel := NewProfiles(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem{
-			Title: "Mods",
+			ItemTitle: "Mods",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				newModel := NewMods(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem{
-			Title: "Apply Changes",
+			ItemTitle: "Apply Changes",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				// TODO Apply changes to all changed profiles
 				return nil, nil
 			},
 		},
 		utils.SimpleItem{
-			Title: "Save",
+			ItemTitle: "Save",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
 					panic(err) // TODO Handle Error
@@ -61,7 +61,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			},
 		},
 		utils.SimpleItem{
-			Title: "Exit",
+			ItemTitle: "Exit",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				newModel := NewExitMenu(root)
 				return newModel, newModel.Init()
@@ -69,7 +69,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 		},
 	}
 
-	model.list = list.NewModel(items, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
+	model.list = list.NewModel(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = "Main Menu"

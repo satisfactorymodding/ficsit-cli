@@ -24,7 +24,7 @@ func NewExitMenu(root components.RootModel) tea.Model {
 
 	items := []list.Item{
 		utils.SimpleItem{
-			Title: "Exit Saving Changes",
+			ItemTitle: "Exit Saving Changes",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
 					panic(err) // TODO
@@ -33,14 +33,14 @@ func NewExitMenu(root components.RootModel) tea.Model {
 			},
 		},
 		utils.SimpleItem{
-			Title: "Exit Discarding Changes",
+			ItemTitle: "Exit Discarding Changes",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				return currentModel, tea.Quit
 			},
 		},
 	}
 
-	model.list = list.NewModel(items, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
+	model.list = list.NewModel(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = "Save Changes?"

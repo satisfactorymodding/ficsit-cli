@@ -28,14 +28,14 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	if root.GetCurrentProfile().HasMod(mod.Reference) {
 		items = []list.Item{
 			utils.SimpleItem{
-				Title: "Remove Mod",
+				ItemTitle: "Remove Mod",
 				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 					root.GetCurrentProfile().RemoveMod(mod.Reference)
 					return currentModel.(modMenu).parent, nil
 				},
 			},
 			utils.SimpleItem{
-				Title: "Change Version",
+				ItemTitle: "Change Version",
 				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 					newModel := NewModVersion(root, currentModel.(modMenu).parent, mod)
 					return newModel, newModel.Init()
@@ -45,7 +45,7 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	} else {
 		items = []list.Item{
 			utils.SimpleItem{
-				Title: "Install Mod",
+				ItemTitle: "Install Mod",
 				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
 					if err != nil {
@@ -55,7 +55,7 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 				},
 			},
 			utils.SimpleItem{
-				Title: "Install Mod with specific version",
+				ItemTitle: "Install Mod with specific version",
 				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 					newModel := NewModVersion(root, currentModel.(modMenu).parent, mod)
 					return newModel, newModel.Init()
@@ -65,14 +65,14 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	}
 
 	items = append(items, utils.SimpleItem{
-		Title: "View Mod info",
+		ItemTitle: "View Mod info",
 		Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 			newModel := NewModInfo(root, currentModel, mod)
 			return newModel, newModel.Init()
 		},
 	})
 
-	model.list = list.NewModel(items, utils.ItemDelegate{}, root.Size().Width, root.Size().Height-root.Height())
+	model.list = list.NewModel(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = mod.Name

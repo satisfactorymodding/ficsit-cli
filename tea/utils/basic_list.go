@@ -1,51 +1,57 @@
 package utils
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-var _ ListItem = (*SimpleItem)(nil)
-var _ list.Item = (*SimpleItem)(nil)
+var _ list.DefaultItem = (*SimpleItem)(nil)
 
 type SimpleItem struct {
-	Title    string
-	Activate func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd)
+	ItemTitle string
+	Activate  func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd)
+
+	// I know this is ugly but generics are coming soon and I cba
+	Extra interface{}
+}
+
+func (n SimpleItem) Title() string {
+	return n.ItemTitle
 }
 
 func (n SimpleItem) FilterValue() string {
-	return n.Title
+	return n.ItemTitle
 }
 
 func (n SimpleItem) GetTitle() string {
-	return n.Title
+	return n.ItemTitle
 }
 
-type ListItem interface {
-	GetTitle() string
+func (n SimpleItem) Description() string {
+	return ""
 }
 
-type ItemDelegate struct{}
+func NewItemDelegate() list.ItemDelegate {
+	delegate := list.NewDefaultDelegate()
+	delegate.ShowDescription = false
+	delegate.SetSpacing(0)
 
-func (d ItemDelegate) Height() int                               { return 1 }
-func (d ItemDelegate) Spacing() int                              { return 0 }
-func (d ItemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
-func (d ItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(ListItem)
-	if !ok {
-		return
-	}
+	// TODO Adaptive Colors
+	// TODO Description Colors
+	delegate.Styles.NormalTitle = lipgloss.NewStyle().
+		Foreground(lipgloss.AdaptiveColor{Light: "#1a1a1a", Dark: "#dddddd"}).
+		Padding(0, 0, 0, 2)
 
-	style := lipgloss.NewStyle().PaddingLeft(2)
+	delegate.Styles.DimmedTitle = lipgloss.NewStyle().
+		Foreground(lipgloss.AdaptiveColor{Light: "#A49FA5", Dark: "#777777"}).
+		Padding(0, 0, 0, 2)
 
-	str := style.Render("o " + i.GetTitle())
-	if index == m.Index() {
-		str = style.Foreground(lipgloss.Color("202")).Render("• " + i.GetTitle())
-	}
+	delegate.Styles.SelectedTitle = lipgloss.NewStyle().
+		Border(lipgloss.ThickBorder(), false, false, false, true).
+		BorderForeground(lipgloss.Color("202")).
+		Foreground(lipgloss.Color("202")).
+		Padding(0, 0, 0, 1)
 
-	fmt.Fprint(w, str)
+	return delegate
 }
