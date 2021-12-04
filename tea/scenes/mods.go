@@ -2,8 +2,9 @@ package scenes
 
 import (
 	"context"
-	"github.com/charmbracelet/bubbles/key"
 	"sort"
+
+	"github.com/charmbracelet/bubbles/key"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -18,6 +19,15 @@ import (
 
 var _ tea.Model = (*modsList)(nil)
 
+type sortOrder string
+
+const (
+	sortOrderAsc  sortOrder = "asc"
+	sortOrderDesc sortOrder = "desc"
+)
+
+const modsTitle = "Mods"
+
 type modsList struct {
 	root   components.RootModel
 	list   list.Model
@@ -25,7 +35,7 @@ type modsList struct {
 	items  chan []list.Item
 
 	sortingField string
-	sortingOrder string
+	sortingOrder sortOrder
 
 	showSortFieldList bool
 	sortFieldList     list.Model
@@ -41,7 +51,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	l.SetShowFilter(true)
 	l.SetFilteringEnabled(true)
 	l.SetSpinner(spinner.MiniDot)
-	l.Title = "Mods"
+	l.Title = modsTitle
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
@@ -87,7 +97,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortFieldList.SetShowStatusBar(true)
 	sortFieldList.SetShowFilter(false)
 	sortFieldList.SetFilteringEnabled(false)
-	sortFieldList.Title = "Mods"
+	sortFieldList.Title = modsTitle
 	sortFieldList.Styles = utils.ListStyles
 	sortFieldList.SetSize(l.Width(), l.Height())
 	sortFieldList.KeyMap.Quit.SetHelp("q", "back")
@@ -97,7 +107,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 			ItemTitle: "Ascending",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				m := currentModel.(modsList)
-				m.sortingOrder = "asc"
+				m.sortingOrder = sortOrderAsc
 				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
 				m.list.ResetSelected()
 				return m, cmd
@@ -107,7 +117,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 			ItemTitle: "Descending",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 				m := currentModel.(modsList)
-				m.sortingOrder = "desc"
+				m.sortingOrder = sortOrderDesc
 				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
 				m.list.ResetSelected()
 				return m, cmd
@@ -117,7 +127,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortOrderList.SetShowStatusBar(true)
 	sortOrderList.SetShowFilter(false)
 	sortOrderList.SetFilteringEnabled(false)
-	sortOrderList.Title = "Mods"
+	sortOrderList.Title = modsTitle
 	sortOrderList.Styles = utils.ListStyles
 	sortOrderList.SetSize(l.Width(), l.Height())
 	sortOrderList.KeyMap.Quit.SetHelp("q", "back")
@@ -128,7 +138,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 		parent:        parent,
 		items:         make(chan []list.Item),
 		sortingField:  "last_version_date",
-		sortingOrder:  "desc",
+		sortingOrder:  sortOrderDesc,
 		sortFieldList: sortFieldList,
 		sortOrderList: sortOrderList,
 	}
@@ -291,14 +301,14 @@ func (m modsList) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), bottom)
 }
 
-func sortItems(items []list.Item, field string, direction string) []list.Item {
+func sortItems(items []list.Item, field string, direction sortOrder) []list.Item {
 	sortedItems := make([]list.Item, len(items))
 	copy(sortedItems, items)
 
 	switch field {
 	case "last_version_date":
 		switch direction {
-		case "asc":
+		case sortOrderAsc:
 			sort.Slice(sortedItems, func(i, j int) bool {
 				a := sortedItems[i].(utils.SimpleItem)
 				b := sortedItems[j].(utils.SimpleItem)
@@ -317,7 +327,7 @@ func sortItems(items []list.Item, field string, direction string) []list.Item {
 		}
 	case "created_at":
 		switch direction {
-		case "asc":
+		case sortOrderAsc:
 			sort.Slice(sortedItems, func(i, j int) bool {
 				a := sortedItems[i].(utils.SimpleItem)
 				b := sortedItems[j].(utils.SimpleItem)
@@ -336,7 +346,7 @@ func sortItems(items []list.Item, field string, direction string) []list.Item {
 		}
 	case "name":
 		switch direction {
-		case "asc":
+		case sortOrderAsc:
 			sort.Slice(sortedItems, func(i, j int) bool {
 				a := sortedItems[i].(utils.SimpleItem)
 				b := sortedItems[j].(utils.SimpleItem)

@@ -3,6 +3,8 @@ package utils
 import (
 	"bytes"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 //goland:noinspection GoUnusedExportedFunction
@@ -16,7 +18,7 @@ func UnmarshalDateTime(b []byte, v *time.Time) error {
 
 	parsed, err := time.Parse(time.RFC3339, string(trimmed))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to parse date time")
 	}
 
 	*v = parsed
