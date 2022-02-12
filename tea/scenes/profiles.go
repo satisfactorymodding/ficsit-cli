@@ -66,7 +66,7 @@ func (m profiles) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch keypress := msg.String(); keypress {
 		case "n":
-			newModel := NewNewProfile(m.root, m)
+			newModel := NewProfile(m.root, m)
 			return newModel, newModel.Init()
 		case KeyControlC:
 			return m, tea.Quit
@@ -129,7 +129,7 @@ func profilesToList(root components.RootModel) []list.Item {
 		items[i] = utils.SimpleItem{
 			ItemTitle: temp.Name,
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewProfile(root, currentModel, temp)
+				newModel := EditProfile(root, currentModel, temp)
 				return newModel, newModel.Init()
 			},
 		}

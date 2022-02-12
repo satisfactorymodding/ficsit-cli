@@ -8,6 +8,7 @@
 *.dll
 *.so
 *.dylib
+ficsit-cli
 
 # Test binary, built with `go test -c`
 *.test
