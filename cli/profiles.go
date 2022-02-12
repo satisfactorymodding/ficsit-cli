@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/satisfactorymodding/ficsit-cli/utils"
+	tea_utils "github.com/satisfactorymodding/ficsit-cli/tea/utils"
 	"github.com/spf13/viper"
 )
 
@@ -39,6 +40,9 @@ type Profile struct {
 }
 
 type ProfileMod struct {
+	Name             string `json:"name"`
+	ID               string `json:"id"`
+	Reference        string `json:"reference"`
 	Version          string `json:"version"`
 	InstalledVersion string `json:"installed_version"`
 }
@@ -182,7 +186,7 @@ func (p *Profiles) RenameProfile(oldName string, newName string) error {
 }
 
 // AddMod adds a mod to the profile with given version.
-func (p *Profile) AddMod(reference string, version string) error {
+func (p *Profile) AddMod(mod tea_utils.Mod, version string) error {
 	if p.Mods == nil {
 		p.Mods = make(map[string]ProfileMod)
 	}
@@ -191,8 +195,11 @@ func (p *Profile) AddMod(reference string, version string) error {
 		return errors.New("invalid semver version")
 	}
 
-	p.Mods[reference] = ProfileMod{
-		Version: version,
+	p.Mods[mod.Reference] = ProfileMod{
+		Name:      mod.Name,
+		ID:        mod.ID,
+		Reference: mod.Reference,
+		Version:   version,
 	}
 
 	return nil

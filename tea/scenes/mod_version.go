@@ -47,7 +47,7 @@ func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) t
 			utils.SimpleItem{
 				ItemTitle: "Latest",
 				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
+					err := root.GetCurrentProfile().AddMod(mod, ">=0.0.0")
 					if err != nil {
 						menu := currentModel.(exitMenu)
 						log.Error().Err(err).Msg(ErrorFailedAddMod)

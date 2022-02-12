@@ -6,11 +6,11 @@ require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.0
 	github.com/Khan/genqlient v0.3.0
 	github.com/MarvinJWendt/testza v0.2.10
+	github.com/PuerkitoBio/goquery v1.5.1
 	github.com/charmbracelet/bubbles v0.9.0
 	github.com/charmbracelet/bubbletea v0.19.0
 	github.com/charmbracelet/glamour v0.3.0
 	github.com/charmbracelet/lipgloss v0.4.0
-	github.com/davecgh/go-spew v1.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.33
 	github.com/rs/zerolog v1.25.0
@@ -19,7 +19,6 @@ require (
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/agnivade/levenshtein v1.0.3 // indirect
 	github.com/alecthomas/chroma v0.8.2 // indirect
 	github.com/alexflint/go-arg v1.4.2 // indirect
@@ -30,6 +29,7 @@ require (
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/containerd/console v1.0.2 // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gookit/color v1.4.2 // indirect

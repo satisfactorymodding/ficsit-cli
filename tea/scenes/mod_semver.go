@@ -47,7 +47,7 @@ func (m modSemver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyEscape:
 			return m.parent, nil
 		case KeyEnter:
-			err := m.root.GetCurrentProfile().AddMod(m.mod.Reference, m.input.Value())
+			err := m.root.GetCurrentProfile().AddMod(m.mod, m.input.Value())
 			if err != nil {
 				panic(err) // TODO Handle Error
 			}

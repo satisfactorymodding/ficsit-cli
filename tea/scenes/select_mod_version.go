@@ -69,7 +69,7 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 					ItemTitle: versions.GetMod.Versions[i].Version,
 					Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
 						version := allVersions[currentOffset+currentI]
-						err := root.GetCurrentProfile().AddMod(mod.Reference, version.Version)
+						err := root.GetCurrentProfile().AddMod(mod, version.Version)
 						if err != nil {
 							panic(err) // TODO
 						}
