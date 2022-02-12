@@ -48,8 +48,9 @@ func NewMainMenu(root components.RootModel) tea.Model {
 		utils.SimpleItem{
 			ItemTitle: "Apply Changes",
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				newModel := NewApply(root, currentModel)
 				// TODO Apply changes to all changed profiles
-				return nil, nil
+				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem{
