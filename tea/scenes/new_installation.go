@@ -17,7 +17,7 @@ type newInstallation struct {
 	path   string
 }
 
-func NewInstallation(root components.RootModel, parent tea.Model) tea.Model {
+func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 	model := newInstallation{
 		root:   root,
 		parent: parent,

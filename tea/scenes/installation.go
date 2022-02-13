@@ -22,7 +22,7 @@ type installation struct {
 	hadRenamed bool
 }
 
-func EditInstallation(root components.RootModel, parent tea.Model, installationData *cli.Installation) tea.Model {
+func NewEditInstallation(root components.RootModel, parent tea.Model, installationData *cli.Installation) tea.Model {
 	model := installation{
 		root:    root,
 		parent:  parent,

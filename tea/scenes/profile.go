@@ -22,7 +22,7 @@ type profile struct {
 	hadRenamed bool
 }
 
-func EditProfile(root components.RootModel, parent tea.Model, profileData *cli.Profile) tea.Model {
+func NewEditProfile(root components.RootModel, parent tea.Model, profileData *cli.Profile) tea.Model {
 	model := profile{
 		root:    root,
 		parent:  parent,

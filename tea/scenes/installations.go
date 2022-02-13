@@ -64,7 +64,7 @@ func (m installations) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch keypress := msg.String(); keypress {
 		case "n":
-			newModel := NewInstallation(m.root, m)
+			newModel := NewNewInstallation(m.root, m)
 			return newModel, newModel.Init()
 		case KeyControlC:
 			return m, tea.Quit
@@ -127,7 +127,7 @@ func installationsToList(root components.RootModel) []list.Item {
 		items[i] = utils.SimpleItem{
 			ItemTitle: temp.Path,
 			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := EditInstallation(root, currentModel, temp)
+				newModel := NewEditInstallation(root, currentModel, temp)
 				return newModel, newModel.Init()
 			},
 		}

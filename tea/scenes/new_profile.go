@@ -17,7 +17,7 @@ type newProfile struct {
 	title  string
 }
 
-func NewProfile(root components.RootModel, parent tea.Model) tea.Model {
+func NewNewProfile(root components.RootModel, parent tea.Model) tea.Model {
 	model := newProfile{
 		root:   root,
 		parent: parent,
