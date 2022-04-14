@@ -27,6 +27,13 @@ const (
 	nextProfilesVersion
 )
 
+type smmProfileFile struct {
+	Items []struct {
+		ID      string `json:"id"`
+		Enabled bool   `json:"enabled"`
+	} `json:"items"`
+}
+
 type Profiles struct {
 	Version         ProfilesVersion     `json:"version"`
 	Profiles        map[string]*Profile `json:"profiles"`
@@ -39,40 +46,84 @@ type Profile struct {
 }
 
 type ProfileMod struct {
-	Version          string `json:"version"`
-	InstalledVersion string `json:"installed_version"`
+	Version string `json:"version"`
+	Enabled bool   `json:"enabled"` // TODO Implement
 }
 
 func InitProfiles() (*Profiles, error) {
-	cacheDir := viper.GetString("cache-dir")
+	localDir := viper.GetString("local-dir")
 
-	profilesFile := path.Join(cacheDir, viper.GetString("profiles-file"))
+	profilesFile := path.Join(localDir, viper.GetString("profiles-file"))
 	_, err := os.Stat(profilesFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, errors.Wrap(err, "failed to stat profiles file")
 		}
 
-		_, err := os.Stat(cacheDir)
+		_, err := os.Stat(localDir)
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return nil, errors.Wrap(err, "failed to read cache directory")
 			}
 
-			err = os.MkdirAll(cacheDir, 0755)
+			err = os.MkdirAll(localDir, 0755)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to create cache directory")
 			}
 		}
 
-		emptyProfiles := Profiles{
-			Version: nextProfilesVersion - 1,
-			Profiles: map[string]*Profile{
-				DefaultProfileName: &defaultProfile,
-			},
+		profiles := map[string]*Profile{
+			DefaultProfileName: &defaultProfile,
 		}
 
-		if err := emptyProfiles.Save(); err != nil {
+		// Import profiles from SMM if already exists
+		smmProfilesDir := path.Join(viper.GetString("base-local-dir"), "SatisfactoryModManager", "profiles")
+		_, err = os.Stat(smmProfilesDir)
+		if err == nil {
+			dir, err := os.ReadDir(smmProfilesDir)
+			if err == nil {
+				for _, entry := range dir {
+					if entry.IsDir() {
+						manifestFile := path.Join(smmProfilesDir, entry.Name(), "manifest.json")
+						_, err := os.Stat(manifestFile)
+						if err == nil {
+							manifestBytes, err := os.ReadFile(manifestFile)
+							if err != nil {
+								log.Err(err).Str("file", manifestFile).Msg("Failed to read file, not importing profile")
+								continue
+							}
+
+							var smmProfile smmProfileFile
+							if err := json.Unmarshal(manifestBytes, &smmProfile); err != nil {
+								log.Err(err).Str("file", manifestFile).Msg("Failed to parse file, not importing profile")
+								continue
+							}
+
+							profile := &Profile{
+								Name: entry.Name(),
+								Mods: make(map[string]ProfileMod),
+							}
+
+							for _, item := range smmProfile.Items {
+								profile.Mods[item.ID] = ProfileMod{
+									Version: ">=0.0.0",
+									Enabled: item.Enabled,
+								}
+							}
+
+							profiles[entry.Name()] = profile
+						}
+					}
+				}
+			}
+		}
+
+		bootstrapProfiles := &Profiles{
+			Version:  nextProfilesVersion - 1,
+			Profiles: profiles,
+		}
+
+		if err := bootstrapProfiles.Save(); err != nil {
 			return nil, errors.Wrap(err, "failed to save empty profiles")
 		}
 	}
@@ -112,7 +163,7 @@ func (p *Profiles) Save() error {
 		return nil
 	}
 
-	profilesFile := path.Join(viper.GetString("cache-dir"), viper.GetString("profiles-file"))
+	profilesFile := path.Join(viper.GetString("local-dir"), viper.GetString("profiles-file"))
 
 	log.Info().Str("path", profilesFile).Msg("saving profiles")
 
@@ -207,7 +258,7 @@ func (p *Profile) RemoveMod(reference string) {
 	delete(p.Mods, reference)
 }
 
-// HasMod returns true if the profile has a mod with the given reference
+// HasMod returns true if the profile has a mod with the given reference.
 func (p *Profile) HasMod(reference string) bool {
 	if p.Mods == nil {
 		return false
@@ -216,4 +267,38 @@ func (p *Profile) HasMod(reference string) bool {
 	_, ok := p.Mods[reference]
 
 	return ok
+}
+
+// Resolve resolves all mods and their dependencies.
+//
+// An optional lockfile can be passed if one exists.
+//
+// Returns an error if resolution is impossible.
+func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile) (*LockFile, error) {
+	toResolve := make(map[string]string)
+	for modReference, mod := range p.Mods {
+		toResolve[modReference] = mod.Version
+	}
+
+	dependencies, err := resolver.ResolveModDependencies(toResolve)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed resolving profile dependencies")
+	}
+
+	resultLockFile := LockFile(make(map[string]LockedMod))
+
+	for modReference, version := range dependencies {
+		modDependencies := make(map[string]string)
+
+		for _, dependency := range version.Dependencies {
+			modDependencies[dependency.ModReference] = dependency.Constraint
+		}
+
+		resultLockFile[modReference] = LockedMod{
+			Version:      version.Version,
+			Dependencies: modDependencies,
+		}
+	}
+
+	return &resultLockFile, nil
 }

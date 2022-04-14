@@ -1,0 +1,14 @@
+# @genqlient(omitempty: true)
+query SMLVersions {
+    smlVersions: getSMLVersions(filter: {limit: 100}) {
+        count
+        sml_versions {
+            id
+            version
+            link
+            satisfactory_version
+            stability
+            updated_at
+        }
+    }
+}

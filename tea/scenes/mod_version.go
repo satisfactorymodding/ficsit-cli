@@ -26,17 +26,17 @@ func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) t
 	}
 
 	items := []list.Item{
-		utils.SimpleItem{
+		utils.SimpleItem[modVersionMenu]{
 			ItemTitle: "Select Version",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewModVersionList(root, currentModel.(modMenu).parent, mod)
+			Activate: func(msg tea.Msg, currentModel modVersionMenu) (tea.Model, tea.Cmd) {
+				newModel := NewModVersionList(root, currentModel.parent, mod)
 				return newModel, newModel.Init()
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[modVersionMenu]{
 			ItemTitle: "Enter Custom SemVer",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewModSemver(root, currentModel.(modMenu).parent, mod)
+			Activate: func(msg tea.Msg, currentModel modVersionMenu) (tea.Model, tea.Cmd) {
+				newModel := NewModSemver(root, currentModel.parent, mod)
 				return newModel, newModel.Init()
 			},
 		},
@@ -44,23 +44,22 @@ func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) t
 
 	if root.GetCurrentProfile().HasMod(mod.Reference) {
 		items = append([]list.Item{
-			utils.SimpleItem{
+			utils.SimpleItem[modVersionMenu]{
 				ItemTitle: "Latest",
-				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				Activate: func(msg tea.Msg, currentModel modVersionMenu) (tea.Model, tea.Cmd) {
 					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
 					if err != nil {
-						menu := currentModel.(exitMenu)
 						log.Error().Err(err).Msg(ErrorFailedAddMod)
-						cmd := menu.list.NewStatusMessage(ErrorFailedAddMod)
+						cmd := currentModel.list.NewStatusMessage(ErrorFailedAddMod)
 						return currentModel, cmd
 					}
-					return currentModel.(modMenu).parent, nil
+					return currentModel.parent, nil
 				},
 			},
 		}, items...)
 	}
 
-	model.list = list.NewModel(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	model.list = list.New(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = mod.Name
@@ -90,7 +89,7 @@ func (m modVersionMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Quit
 		case KeyEnter:
-			i, ok := m.list.SelectedItem().(utils.SimpleItem)
+			i, ok := m.list.SelectedItem().(utils.SimpleItem[modVersionMenu])
 			if ok {
 				if i.Activate != nil {
 					newModel, cmd := i.Activate(msg, m)

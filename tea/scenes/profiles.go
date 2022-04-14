@@ -19,7 +19,7 @@ type profiles struct {
 }
 
 func NewProfiles(root components.RootModel, parent tea.Model) tea.Model {
-	l := list.NewModel(profilesToList(root), utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	l := list.New(profilesToList(root), utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(true)
 	l.SetSpinner(spinner.MiniDot)
@@ -35,11 +35,7 @@ func NewProfiles(root components.RootModel, parent tea.Model) tea.Model {
 		}
 	}
 
-	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("n", "new profile")),
-		}
-	}
+	l.AdditionalFullHelpKeys = l.AdditionalShortHelpKeys
 
 	return &profiles{
 		root:   root,
@@ -77,7 +73,7 @@ func (m profiles) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Quit
 		case KeyEnter:
-			i, ok := m.list.SelectedItem().(utils.SimpleItem)
+			i, ok := m.list.SelectedItem().(utils.SimpleItem[profiles])
 			if ok {
 				if i.Activate != nil {
 					newModel, cmd := i.Activate(msg, m)
@@ -99,15 +95,9 @@ func (m profiles) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case updateProfileList:
 		m.list.ResetSelected()
 		cmd := m.list.SetItems(profilesToList(m.root))
-
-		// Done to refresh keymap
-		m.list.SetFilteringEnabled(m.list.FilteringEnabled())
 		return m, cmd
 	case updateProfileNames:
 		cmd := m.list.SetItems(profilesToList(m.root))
-
-		// Done to refresh keymap
-		m.list.SetFilteringEnabled(m.list.FilteringEnabled())
 		return m, cmd
 	}
 
@@ -126,9 +116,9 @@ func profilesToList(root components.RootModel) []list.Item {
 	i := 0
 	for _, profile := range root.GetGlobal().Profiles.Profiles {
 		temp := profile
-		items[i] = utils.SimpleItem{
+		items[i] = utils.SimpleItem[profiles]{
 			ItemTitle: temp.Name,
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+			Activate: func(msg tea.Msg, currentModel profiles) (tea.Model, tea.Cmd) {
 				newModel := NewProfile(root, currentModel, temp)
 				return newModel, newModel.Init()
 			},

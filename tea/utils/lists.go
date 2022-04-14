@@ -6,29 +6,31 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var _ list.DefaultItem = (*SimpleItem)(nil)
+var _ list.DefaultItem = (*SimpleItem[tea.Model])(nil)
 
-type SimpleItem struct {
+type SimpleItem[T tea.Model] struct {
 	ItemTitle string
-	Activate  func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd)
-
-	// I know this is ugly but generics are coming soon and I cba
-	Extra interface{}
+	Activate  func(msg tea.Msg, currentModel T) (tea.Model, tea.Cmd)
 }
 
-func (n SimpleItem) Title() string {
+type SimpleItemExtra[T tea.Model, E any] struct {
+	SimpleItem[T]
+	Extra E
+}
+
+func (n SimpleItem[any]) Title() string {
 	return n.ItemTitle
 }
 
-func (n SimpleItem) FilterValue() string {
+func (n SimpleItem[any]) FilterValue() string {
 	return n.ItemTitle
 }
 
-func (n SimpleItem) GetTitle() string {
+func (n SimpleItem[any]) GetTitle() string {
 	return n.ItemTitle
 }
 
-func (n SimpleItem) Description() string {
+func (n SimpleItem[any]) Description() string {
 	return ""
 }
 

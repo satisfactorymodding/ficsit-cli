@@ -1,9 +1,9 @@
 # @genqlient(omitempty: true)
 query ModVersions (
-    $modId: ModID!,
+    $modId: String!,
     $filter: VersionFilter
 ) {
-    getMod(modId: $modId) {
+    mod: getModByIdOrReference(modIdOrReference: $modId) {
         id
         versions (filter: $filter) {
             id

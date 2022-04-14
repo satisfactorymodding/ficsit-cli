@@ -28,55 +28,54 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	var items []list.Item
 	if root.GetCurrentProfile().HasMod(mod.Reference) {
 		items = []list.Item{
-			utils.SimpleItem{
+			utils.SimpleItem[modMenu]{
 				ItemTitle: "Remove Mod",
-				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
 					root.GetCurrentProfile().RemoveMod(mod.Reference)
-					return currentModel.(modMenu).parent, nil
+					return currentModel.parent, nil
 				},
 			},
-			utils.SimpleItem{
+			utils.SimpleItem[modMenu]{
 				ItemTitle: "Change Version",
-				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-					newModel := NewModVersion(root, currentModel.(modMenu).parent, mod)
+				Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
+					newModel := NewModVersion(root, currentModel.parent, mod)
 					return newModel, newModel.Init()
 				},
 			},
 		}
 	} else {
 		items = []list.Item{
-			utils.SimpleItem{
+			utils.SimpleItem[modMenu]{
 				ItemTitle: "Install Mod",
-				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
 					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
 					if err != nil {
-						menu := currentModel.(exitMenu)
 						log.Error().Err(err).Msg(ErrorFailedAddMod)
-						cmd := menu.list.NewStatusMessage(ErrorFailedAddMod)
+						cmd := currentModel.list.NewStatusMessage(ErrorFailedAddMod)
 						return currentModel, cmd
 					}
-					return currentModel.(modMenu).parent, nil
+					return currentModel.parent, nil
 				},
 			},
-			utils.SimpleItem{
+			utils.SimpleItem[modMenu]{
 				ItemTitle: "Install Mod with specific version",
-				Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-					newModel := NewModVersion(root, currentModel.(modMenu).parent, mod)
+				Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
+					newModel := NewModVersion(root, currentModel.parent, mod)
 					return newModel, newModel.Init()
 				},
 			},
 		}
 	}
 
-	items = append(items, utils.SimpleItem{
+	items = append(items, utils.SimpleItem[modMenu]{
 		ItemTitle: "View Mod info",
-		Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+		Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
 			newModel := NewModInfo(root, currentModel, mod)
 			return newModel, newModel.Init()
 		},
 	})
 
-	model.list = list.NewModel(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	model.list = list.New(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = mod.Name
@@ -106,7 +105,7 @@ func (m modMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Quit
 		case KeyEnter:
-			i, ok := m.list.SelectedItem().(utils.SimpleItem)
+			i, ok := m.list.SelectedItem().(utils.SimpleItem[modMenu])
 			if ok {
 				if i.Activate != nil {
 					newModel, cmd := i.Activate(msg, m)

@@ -1,10 +1,15 @@
 package cli
 
-import "github.com/pkg/errors"
+import (
+	"github.com/Khan/genqlient/graphql"
+	"github.com/pkg/errors"
+	"github.com/satisfactorymodding/ficsit-cli/ficsit"
+)
 
 type GlobalContext struct {
 	Installations *Installations
 	Profiles      *Profiles
+	APIClient     graphql.Client
 }
 
 var globalContext *GlobalContext
@@ -27,6 +32,7 @@ func InitCLI() (*GlobalContext, error) {
 	ctx := &GlobalContext{
 		Installations: installations,
 		Profiles:      profiles,
+		APIClient:     ficsit.InitAPI(),
 	}
 
 	globalContext = ctx

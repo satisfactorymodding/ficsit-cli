@@ -24,56 +24,54 @@ func NewMainMenu(root components.RootModel) tea.Model {
 	}
 
 	items := []list.Item{
-		utils.SimpleItem{
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Installations",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				newModel := NewInstallations(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Profiles",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				newModel := NewProfiles(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Mods",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				newModel := NewMods(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Apply Changes",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				// TODO Apply changes to all changed profiles
 				return nil, nil
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Save",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					menu := currentModel.(exitMenu)
 					log.Error().Err(err).Msg(ErrorFailedAddMod)
-					cmd := menu.list.NewStatusMessage(ErrorFailedAddMod)
+					cmd := currentModel.list.NewStatusMessage(ErrorFailedAddMod)
 					return currentModel, cmd
 				}
 				return nil, nil
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Exit",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				newModel := NewExitMenu(root)
-				return newModel, newModel.Init()
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
+				return nil, tea.Quit
 			},
 		},
 	}
 
-	model.list = list.NewModel(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	model.list = list.New(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = "Main Menu"
@@ -96,10 +94,9 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyControlC:
 			return m, tea.Quit
 		case "q":
-			newModel := NewExitMenu(m.root)
-			return newModel, newModel.Init()
+			return m, tea.Quit
 		case KeyEnter:
-			i, ok := m.list.SelectedItem().(utils.SimpleItem)
+			i, ok := m.list.SelectedItem().(utils.SimpleItem[mainMenu])
 			if ok {
 				if i.Activate != nil {
 					newModel, cmd := i.Activate(msg, m)

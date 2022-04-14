@@ -6,26 +6,25 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
 	"github.com/satisfactorymodding/ficsit-cli/cli"
-	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes"
 )
 
 type rootModel struct {
-	global          *cli.GlobalContext
-	apiClient       graphql.Client
-	currentSize     tea.WindowSizeMsg
-	headerComponent tea.Model
+	global             *cli.GlobalContext
+	currentSize        tea.WindowSizeMsg
+	headerComponent    tea.Model
+	dependencyResolver cli.DependencyResolver
 }
 
 func newModel(global *cli.GlobalContext) *rootModel {
 	m := &rootModel{
-		global:    global,
-		apiClient: ficsit.InitAPI(),
+		global: global,
 		currentSize: tea.WindowSizeMsg{
 			Width:  20,
 			Height: 14,
 		},
+		dependencyResolver: cli.NewDependencyResolver(global.APIClient),
 	}
 
 	m.headerComponent = components.NewHeaderComponent(m)
@@ -39,6 +38,11 @@ func (m *rootModel) GetCurrentProfile() *cli.Profile {
 
 func (m *rootModel) SetCurrentProfile(profile *cli.Profile) error {
 	m.global.Profiles.SelectedProfile = profile.Name
+
+	if err := m.GetCurrentInstallation().SetProfile(m.global, profile.Name); err != nil {
+		return errors.Wrap(err, "failed setting profile on installation")
+	}
+
 	return m.global.Save()
 }
 
@@ -48,11 +52,12 @@ func (m *rootModel) GetCurrentInstallation() *cli.Installation {
 
 func (m *rootModel) SetCurrentInstallation(installation *cli.Installation) error {
 	m.global.Installations.SelectedInstallation = installation.Path
+	m.global.Profiles.SelectedProfile = installation.Profile
 	return m.global.Save()
 }
 
 func (m *rootModel) GetAPIClient() graphql.Client {
-	return m.apiClient
+	return m.global.APIClient
 }
 
 func (m *rootModel) Size() tea.WindowSizeMsg {
@@ -73,6 +78,10 @@ func (m *rootModel) Height() int {
 
 func (m *rootModel) GetGlobal() *cli.GlobalContext {
 	return m.global
+}
+
+func (m *rootModel) ResolveModDependencies(constraints map[string]string) (map[string]cli.ModVersion, error) {
+	return m.dependencyResolver.ResolveModDependencies(constraints)
 }
 
 func RunTea(global *cli.GlobalContext) error {

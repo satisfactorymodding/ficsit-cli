@@ -3,7 +3,9 @@ package cmd
 import (
 	"io"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/pkg/errors"
@@ -88,6 +90,21 @@ func Execute() {
 }
 
 func init() {
+	var baseLocalDir string
+
+	switch runtime.GOOS {
+	case "windows":
+		baseLocalDir = os.Getenv("APPDATA")
+		break
+	case "linux":
+		baseLocalDir = path.Join(os.Getenv("HOME"), ".local", "share")
+		break
+	default:
+		panic("unsupported platform: " + runtime.GOOS)
+	}
+
+	viper.Set("base-local-dir", baseLocalDir)
+
 	baseCacheDir, err := os.UserCacheDir()
 	if err != nil {
 		panic(err)
@@ -101,6 +118,7 @@ func init() {
 	rootCmd.PersistentFlags().Bool("dry-run", false, "Dry-run. Do not save any changes")
 
 	rootCmd.PersistentFlags().String("cache-dir", filepath.Clean(filepath.Join(baseCacheDir, "ficsit")), "The cache directory")
+	rootCmd.PersistentFlags().String("local-dir", filepath.Clean(filepath.Join(baseLocalDir, "ficsit")), "The local directory")
 	rootCmd.PersistentFlags().String("profiles-file", "profiles.json", "The profiles file")
 	rootCmd.PersistentFlags().String("installations-file", "installations.json", "The installations file")
 
@@ -114,6 +132,7 @@ func init() {
 	_ = viper.BindPFlag("dry-run", rootCmd.PersistentFlags().Lookup("dry-run"))
 
 	_ = viper.BindPFlag("cache-dir", rootCmd.PersistentFlags().Lookup("cache-dir"))
+	_ = viper.BindPFlag("local-dir", rootCmd.PersistentFlags().Lookup("local-dir"))
 	_ = viper.BindPFlag("profiles-file", rootCmd.PersistentFlags().Lookup("profiles-file"))
 	_ = viper.BindPFlag("installations-file", rootCmd.PersistentFlags().Lookup("installations-file"))
 

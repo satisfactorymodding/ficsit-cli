@@ -44,7 +44,7 @@ type modsList struct {
 
 func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	// TODO Color mods that are installed in current profile
-	l := list.NewModel([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	l := list.New([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
 	l.SetShowFilter(true)
 	l.SetFilteringEnabled(true)
@@ -69,31 +69,28 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 		}
 	}
 
-	sortFieldList := list.NewModel([]list.Item{
-		utils.SimpleItem{
+	sortFieldList := list.New([]list.Item{
+		utils.SimpleItem[modsList]{
 			ItemTitle: "Name",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				m := currentModel.(modsList)
+			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
 				m.sortingField = "name"
 				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
 				m.list.ResetSelected()
 				return m, cmd
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[modsList]{
 			ItemTitle: "Last Version Date",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				m := currentModel.(modsList)
+			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
 				m.sortingField = "last_version_date"
 				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
 				m.list.ResetSelected()
 				return m, cmd
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[modsList]{
 			ItemTitle: "Creation Date",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				m := currentModel.(modsList)
+			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
 				m.sortingField = "created_at"
 				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
 				m.list.ResetSelected()
@@ -110,21 +107,19 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortFieldList.KeyMap.Quit.SetHelp("q", "back")
 	sortFieldList.DisableQuitKeybindings()
 
-	sortOrderList := list.NewModel([]list.Item{
-		utils.SimpleItem{
+	sortOrderList := list.New([]list.Item{
+		utils.SimpleItem[modsList]{
 			ItemTitle: "Ascending",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				m := currentModel.(modsList)
+			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
 				m.sortingOrder = sortOrderAsc
 				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
 				m.list.ResetSelected()
 				return m, cmd
 			},
 		},
-		utils.SimpleItem{
+		utils.SimpleItem[modsList]{
 			ItemTitle: "Descending",
-			Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-				m := currentModel.(modsList)
+			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
 				m.sortingOrder = sortOrderDesc
 				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
 				m.list.ResetSelected()
@@ -177,15 +172,17 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 			for i := 0; i < len(mods.GetMods.Mods); i++ {
 				currentOffset := offset
 				currentI := i
-				items = append(items, utils.SimpleItem{
-					ItemTitle: mods.GetMods.Mods[i].Name,
-					Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
-						mod := allMods[currentOffset+currentI]
-						return NewModMenu(root, currentModel, utils.Mod{
-							Name:      mod.Name,
-							ID:        mod.Id,
-							Reference: mod.Mod_reference,
-						}), nil
+				items = append(items, utils.SimpleItemExtra[modsList, ficsit.ModsGetModsModsMod]{
+					SimpleItem: utils.SimpleItem[modsList]{
+						ItemTitle: mods.GetMods.Mods[i].Name,
+						Activate: func(msg tea.Msg, currentModel modsList) (tea.Model, tea.Cmd) {
+							mod := allMods[currentOffset+currentI]
+							return NewModMenu(root, currentModel, utils.Mod{
+								Name:      mod.Name,
+								ID:        mod.Id,
+								Reference: mod.Mod_reference,
+							}), nil
+						},
 					},
 					Extra: allMods[currentOffset+currentI],
 				})
@@ -244,7 +241,7 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyEnter:
 			if m.showSortFieldList {
 				m.showSortFieldList = false
-				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItem)
+				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItem[modsList])
 				if ok {
 					return m.processActivation(i, msg)
 				}
@@ -253,16 +250,16 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if m.showSortOrderList {
 				m.showSortOrderList = false
-				i, ok := m.sortOrderList.SelectedItem().(utils.SimpleItem)
+				i, ok := m.sortOrderList.SelectedItem().(utils.SimpleItem[modsList])
 				if ok {
 					return m.processActivation(i, msg)
 				}
 				return m, nil
 			}
 
-			i, ok := m.list.SelectedItem().(utils.SimpleItem)
+			i, ok := m.list.SelectedItem().(utils.SimpleItemExtra[modsList, ficsit.ModsGetModsModsMod])
 			if ok {
-				return m.processActivation(i, msg)
+				return m.processActivation(i.SimpleItem, msg)
 			}
 			return m, nil
 		}
@@ -275,8 +272,6 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case items := <-m.items:
 			m.list.StopSpinner()
 			cmd := m.list.SetItems(items)
-			// Done to refresh keymap
-			m.list.SetFilteringEnabled(m.list.FilteringEnabled())
 			return m, cmd
 		default:
 			start := m.list.StartSpinner()
@@ -318,68 +313,29 @@ func sortItems(items []list.Item, field string, direction sortOrder) []list.Item
 
 	switch field {
 	case "last_version_date":
-		switch direction {
-		case sortOrderAsc:
-			sort.Slice(sortedItems, func(i, j int) bool {
-				a := sortedItems[i].(utils.SimpleItem)
-				b := sortedItems[j].(utils.SimpleItem)
-				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
-				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
-				return aMod.Last_version_date.Before(bMod.Last_version_date)
-			})
-		default:
-			sort.Slice(sortedItems, func(i, j int) bool {
-				a := sortedItems[i].(utils.SimpleItem)
-				b := sortedItems[j].(utils.SimpleItem)
-				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
-				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
-				return aMod.Last_version_date.After(bMod.Last_version_date)
-			})
-		}
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Last_version_date.Before(b.Extra.Last_version_date))
+		})
 	case "created_at":
-		switch direction {
-		case sortOrderAsc:
-			sort.Slice(sortedItems, func(i, j int) bool {
-				a := sortedItems[i].(utils.SimpleItem)
-				b := sortedItems[j].(utils.SimpleItem)
-				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
-				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
-				return aMod.Created_at.Before(bMod.Created_at)
-			})
-		default:
-			sort.Slice(sortedItems, func(i, j int) bool {
-				a := sortedItems[i].(utils.SimpleItem)
-				b := sortedItems[j].(utils.SimpleItem)
-				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
-				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
-				return aMod.Created_at.After(bMod.Created_at)
-			})
-		}
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Created_at.Before(b.Extra.Created_at))
+		})
 	case "name":
-		switch direction {
-		case sortOrderAsc:
-			sort.Slice(sortedItems, func(i, j int) bool {
-				a := sortedItems[i].(utils.SimpleItem)
-				b := sortedItems[j].(utils.SimpleItem)
-				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
-				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
-				return aMod.Name < bMod.Name
-			})
-		default:
-			sort.Slice(sortedItems, func(i, j int) bool {
-				a := sortedItems[i].(utils.SimpleItem)
-				b := sortedItems[j].(utils.SimpleItem)
-				aMod := a.Extra.(ficsit.ModsGetModsModsMod)
-				bMod := b.Extra.(ficsit.ModsGetModsModsMod)
-				return aMod.Name > bMod.Name
-			})
-		}
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Name < b.Extra.Name)
+		})
 	}
 
 	return sortedItems
 }
 
-func (m modsList) processActivation(item utils.SimpleItem, msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m modsList) processActivation(item utils.SimpleItem[modsList], msg tea.Msg) (tea.Model, tea.Cmd) {
 	if item.Activate != nil {
 		newModel, cmd := item.Activate(msg, m)
 		if newModel != nil || cmd != nil {
@@ -391,4 +347,11 @@ func (m modsList) processActivation(item utils.SimpleItem, msg tea.Msg) (tea.Mod
 		return m, nil
 	}
 	return m, nil
+}
+
+func ascDesc(order sortOrder, result bool) bool {
+	if order == sortOrderAsc {
+		return result
+	}
+	return !result
 }

@@ -32,22 +32,22 @@ type Installation struct {
 }
 
 func InitInstallations() (*Installations, error) {
-	cacheDir := viper.GetString("cache-dir")
+	localDir := viper.GetString("local-dir")
 
-	installationsFile := path.Join(cacheDir, viper.GetString("installations-file"))
+	installationsFile := path.Join(localDir, viper.GetString("installations-file"))
 	_, err := os.Stat(installationsFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, errors.Wrap(err, "failed to stat installations file")
 		}
 
-		_, err := os.Stat(cacheDir)
+		_, err := os.Stat(localDir)
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return nil, errors.Wrap(err, "failed to read cache directory")
 			}
 
-			err = os.MkdirAll(cacheDir, 0755)
+			err = os.MkdirAll(localDir, 0755)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to create cache directory")
 			}
@@ -85,7 +85,7 @@ func (i *Installations) Save() error {
 		return nil
 	}
 
-	installationsFile := path.Join(viper.GetString("cache-dir"), viper.GetString("installations-file"))
+	installationsFile := path.Join(viper.GetString("local-dir"), viper.GetString("installations-file"))
 
 	log.Info().Str("path", installationsFile).Msg("saving installations")
 
@@ -117,7 +117,7 @@ func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, 
 	}
 
 	found := false
-	for _, install := range ctx.Installations.Installations {
+	for _, install := range i.Installations {
 		stat, err := os.Stat(install.Path)
 		if err != nil {
 			continue
@@ -148,6 +148,24 @@ func (i *Installations) GetInstallation(installPath string) *Installation {
 	return nil
 }
 
+func (i *Installations) DeleteInstallation(installPath string) error {
+	found := -1
+	for j, install := range i.Installations {
+		if install.Path == installPath {
+			found = j
+			break
+		}
+	}
+
+	if found == -1 {
+		return errors.New("installation not found")
+	}
+
+	i.Installations = append(i.Installations[:found], i.Installations[found+1:]...)
+
+	return nil
+}
+
 func (i *Installation) Validate(ctx *GlobalContext) error {
 	found := false
 	for _, p := range ctx.Profiles.Profiles {
@@ -161,7 +179,38 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 		return errors.New("profile not found")
 	}
 
-	// TODO Validate installation path
+	foundExecutable := false
+
+	_, err := os.Stat(path.Join(i.Path, "FactoryGame.exe"))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return errors.Wrap(err, "failed reading FactoryGame.exe")
+		}
+	} else {
+		foundExecutable = true
+	}
+
+	_, err = os.Stat(path.Join(i.Path, "FactoryServer.sh"))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return errors.Wrap(err, "failed reading FactoryServer.sh")
+		}
+	} else {
+		foundExecutable = true
+	}
+
+	_, err = os.Stat(path.Join(i.Path, "FactoryServer.exe"))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return errors.Wrap(err, "failed reading FactoryServer.exe")
+		}
+	} else {
+		foundExecutable = true
+	}
+
+	if !foundExecutable {
+		return errors.New("did not find game executable in " + i.Path)
+	}
 
 	return nil
 }
@@ -170,6 +219,26 @@ func (i *Installation) Install(ctx *GlobalContext) error {
 	if err := i.Validate(ctx); err != nil {
 		return errors.Wrap(err, "failed to validate installation")
 	}
+
+	// TODO Install from lockfile
+
+	return nil
+}
+
+func (i *Installation) SetProfile(ctx *GlobalContext, profile string) error {
+	found := false
+	for _, p := range ctx.Profiles.Profiles {
+		if p.Name == profile {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("could not find profile: " + profile)
+	}
+
+	i.Profile = profile
 
 	return nil
 }

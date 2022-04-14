@@ -25,7 +25,7 @@ func NewRenameProfile(root components.RootModel, parent tea.Model, profileData *
 	model := renameProfile{
 		root:    root,
 		parent:  parent,
-		input:   textinput.NewModel(),
+		input:   textinput.New(),
 		title:   utils.NonListTitleStyle.Render(fmt.Sprintf("Rename Profile: %s", profileData.Name)),
 		oldName: profileData.Name,
 	}

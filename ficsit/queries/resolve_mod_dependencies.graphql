@@ -1,0 +1,15 @@
+query ResolveModDependencies ($filter: [ModVersionConstraint!]!) {
+    mods: resolveModVersions(filter: $filter) {
+        id
+        mod_reference
+        versions {
+            id
+            version
+            dependencies {
+                condition
+                mod_id
+                optional
+            }
+        }
+    }
+}

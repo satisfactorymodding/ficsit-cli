@@ -62,11 +62,11 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	model := modInfo{
 		root:     root,
 		viewport: viewport.Model{},
-		spinner:  spinner.NewModel(),
+		spinner:  spinner.New(),
 		parent:   parent,
 		modData:  make(chan ficsit.GetModGetMod),
 		ready:    false,
-		help:     help.NewModel(),
+		help:     help.New(),
 		keys: modInfoKeyMap{
 			Up:       key.NewBinding(key.WithHelp("↑/k", "move up")),
 			UpHalf:   key.NewBinding(key.WithHelp("u", "up half page")),

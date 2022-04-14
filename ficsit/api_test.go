@@ -20,9 +20,9 @@ func TestModVersions(t *testing.T) {
 	response, err := ModVersions(context.Background(), client, "SmartFoundations", VersionFilter{})
 	testza.AssertNoError(t, err)
 	testza.AssertNotNil(t, response)
-	testza.AssertNotNil(t, response.GetMod)
-	testza.AssertNotNil(t, response.GetMod.Versions)
-	testza.AssertNotZero(t, len(response.GetMod.Versions))
+	testza.AssertNotNil(t, response.Mod)
+	testza.AssertNotNil(t, response.Mod.Versions)
+	testza.AssertNotZero(t, len(response.Mod.Versions))
 }
 
 func TestMods(t *testing.T) {

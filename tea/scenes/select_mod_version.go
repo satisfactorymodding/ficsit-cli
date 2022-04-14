@@ -23,7 +23,7 @@ type selectModVersionList struct {
 }
 
 func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
-	l := list.NewModel([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	l := list.New([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.SetSpinner(spinner.MiniDot)
@@ -42,7 +42,7 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 
 	go func() {
 		items := make([]list.Item, 0)
-		allVersions := make([]ficsit.ModVersionsGetModVersionsVersion, 0)
+		allVersions := make([]ficsit.ModVersionsModVersionsVersion, 0)
 		offset := 0
 		for {
 			versions, err := ficsit.ModVersions(context.TODO(), root.GetAPIClient(), mod.ID, ficsit.VersionFilter{
@@ -56,29 +56,29 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 				panic(err) // TODO
 			}
 
-			if len(versions.GetMod.Versions) == 0 {
+			if len(versions.Mod.Versions) == 0 {
 				break
 			}
 
-			allVersions = append(allVersions, versions.GetMod.Versions...)
+			allVersions = append(allVersions, versions.Mod.Versions...)
 
-			for i := 0; i < len(versions.GetMod.Versions); i++ {
+			for i := 0; i < len(versions.Mod.Versions); i++ {
 				currentOffset := offset
 				currentI := i
-				items = append(items, utils.SimpleItem{
-					ItemTitle: versions.GetMod.Versions[i].Version,
-					Activate: func(msg tea.Msg, currentModel tea.Model) (tea.Model, tea.Cmd) {
+				items = append(items, utils.SimpleItem[selectModVersionList]{
+					ItemTitle: versions.Mod.Versions[i].Version,
+					Activate: func(msg tea.Msg, currentModel selectModVersionList) (tea.Model, tea.Cmd) {
 						version := allVersions[currentOffset+currentI]
 						err := root.GetCurrentProfile().AddMod(mod.Reference, version.Version)
 						if err != nil {
 							panic(err) // TODO
 						}
-						return currentModel.(selectModVersionList).parent, nil
+						return currentModel.parent, nil
 					},
 				})
 			}
 
-			offset += len(versions.GetMod.Versions)
+			offset += len(versions.Mod.Versions)
 		}
 
 		m.items <- items
@@ -104,7 +104,7 @@ func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Quit
 		case KeyEnter:
-			i, ok := m.list.SelectedItem().(utils.SimpleItem)
+			i, ok := m.list.SelectedItem().(utils.SimpleItem[selectModVersionList])
 			if ok {
 				if i.Activate != nil {
 					newModel, cmd := i.Activate(msg, m)
@@ -136,8 +136,6 @@ func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case items := <-m.items:
 			m.list.StopSpinner()
 			cmd := m.list.SetItems(items)
-			// Done to refresh keymap
-			m.list.SetFilteringEnabled(m.list.FilteringEnabled())
 			return m, cmd
 		default:
 			start := m.list.StartSpinner()

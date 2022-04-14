@@ -12,62 +12,50 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
-var _ tea.Model = (*profile)(nil)
+var _ tea.Model = (*installation)(nil)
 
-type profile struct {
-	root       components.RootModel
-	list       list.Model
-	parent     tea.Model
-	profile    *cli.Profile
-	hadRenamed bool
+type installation struct {
+	root         components.RootModel
+	list         list.Model
+	parent       tea.Model
+	installation *cli.Installation
+	hadRenamed   bool
 }
 
-func NewProfile(root components.RootModel, parent tea.Model, profileData *cli.Profile) tea.Model {
-	model := profile{
-		root:    root,
-		parent:  parent,
-		profile: profileData,
+func NewInstallation(root components.RootModel, parent tea.Model, installationData *cli.Installation) tea.Model {
+	model := installation{
+		root:         root,
+		parent:       parent,
+		installation: installationData,
 	}
 
 	items := []list.Item{
-		utils.SimpleItem[profile]{
+		utils.SimpleItem[installation]{
 			ItemTitle: "Select",
-			Activate: func(msg tea.Msg, currentModel profile) (tea.Model, tea.Cmd) {
-				if err := root.SetCurrentProfile(profileData); err != nil {
+			Activate: func(msg tea.Msg, currentModel installation) (tea.Model, tea.Cmd) {
+				if err := root.SetCurrentInstallation(installationData); err != nil {
 					panic(err) // TODO Handle Error
 				}
 
 				return currentModel.parent, nil
 			},
 		},
-	}
+		utils.SimpleItem[installation]{
+			ItemTitle: "Delete",
+			Activate: func(msg tea.Msg, currentModel installation) (tea.Model, tea.Cmd) {
+				if err := root.GetGlobal().Installations.DeleteInstallation(installationData.Path); err != nil {
+					panic(err) // TODO Handle Error
+				}
 
-	if profileData.Name != cli.DefaultProfileName {
-		items = append(items,
-			utils.SimpleItem[profile]{
-				ItemTitle: "Rename",
-				Activate: func(msg tea.Msg, currentModel profile) (tea.Model, tea.Cmd) {
-					newModel := NewRenameProfile(root, currentModel, profileData)
-					return newModel, newModel.Init()
-				},
+				return currentModel.parent, updateInstallationListCmd
 			},
-			utils.SimpleItem[profile]{
-				ItemTitle: "Delete",
-				Activate: func(msg tea.Msg, currentModel profile) (tea.Model, tea.Cmd) {
-					if err := root.GetGlobal().Profiles.DeleteProfile(profileData.Name); err != nil {
-						panic(err) // TODO Handle Error
-					}
-
-					return currentModel.parent, updateProfileListCmd
-				},
-			},
-		)
+		},
 	}
 
 	model.list = list.New(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)
 	model.list.SetFilteringEnabled(false)
-	model.list.Title = fmt.Sprintf("Profile: %s", profileData.Name)
+	model.list.Title = fmt.Sprintf("Installation: %s", installationData.Path)
 	model.list.Styles = utils.ListStyles
 	model.list.SetSize(model.list.Width(), model.list.Height())
 	model.list.StatusMessageLifetime = time.Second * 3
@@ -76,11 +64,11 @@ func NewProfile(root components.RootModel, parent tea.Model, profileData *cli.Pr
 	return model
 }
 
-func (m profile) Init() tea.Cmd {
+func (m installation) Init() tea.Cmd {
 	return nil
 }
 
-func (m profile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m installation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -91,14 +79,14 @@ func (m profile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.parent.Update(m.root.Size())
 
 				if m.hadRenamed {
-					return m.parent, updateProfileNamesCmd
+					return m.parent, updateInstallationNamesCmd
 				}
 
 				return m.parent, nil
 			}
 			return m, nil
 		case KeyEnter:
-			i, ok := m.list.SelectedItem().(utils.SimpleItem[profile])
+			i, ok := m.list.SelectedItem().(utils.SimpleItem[installation])
 			if ok {
 				if i.Activate != nil {
 					newModel, cmd := i.Activate(msg, m)
@@ -121,14 +109,14 @@ func (m profile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		top, right, bottom, left := lipgloss.NewStyle().Margin(2, 2).GetMargin()
 		m.list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
 		m.root.SetSize(msg)
-	case updateProfileNames:
+	case updateInstallationNames:
 		m.hadRenamed = true
-		m.list.Title = fmt.Sprintf("Profile: %s", m.profile.Name)
+		m.list.Title = fmt.Sprintf("Installation: %s", m.installation.Path)
 	}
 
 	return m, nil
 }
 
-func (m profile) View() string {
+func (m installation) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
 }

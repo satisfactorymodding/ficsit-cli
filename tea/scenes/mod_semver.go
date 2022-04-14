@@ -22,7 +22,7 @@ func NewModSemver(root components.RootModel, parent tea.Model, mod utils.Mod) te
 	model := modSemver{
 		root:   root,
 		parent: parent,
-		input:  textinput.NewModel(),
+		input:  textinput.New(),
 		title:  lipgloss.NewStyle().Padding(0, 2).Render(utils.TitleStyle.Render(mod.Name)),
 		mod:    mod,
 	}

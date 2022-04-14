@@ -8,34 +8,37 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
-var _ tea.Model = (*newProfile)(nil)
+var _ tea.Model = (*newInstallation)(nil)
 
-type newProfile struct {
+type newInstallation struct {
 	root   components.RootModel
 	parent tea.Model
 	input  textinput.Model
 	title  string
 }
 
-func NewNewProfile(root components.RootModel, parent tea.Model) tea.Model {
-	model := newProfile{
+func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
+	model := newInstallation{
 		root:   root,
 		parent: parent,
 		input:  textinput.New(),
-		title:  utils.NonListTitleStyle.Render("New Profile"),
+		title:  utils.NonListTitleStyle.Render("New Installation"),
 	}
 
 	model.input.Focus()
 	model.input.Width = root.Size().Width
 
+	// TODO Tab-completion for input field
+	// TODO Directory listing
+
 	return model
 }
 
-func (m newProfile) Init() tea.Cmd {
+func (m newInstallation) Init() tea.Cmd {
 	return nil
 }
 
-func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
@@ -44,11 +47,11 @@ func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyEscape:
 			return m.parent, nil
 		case KeyEnter:
-			if _, err := m.root.GetGlobal().Profiles.AddProfile(m.input.Value()); err != nil {
+			if _, err := m.root.GetGlobal().Installations.AddInstallation(m.root.GetGlobal(), m.input.Value(), m.root.GetGlobal().Profiles.SelectedProfile); err != nil {
 				panic(err) // TODO Handle Error
 			}
 
-			return m.parent, updateProfileListCmd
+			return m.parent, updateInstallationListCmd
 		default:
 			var cmd tea.Cmd
 			m.input, cmd = m.input.Update(msg)
@@ -61,7 +64,7 @@ func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m newProfile) View() string {
+func (m newInstallation) View() string {
 	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
 }
