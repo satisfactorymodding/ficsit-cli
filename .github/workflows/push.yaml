@@ -41,6 +41,9 @@ jobs:
       - name: Download GQL schema
         run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 
+      - name: Go Generate
+        run: go generate -tags tools -x ./...
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
