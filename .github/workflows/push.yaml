@@ -70,7 +70,7 @@ jobs:
         uses: CyberAndrii/setup-steamcmd@v1
 
       - name: Install Satisfactory Dedicated Server
-        run: steamcmd +login anonymous +force_install_dir $GITHUB_WORKSPACE/SatisfactoryDedicatedServer +app_update 1690800 validate +quit && ls -lR
+        run: steamcmd +login anonymous +force_install_dir $GITHUB_WORKSPACE/SatisfactoryDedicatedServer +app_update 1690800 validate +quit
 
       - name: Download GQL schema
         run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
