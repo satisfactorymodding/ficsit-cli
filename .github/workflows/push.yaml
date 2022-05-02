@@ -52,7 +52,10 @@ jobs:
 
   test:
     name: Test
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -77,5 +80,4 @@ jobs:
       - name: Test
         run: go test ./...
         env:
-          SF_DEDICATED_SERVER: $GITHUB_WORKSPACE/SatisfactoryDedicatedServer
-
+          SF_DEDICATED_SERVER: ${{ github.workspace }}/SatisfactoryDedicatedServer
