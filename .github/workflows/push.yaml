@@ -70,7 +70,7 @@ jobs:
         uses: CyberAndrii/setup-steamcmd@v1
 
       - name: Install Satisfactory Dedicated Server
-        run: steamcmd +login anonymous +force_install_dir $GITHUB_WORKSPACE/SatisfactoryDedicatedServer +app_update 1690800 validate +quit
+        run: steamcmd +login anonymous +force_install_dir ${{ github.workspace }}/SatisfactoryDedicatedServer +app_update 1690800 validate +quit
 
       - name: List directory (linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
