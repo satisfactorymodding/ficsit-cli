@@ -5,6 +5,8 @@ query ResolveModDependencies ($filter: [ModVersionConstraint!]!) {
         versions {
             id
             version
+            link
+            hash
             dependencies {
                 condition
                 mod_id

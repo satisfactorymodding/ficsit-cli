@@ -50,7 +50,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if viper.GetString("log-file") != "" {
-			logFile, err := os.OpenFile(viper.GetString("log-file"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			logFile, err := os.OpenFile(viper.GetString("log-file"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
 
 			if err != nil {
 				return errors.Wrap(err, "failed to open log file")
@@ -122,7 +122,8 @@ func init() {
 	rootCmd.PersistentFlags().String("profiles-file", "profiles.json", "The profiles file")
 	rootCmd.PersistentFlags().String("installations-file", "installations.json", "The installations file")
 
-	rootCmd.PersistentFlags().String("api", "https://api.ficsit.app/v2/query", "URL for API")
+	rootCmd.PersistentFlags().String("api-base", "https://api.ficsit.app", "URL for API")
+	rootCmd.PersistentFlags().String("graphql-api", "/v2/query", "Path for GraphQL API")
 
 	_ = viper.BindPFlag("log", rootCmd.PersistentFlags().Lookup("log"))
 	_ = viper.BindPFlag("log-file", rootCmd.PersistentFlags().Lookup("log-file"))
@@ -136,5 +137,6 @@ func init() {
 	_ = viper.BindPFlag("profiles-file", rootCmd.PersistentFlags().Lookup("profiles-file"))
 	_ = viper.BindPFlag("installations-file", rootCmd.PersistentFlags().Lookup("installations-file"))
 
-	_ = viper.BindPFlag("api", rootCmd.PersistentFlags().Lookup("api"))
+	_ = viper.BindPFlag("api-base", rootCmd.PersistentFlags().Lookup("api-base"))
+	_ = viper.BindPFlag("graphql-api", rootCmd.PersistentFlags().Lookup("graphql-api"))
 }

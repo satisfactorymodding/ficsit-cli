@@ -80,10 +80,6 @@ func (m *rootModel) GetGlobal() *cli.GlobalContext {
 	return m.global
 }
 
-func (m *rootModel) ResolveModDependencies(constraints map[string]string) (map[string]cli.ModVersion, error) {
-	return m.dependencyResolver.ResolveModDependencies(constraints)
-}
-
 func RunTea(global *cli.GlobalContext) error {
 	if err := tea.NewProgram(scenes.NewMainMenu(newModel(global)), tea.WithAltScreen(), tea.WithMouseCellMotion()).Start(); err != nil {
 		return errors.Wrap(err, "internal tea error")

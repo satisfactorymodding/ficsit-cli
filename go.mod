@@ -19,6 +19,8 @@ require (
 	github.com/spf13/viper v1.11.0
 )
 
+replace github.com/Masterminds/semver/v3 v3.1.1 => github.com/Vilsol/semver/v3 v3.1.2-0.20220414201711-64ef71d40f9a
+
 require (
 	github.com/agnivade/levenshtein v1.1.0 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect

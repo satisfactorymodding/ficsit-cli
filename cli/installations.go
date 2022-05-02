@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+
+	"github.com/satisfactorymodding/ficsit-cli/utils"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -102,8 +105,14 @@ func (i *Installations) Save() error {
 }
 
 func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, profile string) (*Installation, error) {
+	absolutePath, err := filepath.Abs(installPath)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "could not resolve absolute path of: "+installPath)
+	}
+
 	installation := &Installation{
-		Path:    installPath,
+		Path:    absolutePath,
 		Profile: profile,
 	}
 
@@ -220,7 +229,66 @@ func (i *Installation) Install(ctx *GlobalContext) error {
 		return errors.Wrap(err, "failed to validate installation")
 	}
 
-	// TODO Install from lockfile
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return err
+	}
+
+	lockfilePath := path.Join(i.Path, platform.LockfilePath)
+
+	var lockFile *LockFile
+	lockFileJSON, err := os.ReadFile(lockfilePath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return errors.Wrap(err, "failed reading lockfile")
+		}
+	} else {
+		if err := json.Unmarshal(lockFileJSON, &lockFile); err != nil {
+			return errors.Wrap(err, "failed parsing lockfile")
+		}
+	}
+
+	resolver := NewDependencyResolver(ctx.APIClient)
+
+	gameVersion, err := i.GetGameVersion(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to detect game version")
+	}
+
+	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(resolver, lockFile, gameVersion)
+
+	if err != nil {
+		return errors.Wrap(err, "could not resolve mods")
+	}
+
+	modsDirectory := path.Join(i.Path, "FactoryGame", "Mods")
+	if err := os.MkdirAll(modsDirectory, 0777); err != nil {
+		return errors.Wrap(err, "failed creating Mods directory")
+	}
+
+	for modReference, version := range lockfile {
+		// Only install if a link is provided, otherwise assume mod is already installed
+		if version.Link != "" {
+			reader, size, err := utils.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link)
+			if err != nil {
+				return errors.Wrap(err, "failed to download "+modReference+" from: "+version.Link)
+			}
+
+			if err := utils.ExtractMod(reader, size, path.Join(modsDirectory, modReference)); err != nil {
+				return errors.Wrap(err, "could not extract "+modReference)
+			}
+		}
+	}
+
+	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
+
+	if err != nil {
+		return errors.Wrap(err, "failed to serialize lockfile json")
+	}
+
+	if err := os.WriteFile(lockfilePath, marshaledLockfile, 0777); err != nil {
+		return errors.Wrap(err, "failed writing lockfile")
+	}
 
 	return nil
 }
@@ -241,4 +309,64 @@ func (i *Installation) SetProfile(ctx *GlobalContext, profile string) error {
 	i.Profile = profile
 
 	return nil
+}
+
+type gameVersionFile struct {
+	MajorVersion         int    `json:"MajorVersion"`
+	MinorVersion         int    `json:"MinorVersion"`
+	PatchVersion         int    `json:"PatchVersion"`
+	Changelist           int    `json:"Changelist"`
+	CompatibleChangelist int    `json:"CompatibleChangelist"`
+	IsLicenseeVersion    int    `json:"IsLicenseeVersion"`
+	IsPromotedBuild      int    `json:"IsPromotedBuild"`
+	BranchName           string `json:"BranchName"`
+	BuildID              string `json:"BuildId"`
+}
+
+func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
+	if err := i.Validate(ctx); err != nil {
+		return 0, errors.Wrap(err, "failed to validate installation")
+	}
+
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	fullPath := path.Join(i.Path, platform.VersionPath)
+	file, err := os.ReadFile(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, errors.Wrap(err, "could not find game version file")
+		}
+		return 0, errors.Wrap(err, "failed reading version file")
+	}
+
+	var versionData gameVersionFile
+	if err := json.Unmarshal(file, &versionData); err != nil {
+		return 0, errors.Wrap(err, "failed to parse version file json")
+	}
+
+	return versionData.Changelist, nil
+}
+
+func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
+	if err := i.Validate(ctx); err != nil {
+		return nil, errors.Wrap(err, "failed to validate installation")
+	}
+
+	for _, platform := range platforms {
+		fullPath := path.Join(i.Path, platform.VersionPath)
+		_, err := os.Stat(fullPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			} else {
+				return nil, errors.Wrap(err, "failed detecting version file")
+			}
+		}
+		return &platform, nil
+	}
+
+	return nil, errors.New("no platform detected")
 }

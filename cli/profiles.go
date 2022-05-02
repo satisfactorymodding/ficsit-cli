@@ -47,7 +47,7 @@ type Profile struct {
 
 type ProfileMod struct {
 	Version string `json:"version"`
-	Enabled bool   `json:"enabled"` // TODO Implement
+	Enabled bool   `json:"enabled"`
 }
 
 func InitProfiles() (*Profiles, error) {
@@ -244,6 +244,7 @@ func (p *Profile) AddMod(reference string, version string) error {
 
 	p.Mods[reference] = ProfileMod{
 		Version: version,
+		Enabled: true,
 	}
 
 	return nil
@@ -274,31 +275,18 @@ func (p *Profile) HasMod(reference string) bool {
 // An optional lockfile can be passed if one exists.
 //
 // Returns an error if resolution is impossible.
-func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile) (*LockFile, error) {
+func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile, gameVersion int) (LockFile, error) {
 	toResolve := make(map[string]string)
 	for modReference, mod := range p.Mods {
-		toResolve[modReference] = mod.Version
+		if mod.Enabled {
+			toResolve[modReference] = mod.Version
+		}
 	}
 
-	dependencies, err := resolver.ResolveModDependencies(toResolve)
+	resultLockfile, err := resolver.ResolveModDependencies(toResolve, lockFile, gameVersion)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed resolving profile dependencies")
 	}
 
-	resultLockFile := LockFile(make(map[string]LockedMod))
-
-	for modReference, version := range dependencies {
-		modDependencies := make(map[string]string)
-
-		for _, dependency := range version.Dependencies {
-			modDependencies[dependency.ModReference] = dependency.Constraint
-		}
-
-		resultLockFile[modReference] = LockedMod{
-			Version:      version.Version,
-			Dependencies: modDependencies,
-		}
-	}
-
-	return &resultLockFile, nil
+	return resultLockfile, nil
 }

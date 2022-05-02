@@ -53,7 +53,7 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 			})
 
 			if err != nil {
-				panic(err) // TODO
+				panic(err) // TODO Handle Error
 			}
 
 			if len(versions.Mod.Versions) == 0 {
@@ -71,7 +71,7 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 						version := allVersions[currentOffset+currentI]
 						err := root.GetCurrentProfile().AddMod(mod.Reference, version.Version)
 						if err != nil {
-							panic(err) // TODO
+							panic(err) // TODO Handle Error
 						}
 						return currentModel.parent, nil
 					},

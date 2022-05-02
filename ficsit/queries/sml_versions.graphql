@@ -5,10 +5,7 @@ query SMLVersions {
         sml_versions {
             id
             version
-            link
             satisfactory_version
-            stability
-            updated_at
         }
     }
 }

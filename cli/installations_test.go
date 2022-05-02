@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
@@ -27,11 +28,13 @@ func TestAddInstallation(t *testing.T) {
 	testza.AssertNoError(t, profile.AddMod("AreaActions", ">=1.6.5"))
 	testza.AssertNoError(t, profile.AddMod("ArmorModules__Modpack_All", ">=1.4.1"))
 
-	// TODO Re-enable conditionally
-	//installation, err := ctx.Installations.AddInstallation(ctx, "../testdata/server", profileName)
-	//testza.AssertNoError(t, err)
-	//testza.AssertNotNil(t, installation)
-	//
-	//err = installation.Install(ctx)
-	//testza.AssertNoError(t, err)
+	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
+	if serverLocation != "" {
+		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
+		testza.AssertNoError(t, err)
+		testza.AssertNotNil(t, installation)
+
+		err = installation.Install(ctx)
+		testza.AssertNoError(t, err)
+	}
 }
