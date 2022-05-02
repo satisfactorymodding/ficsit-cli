@@ -75,7 +75,11 @@ func (r *resolvingInstance) Step() error {
 				smlVersionConstraint, _ := semver.NewConstraint(constraint)
 				if existingSML, ok := r.OutputLock[id]; ok {
 					if !smlVersionConstraint.Check(semver.MustParse(existingSML.Version)) {
-						return errors.New("failed resolving dependencies. requires different versions of " + id)
+						return errors.Errorf("mod %s version %s does not match constraint %s",
+							id,
+							existingSML.Version,
+							constraint,
+						)
 					}
 				}
 
