@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.3
 	github.com/Khan/genqlient v0.4.0
-	github.com/MarvinJWendt/testza v0.4.1
+	github.com/MarvinJWendt/testza v0.4.2
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/charmbracelet/bubbles v0.10.3
@@ -30,6 +30,7 @@ require (
 	github.com/atomicgo/cursor v0.0.1 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/charmbracelet/harmonica v0.1.0 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect

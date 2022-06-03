@@ -14,7 +14,34 @@ import (
 	"github.com/spf13/viper"
 )
 
-func DownloadOrCache(cacheKey string, hash string, url string) (r io.ReaderAt, size int64, err error) {
+type Progresser struct {
+	io.Reader
+	total   int64
+	running int64
+	updates chan GenericUpdate
+}
+
+func (pt *Progresser) Read(p []byte) (int, error) {
+	n, err := pt.Reader.Read(p)
+	pt.running += int64(n)
+
+	if err == nil {
+		if pt.updates != nil {
+			select {
+			case pt.updates <- GenericUpdate{Progress: float64(pt.running) / float64(pt.total)}:
+			default:
+			}
+		}
+	}
+
+	return n, errors.Wrap(err, "failed to read")
+}
+
+type GenericUpdate struct {
+	Progress float64
+}
+
+func DownloadOrCache(cacheKey string, hash string, url string, updates chan GenericUpdate) (r io.ReaderAt, size int64, err error) {
 	downloadCache := path.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0777); err != nil {
 		if !os.IsExist(err) {
@@ -74,7 +101,13 @@ func DownloadOrCache(cacheKey string, hash string, url string) (r io.ReaderAt, s
 		return nil, 0, fmt.Errorf("bad status: %s on url: %s", resp.Status, url)
 	}
 
-	_, err = io.Copy(out, resp.Body)
+	progresser := &Progresser{
+		Reader:  resp.Body,
+		total:   resp.ContentLength,
+		updates: updates,
+	}
+
+	_, err = io.Copy(out, progresser)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed writing file to disk")
 	}
@@ -82,6 +115,13 @@ func DownloadOrCache(cacheKey string, hash string, url string) (r io.ReaderAt, s
 	f, err := os.Open(location)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to open file: "+location)
+	}
+
+	if updates != nil {
+		select {
+		case updates <- GenericUpdate{Progress: 1}:
+		default:
+		}
 	}
 
 	return f, resp.ContentLength, nil
@@ -96,7 +136,7 @@ func SHA256Data(f io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func ExtractMod(f io.ReaderAt, size int64, location string) error {
+func ExtractMod(f io.ReaderAt, size int64, location string, updates chan GenericUpdate) error {
 	if err := os.MkdirAll(location, 0777); err != nil {
 		if !os.IsExist(err) {
 			return errors.Wrap(err, "failed to create mod directory: "+location)
@@ -116,7 +156,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string) error {
 		return errors.Wrap(err, "failed to read file as zip")
 	}
 
-	for _, file := range reader.File {
+	for i, file := range reader.File {
 		if !file.FileInfo().IsDir() {
 			outFileLocation := path.Join(location, file.Name)
 
@@ -124,20 +164,44 @@ func ExtractMod(f io.ReaderAt, size int64, location string) error {
 				return errors.Wrap(err, "failed to create mod directory: "+location)
 			}
 
-			outFile, err := os.OpenFile(outFileLocation, os.O_CREATE|os.O_RDWR, 0644)
-			if err != nil {
-				return errors.Wrap(err, "failed to write to file: "+location)
-			}
-
-			inFile, err := file.Open()
-			if err != nil {
-				return errors.Wrap(err, "failed to process mod zip")
-			}
-
-			if _, err := io.Copy(outFile, inFile); err != nil {
-				return errors.Wrap(err, "failed to write to file: "+location)
+			if err := writeZipFile(outFileLocation, file); err != nil {
+				return err
 			}
 		}
+
+		if updates != nil {
+			select {
+			case updates <- GenericUpdate{Progress: float64(i) / float64(len(reader.File)-1)}:
+			default:
+			}
+		}
+	}
+
+	if updates != nil {
+		select {
+		case updates <- GenericUpdate{Progress: 1}:
+		default:
+		}
+	}
+
+	return nil
+}
+
+func writeZipFile(outFileLocation string, file *zip.File) error {
+	outFile, err := os.OpenFile(outFileLocation, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
+	}
+
+	defer outFile.Close()
+
+	inFile, err := file.Open()
+	if err != nil {
+		return errors.Wrap(err, "failed to process mod zip")
+	}
+
+	if _, err := io.Copy(outFile, inFile); err != nil {
+		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
 	}
 
 	return nil

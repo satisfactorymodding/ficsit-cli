@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -30,9 +31,11 @@ type modInfo struct {
 	spinner  spinner.Model
 	parent   tea.Model
 	modData  chan ficsit.GetModGetMod
+	modError chan string
 	ready    bool
 	help     help.Model
 	keys     modInfoKeyMap
+	error    *components.ErrorComponent
 }
 
 type modInfoKeyMap struct {
@@ -65,6 +68,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 		spinner:  spinner.New(),
 		parent:   parent,
 		modData:  make(chan ficsit.GetModGetMod),
+		modError: make(chan string),
 		ready:    false,
 		help:     help.New(),
 		keys: modInfoKeyMap{
@@ -86,11 +90,13 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 		fullMod, err := ficsit.GetMod(context.TODO(), root.GetAPIClient(), mod.ID)
 
 		if err != nil {
-			panic(err) // TODO Handle Error
+			model.modError <- err.Error()
+			return
 		}
 
 		if fullMod == nil {
-			panic("mod is nil") // TODO Handle Error
+			model.modError <- "unknown error (mod is nil)"
+			return
 		}
 
 		model.modData <- fullMod.GetMod
@@ -204,6 +210,10 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
+		case err := <-m.modError:
+			errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
+			m.error = errorComponent
+			return m, cmd
 		default:
 			return m, utils.Ticker()
 		}
@@ -213,6 +223,11 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m modInfo) View() string {
+	if m.error != nil {
+		helpBar := lipgloss.NewStyle().Padding(1, 2).Render(m.help.View(m.keys))
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), (*m.error).View(), m.viewport.View(), helpBar)
+	}
+
 	if m.viewport.Height == 0 {
 		spinnerView := lipgloss.NewStyle().Padding(0, 2, 1).Render(m.spinner.View() + " Loading...")
 		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), spinnerView)

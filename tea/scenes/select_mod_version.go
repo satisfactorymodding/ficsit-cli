@@ -3,7 +3,9 @@ package scenes
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,6 +22,8 @@ type selectModVersionList struct {
 	list   list.Model
 	parent tea.Model
 	items  chan []list.Item
+	err    chan string
+	error  *components.ErrorComponent
 }
 
 func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
@@ -33,11 +37,24 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 	l.KeyMap.Quit.SetHelp("q", "back")
 	l.DisableQuitKeybindings()
 
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
+		}
+	}
+
+	l.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
+		}
+	}
+
 	m := &selectModVersionList{
 		root:   root,
 		list:   l,
 		parent: parent,
 		items:  make(chan []list.Item),
+		err:    make(chan string),
 	}
 
 	go func() {
@@ -53,7 +70,8 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 			})
 
 			if err != nil {
-				panic(err) // TODO Handle Error
+				m.err <- err.Error()
+				return
 			}
 
 			if len(versions.Mod.Versions) == 0 {
@@ -71,7 +89,9 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 						version := allVersions[currentOffset+currentI]
 						err := root.GetCurrentProfile().AddMod(mod.Reference, version.Version)
 						if err != nil {
-							panic(err) // TODO Handle Error
+							errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+							currentModel.error = errorComponent
+							return currentModel, cmd
 						}
 						return currentModel.parent, nil
 					},
@@ -137,6 +157,10 @@ func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.list.StopSpinner()
 			cmd := m.list.SetItems(items)
 			return m, cmd
+		case err := <-m.err:
+			errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
+			m.error = errorComponent
+			return m, cmd
 		default:
 			start := m.list.StartSpinner()
 			return m, tea.Batch(utils.Ticker(), start)
@@ -147,5 +171,12 @@ func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m selectModVersionList) View() string {
+	if m.error != nil {
+		err := (*m.error).View()
+		m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, m.list.View())
+	}
+
+	m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height())
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
 }

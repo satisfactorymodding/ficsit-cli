@@ -1,6 +1,8 @@
 package scenes
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -16,6 +18,7 @@ type modSemver struct {
 	input  textinput.Model
 	title  string
 	mod    utils.Mod
+	error  *components.ErrorComponent
 }
 
 func NewModSemver(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
@@ -49,7 +52,9 @@ func (m modSemver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyEnter:
 			err := m.root.GetCurrentProfile().AddMod(m.mod.Reference, m.input.Value())
 			if err != nil {
-				panic(err) // TODO Handle Error
+				errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+				m.error = errorComponent
+				return m, cmd
 			}
 			return m.parent, nil
 		default:
@@ -59,6 +64,8 @@ func (m modSemver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		m.root.SetSize(msg)
+	case components.ErrorComponentTimeoutMsg:
+		m.error = nil
 	}
 
 	return m, nil
@@ -66,5 +73,10 @@ func (m modSemver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m modSemver) View() string {
 	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
+
+	if m.error != nil {
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, (*m.error).View(), inputView)
+	}
+
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
 }

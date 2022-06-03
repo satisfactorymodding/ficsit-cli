@@ -95,10 +95,8 @@ func init() {
 	switch runtime.GOOS {
 	case "windows":
 		baseLocalDir = os.Getenv("APPDATA")
-		break
 	case "linux":
 		baseLocalDir = path.Join(os.Getenv("HOME"), ".local", "share")
-		break
 	default:
 		panic("unsupported platform: " + runtime.GOOS)
 	}

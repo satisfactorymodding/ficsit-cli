@@ -6,6 +6,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 
@@ -224,28 +226,82 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 	return nil
 }
 
-func (i *Installation) Install(ctx *GlobalContext) error {
-	if err := i.Validate(ctx); err != nil {
-		return errors.Wrap(err, "failed to validate installation")
-	}
+var (
+	lockFileCleaner = regexp.MustCompile(`[^a-zA-Z\d]]`)
+	matchFirstCap   = regexp.MustCompile(`(.)([A-Z][a-z]+)`)
+	matchAllCap     = regexp.MustCompile(`([a-z\d])([A-Z])`)
+)
 
+func (i *Installation) LockFilePath(ctx *GlobalContext) (string, error) {
 	platform, err := i.GetPlatform(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	lockfilePath := path.Join(i.Path, platform.LockfilePath)
+	lockFileName := ctx.Profiles.Profiles[i.Profile].Name
+	lockFileName = matchFirstCap.ReplaceAllString(lockFileName, "${1}_${2}")
+	lockFileName = matchAllCap.ReplaceAllString(lockFileName, "${1}_${2}")
+	lockFileName = lockFileCleaner.ReplaceAllLiteralString(lockFileName, "-")
+	lockFileName = strings.ToLower(lockFileName) + "-lock.json"
+
+	return path.Join(i.Path, platform.LockfilePath, lockFileName), nil
+}
+
+func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
+	lockfilePath, err := i.LockFilePath(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	var lockFile *LockFile
 	lockFileJSON, err := os.ReadFile(lockfilePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return errors.Wrap(err, "failed reading lockfile")
+			return nil, errors.Wrap(err, "failed reading lockfile")
 		}
 	} else {
 		if err := json.Unmarshal(lockFileJSON, &lockFile); err != nil {
-			return errors.Wrap(err, "failed parsing lockfile")
+			return nil, errors.Wrap(err, "failed parsing lockfile")
 		}
+	}
+
+	return lockFile, nil
+}
+
+func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) error {
+	lockfilePath, err := i.LockFilePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
+
+	if err != nil {
+		return errors.Wrap(err, "failed to serialize lockfile json")
+	}
+
+	if err := os.WriteFile(lockfilePath, marshaledLockfile, 0777); err != nil {
+		return errors.Wrap(err, "failed writing lockfile")
+	}
+
+	return nil
+}
+
+type InstallUpdate struct {
+	ModName          string
+	OverallProgress  float64
+	DownloadProgress float64
+	ExtractProgress  float64
+}
+
+func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) error {
+	if err := i.Validate(ctx); err != nil {
+		return errors.Wrap(err, "failed to validate installation")
+	}
+
+	lockFile, err := i.LockFile(ctx)
+	if err != nil {
+		return err
 	}
 
 	resolver := NewDependencyResolver(ctx.APIClient)
@@ -266,28 +322,79 @@ func (i *Installation) Install(ctx *GlobalContext) error {
 		return errors.Wrap(err, "failed creating Mods directory")
 	}
 
-	for modReference, version := range lockfile {
-		// Only install if a link is provided, otherwise assume mod is already installed
-		if version.Link != "" {
-			reader, size, err := utils.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link)
-			if err != nil {
-				return errors.Wrap(err, "failed to download "+modReference+" from: "+version.Link)
-			}
+	dir, err := os.ReadDir(modsDirectory)
+	if err != nil {
+		return errors.Wrap(err, "failed to read mods directory")
+	}
 
-			if err := utils.ExtractMod(reader, size, path.Join(modsDirectory, modReference)); err != nil {
-				return errors.Wrap(err, "could not extract "+modReference)
+	for _, entry := range dir {
+		if entry.IsDir() {
+			if _, ok := lockfile[entry.Name()]; !ok {
+				if err := os.RemoveAll(path.Join(modsDirectory, entry.Name())); err != nil {
+					return errors.Wrap(err, "failed to delete mod directory")
+				}
 			}
 		}
 	}
 
-	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
+	completed := 0
+	for modReference, version := range lockfile {
+		// Only install if a link is provided, otherwise assume mod is already installed
+		if version.Link != "" {
+			downloading := true
 
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize lockfile json")
+			var genericUpdates chan utils.GenericUpdate
+			if updates != nil {
+				genericUpdates = make(chan utils.GenericUpdate)
+
+				go func() {
+					update := InstallUpdate{
+						ModName:          modReference,
+						OverallProgress:  float64(completed) / float64(len(lockfile)),
+						DownloadProgress: 0,
+						ExtractProgress:  0,
+					}
+
+					select {
+					case updates <- update:
+					default:
+					}
+
+					for up := range genericUpdates {
+						if downloading {
+							update.DownloadProgress = up.Progress
+						} else {
+							update.DownloadProgress = 1
+							update.ExtractProgress = up.Progress
+						}
+
+						select {
+						case updates <- update:
+						default:
+						}
+					}
+				}()
+			}
+
+			reader, size, err := utils.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link, genericUpdates)
+			if err != nil {
+				return errors.Wrap(err, "failed to download "+modReference+" from: "+version.Link)
+			}
+
+			downloading = false
+
+			if err := utils.ExtractMod(reader, size, path.Join(modsDirectory, modReference), genericUpdates); err != nil {
+				return errors.Wrap(err, "could not extract "+modReference)
+			}
+
+			close(genericUpdates)
+		}
+
+		completed++
 	}
 
-	if err := os.WriteFile(lockfilePath, marshaledLockfile, 0777); err != nil {
-		return errors.Wrap(err, "failed writing lockfile")
+	if err := i.WriteLockFile(ctx, lockfile); err != nil {
+		return err
 	}
 
 	return nil

@@ -14,8 +14,9 @@ import (
 var _ tea.Model = (*mainMenu)(nil)
 
 type mainMenu struct {
-	root components.RootModel
-	list list.Model
+	root  components.RootModel
+	list  list.Model
+	error *components.ErrorComponent
 }
 
 func NewMainMenu(root components.RootModel) tea.Model {
@@ -48,8 +49,15 @@ func NewMainMenu(root components.RootModel) tea.Model {
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Apply Changes",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				// TODO Apply changes to all changed profiles
-				return nil, nil
+				if err := root.GetGlobal().Save(); err != nil {
+					log.Error().Err(err).Msg(ErrorFailedAddMod)
+					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+					currentModel.error = errorComponent
+					return currentModel, cmd
+				}
+
+				newModel := NewApply(root, currentModel)
+				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem[mainMenu]{
@@ -57,7 +65,8 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
 					log.Error().Err(err).Msg(ErrorFailedAddMod)
-					cmd := currentModel.list.NewStatusMessage(ErrorFailedAddMod)
+					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+					currentModel.error = errorComponent
 					return currentModel, cmd
 				}
 				return nil, nil
@@ -76,8 +85,6 @@ func NewMainMenu(root components.RootModel) tea.Model {
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = "Main Menu"
 	model.list.Styles = utils.ListStyles
-	model.list.SetSize(model.list.Width(), model.list.Height())
-	model.list.StatusMessageLifetime = time.Second * 3
 	model.list.DisableQuitKeybindings()
 
 	return model
@@ -119,11 +126,20 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		top, right, bottom, left := lipgloss.NewStyle().Margin(2, 2).GetMargin()
 		m.list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
 		m.root.SetSize(msg)
+	case components.ErrorComponentTimeoutMsg:
+		m.error = nil
 	}
 
 	return m, nil
 }
 
 func (m mainMenu) View() string {
+	if m.error != nil {
+		err := (*m.error).View()
+		m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, m.list.View())
+	}
+
+	m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height())
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
 }

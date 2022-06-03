@@ -1,6 +1,8 @@
 package scenes
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -15,6 +17,7 @@ type newProfile struct {
 	parent tea.Model
 	input  textinput.Model
 	title  string
+	error  *components.ErrorComponent
 }
 
 func NewNewProfile(root components.RootModel, parent tea.Model) tea.Model {
@@ -45,7 +48,9 @@ func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.parent, nil
 		case KeyEnter:
 			if _, err := m.root.GetGlobal().Profiles.AddProfile(m.input.Value()); err != nil {
-				panic(err) // TODO Handle Error
+				errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+				m.error = errorComponent
+				return m, cmd
 			}
 
 			return m.parent, updateProfileListCmd
@@ -56,6 +61,8 @@ func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		m.root.SetSize(msg)
+	case components.ErrorComponentTimeoutMsg:
+		m.error = nil
 	}
 
 	return m, nil
@@ -63,5 +70,10 @@ func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m newProfile) View() string {
 	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
+
+	if m.error != nil {
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, (*m.error).View(), inputView)
+	}
+
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
 }

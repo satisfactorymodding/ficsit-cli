@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,6 +21,7 @@ type profile struct {
 	parent     tea.Model
 	profile    *cli.Profile
 	hadRenamed bool
+	error      *components.ErrorComponent
 }
 
 func NewProfile(root components.RootModel, parent tea.Model, profileData *cli.Profile) tea.Model {
@@ -34,7 +36,9 @@ func NewProfile(root components.RootModel, parent tea.Model, profileData *cli.Pr
 			ItemTitle: "Select",
 			Activate: func(msg tea.Msg, currentModel profile) (tea.Model, tea.Cmd) {
 				if err := root.SetCurrentProfile(profileData); err != nil {
-					panic(err) // TODO Handle Error
+					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+					currentModel.error = errorComponent
+					return currentModel, cmd
 				}
 
 				return currentModel.parent, nil
@@ -55,7 +59,9 @@ func NewProfile(root components.RootModel, parent tea.Model, profileData *cli.Pr
 				ItemTitle: "Delete",
 				Activate: func(msg tea.Msg, currentModel profile) (tea.Model, tea.Cmd) {
 					if err := root.GetGlobal().Profiles.DeleteProfile(profileData.Name); err != nil {
-						panic(err) // TODO Handle Error
+						errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+						currentModel.error = errorComponent
+						return currentModel, cmd
 					}
 
 					return currentModel.parent, updateProfileListCmd
@@ -72,6 +78,18 @@ func NewProfile(root components.RootModel, parent tea.Model, profileData *cli.Pr
 	model.list.SetSize(model.list.Width(), model.list.Height())
 	model.list.StatusMessageLifetime = time.Second * 3
 	model.list.DisableQuitKeybindings()
+
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
+		}
+	}
+
+	model.list.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
+		}
+	}
 
 	return model
 }
@@ -124,11 +142,20 @@ func (m profile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case updateProfileNames:
 		m.hadRenamed = true
 		m.list.Title = fmt.Sprintf("Profile: %s", m.profile.Name)
+	case components.ErrorComponentTimeoutMsg:
+		m.error = nil
 	}
 
 	return m, nil
 }
 
 func (m profile) View() string {
+	if m.error != nil {
+		err := (*m.error).View()
+		m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, m.list.View())
+	}
+
+	m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height())
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
 }

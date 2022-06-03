@@ -31,6 +31,7 @@ func NewProfiles(root components.RootModel, parent tea.Model) tea.Model {
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
 			key.NewBinding(key.WithHelp("n", "new profile")),
 		}
 	}

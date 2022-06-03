@@ -1,6 +1,8 @@
 package scenes
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -15,6 +17,7 @@ type newInstallation struct {
 	parent tea.Model
 	input  textinput.Model
 	title  string
+	error  *components.ErrorComponent
 }
 
 func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
@@ -30,6 +33,7 @@ func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 
 	// TODO Tab-completion for input field
 	// TODO Directory listing
+	// TODO SSH/FTP/SFTP support
 
 	return model
 }
@@ -48,7 +52,9 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.parent, nil
 		case KeyEnter:
 			if _, err := m.root.GetGlobal().Installations.AddInstallation(m.root.GetGlobal(), m.input.Value(), m.root.GetGlobal().Profiles.SelectedProfile); err != nil {
-				panic(err) // TODO Handle Error
+				errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+				m.error = errorComponent
+				return m, cmd
 			}
 
 			return m.parent, updateInstallationListCmd
@@ -59,6 +65,8 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		m.root.SetSize(msg)
+	case components.ErrorComponentTimeoutMsg:
+		m.error = nil
 	}
 
 	return m, nil
@@ -66,5 +74,10 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m newInstallation) View() string {
 	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
+
+	if m.error != nil {
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, (*m.error).View(), inputView)
+	}
+
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
 }

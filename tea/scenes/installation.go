@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,6 +21,7 @@ type installation struct {
 	parent       tea.Model
 	installation *cli.Installation
 	hadRenamed   bool
+	error        *components.ErrorComponent
 }
 
 func NewInstallation(root components.RootModel, parent tea.Model, installationData *cli.Installation) tea.Model {
@@ -34,7 +36,9 @@ func NewInstallation(root components.RootModel, parent tea.Model, installationDa
 			ItemTitle: "Select",
 			Activate: func(msg tea.Msg, currentModel installation) (tea.Model, tea.Cmd) {
 				if err := root.SetCurrentInstallation(installationData); err != nil {
-					panic(err) // TODO Handle Error
+					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+					currentModel.error = errorComponent
+					return currentModel, cmd
 				}
 
 				return currentModel.parent, nil
@@ -44,7 +48,9 @@ func NewInstallation(root components.RootModel, parent tea.Model, installationDa
 			ItemTitle: "Delete",
 			Activate: func(msg tea.Msg, currentModel installation) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Installations.DeleteInstallation(installationData.Path); err != nil {
-					panic(err) // TODO Handle Error
+					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+					currentModel.error = errorComponent
+					return currentModel, cmd
 				}
 
 				return currentModel.parent, updateInstallationListCmd
@@ -60,6 +66,18 @@ func NewInstallation(root components.RootModel, parent tea.Model, installationDa
 	model.list.SetSize(model.list.Width(), model.list.Height())
 	model.list.StatusMessageLifetime = time.Second * 3
 	model.list.DisableQuitKeybindings()
+
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
+		}
+	}
+
+	model.list.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
+		}
+	}
 
 	return model
 }
@@ -112,11 +130,20 @@ func (m installation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case updateInstallationNames:
 		m.hadRenamed = true
 		m.list.Title = fmt.Sprintf("Installation: %s", m.installation.Path)
+	case components.ErrorComponentTimeoutMsg:
+		m.error = nil
 	}
 
 	return m, nil
 }
 
 func (m installation) View() string {
+	if m.error != nil {
+		err := (*m.error).View()
+		m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, m.list.View())
+	}
+
+	m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height())
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
 }

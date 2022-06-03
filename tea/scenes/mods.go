@@ -3,6 +3,7 @@ package scenes
 import (
 	"context"
 	"sort"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 
@@ -40,6 +41,9 @@ type modsList struct {
 
 	showSortOrderList bool
 	sortOrderList     list.Model
+
+	err   chan string
+	error *components.ErrorComponent
 }
 
 func NewMods(root components.RootModel, parent tea.Model) tea.Model {
@@ -57,6 +61,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
 			key.NewBinding(key.WithHelp("s", "sort")),
 			key.NewBinding(key.WithHelp("o", "order")),
 		}
@@ -64,6 +69,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 
 	l.AdditionalFullHelpKeys = func() []key.Binding {
 		return []key.Binding{
+			key.NewBinding(key.WithHelp("q", "back")),
 			key.NewBinding(key.WithHelp("s", "sort")),
 			key.NewBinding(key.WithHelp("o", "order")),
 		}
@@ -145,6 +151,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 		sortingOrder:  sortOrderDesc,
 		sortFieldList: sortFieldList,
 		sortOrderList: sortOrderList,
+		err:           make(chan string),
 	}
 
 	go func() {
@@ -160,7 +167,8 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 			})
 
 			if err != nil {
-				panic(err) // TODO Handle Error
+				m.err <- err.Error()
+				return
 			}
 
 			if len(mods.GetMods.Mods) == 0 {
@@ -273,6 +281,10 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.list.StopSpinner()
 			cmd := m.list.SetItems(items)
 			return m, cmd
+		case err := <-m.err:
+			errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
+			m.error = errorComponent
+			return m, cmd
 		default:
 			start := m.list.StartSpinner()
 			return m, tea.Batch(utils.Ticker(), start)
@@ -295,16 +307,23 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m modsList) View() string {
-	var bottom string
+	var bottomList list.Model
 	if m.showSortFieldList {
-		bottom = m.sortFieldList.View()
+		bottomList = m.sortFieldList
 	} else if m.showSortOrderList {
-		bottom = m.sortOrderList.View()
+		bottomList = m.sortOrderList
 	} else {
-		bottom = m.list.View()
+		bottomList = m.list
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), bottom)
+	if m.error != nil {
+		err := (*m.error).View()
+		bottomList.SetSize(bottomList.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, bottomList.View())
+	}
+
+	bottomList.SetSize(bottomList.Width(), m.root.Size().Height-m.root.Height())
+	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), bottomList.View())
 }
 
 func sortItems(items []list.Item, field string, direction sortOrder) []list.Item {
