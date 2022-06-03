@@ -34,11 +34,11 @@ func (pt *Progresser) Read(p []byte) (int, error) {
 		}
 	}
 
-	if err != io.EOF {
-		return n, errors.Wrap(err, "failed to read")
+	if err == io.EOF {
+		return n, io.EOF
 	}
 
-	return n, err
+	return n, errors.Wrap(err, "failed to read")
 }
 
 type GenericUpdate struct {
