@@ -376,6 +376,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 				}()
 			}
 
+			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("downloading mod")
 			reader, size, err := utils.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link, genericUpdates)
 			if err != nil {
 				return errors.Wrap(err, "failed to download "+modReference+" from: "+version.Link)
@@ -383,11 +384,14 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 
 			downloading = false
 
+			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("extracting mod")
 			if err := utils.ExtractMod(reader, size, path.Join(modsDirectory, modReference), genericUpdates); err != nil {
 				return errors.Wrap(err, "could not extract "+modReference)
 			}
 
-			close(genericUpdates)
+			if genericUpdates != nil {
+				close(genericUpdates)
+			}
 		}
 
 		completed++
