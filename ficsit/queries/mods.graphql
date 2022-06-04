@@ -8,6 +8,10 @@ query Mods ($filter: ModFilter) {
             mod_reference
             last_version_date
             created_at
+            views
+            downloads
+            popularity
+            hotness
         }
     }
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -105,6 +106,11 @@ func InitProfiles() (*Profiles, error) {
 							}
 
 							for _, item := range smmProfile.Items {
+								// Explicitly ignore bootstrapper
+								if strings.ToLower(item.ID) == "bootstrapper" {
+									continue
+								}
+
 								profile.Mods[item.ID] = ProfileMod{
 									Version: ">=0.0.0",
 									Enabled: item.Enabled,

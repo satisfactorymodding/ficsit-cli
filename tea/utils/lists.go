@@ -26,10 +26,6 @@ func (n SimpleItem[any]) FilterValue() string {
 	return n.ItemTitle
 }
 
-func (n SimpleItem[any]) GetTitle() string {
-	return n.ItemTitle
-}
-
 func (n SimpleItem[any]) Description() string {
 	return ""
 }
