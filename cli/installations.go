@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -39,7 +38,7 @@ type Installation struct {
 func InitInstallations() (*Installations, error) {
 	localDir := viper.GetString("local-dir")
 
-	installationsFile := path.Join(localDir, viper.GetString("installations-file"))
+	installationsFile := filepath.Join(localDir, viper.GetString("installations-file"))
 	_, err := os.Stat(installationsFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -90,7 +89,7 @@ func (i *Installations) Save() error {
 		return nil
 	}
 
-	installationsFile := path.Join(viper.GetString("local-dir"), viper.GetString("installations-file"))
+	installationsFile := filepath.Join(viper.GetString("local-dir"), viper.GetString("installations-file"))
 
 	log.Info().Str("path", installationsFile).Msg("saving installations")
 
@@ -192,7 +191,7 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 
 	foundExecutable := false
 
-	_, err := os.Stat(path.Join(i.Path, "FactoryGame.exe"))
+	_, err := os.Stat(filepath.Join(i.Path, "FactoryGame.exe"))
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return errors.Wrap(err, "failed reading FactoryGame.exe")
@@ -201,7 +200,7 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 		foundExecutable = true
 	}
 
-	_, err = os.Stat(path.Join(i.Path, "FactoryServer.sh"))
+	_, err = os.Stat(filepath.Join(i.Path, "FactoryServer.sh"))
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return errors.Wrap(err, "failed reading FactoryServer.sh")
@@ -210,7 +209,7 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 		foundExecutable = true
 	}
 
-	_, err = os.Stat(path.Join(i.Path, "FactoryServer.exe"))
+	_, err = os.Stat(filepath.Join(i.Path, "FactoryServer.exe"))
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return errors.Wrap(err, "failed reading FactoryServer.exe")
@@ -244,7 +243,7 @@ func (i *Installation) LockFilePath(ctx *GlobalContext) (string, error) {
 	lockFileName = lockFileCleaner.ReplaceAllLiteralString(lockFileName, "-")
 	lockFileName = strings.ToLower(lockFileName) + "-lock.json"
 
-	return path.Join(i.Path, platform.LockfilePath, lockFileName), nil
+	return filepath.Join(i.Path, platform.LockfilePath, lockFileName), nil
 }
 
 func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
@@ -317,7 +316,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		return errors.Wrap(err, "could not resolve mods")
 	}
 
-	modsDirectory := path.Join(i.Path, "FactoryGame", "Mods")
+	modsDirectory := filepath.Join(i.Path, "FactoryGame", "Mods")
 	if err := os.MkdirAll(modsDirectory, 0777); err != nil {
 		return errors.Wrap(err, "failed creating Mods directory")
 	}
@@ -330,7 +329,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 	for _, entry := range dir {
 		if entry.IsDir() {
 			if _, ok := lockfile[entry.Name()]; !ok {
-				if err := os.RemoveAll(path.Join(modsDirectory, entry.Name())); err != nil {
+				if err := os.RemoveAll(filepath.Join(modsDirectory, entry.Name())); err != nil {
 					return errors.Wrap(err, "failed to delete mod directory")
 				}
 			}
@@ -385,7 +384,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 			downloading = false
 
 			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("extracting mod")
-			if err := utils.ExtractMod(reader, size, path.Join(modsDirectory, modReference), genericUpdates); err != nil {
+			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), genericUpdates); err != nil {
 				return errors.Wrap(err, "could not extract "+modReference)
 			}
 
@@ -444,7 +443,7 @@ func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
 		return 0, err
 	}
 
-	fullPath := path.Join(i.Path, platform.VersionPath)
+	fullPath := filepath.Join(i.Path, platform.VersionPath)
 	file, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -467,7 +466,7 @@ func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 	}
 
 	for _, platform := range platforms {
-		fullPath := path.Join(i.Path, platform.VersionPath)
+		fullPath := filepath.Join(i.Path, platform.VersionPath)
 		_, err := os.Stat(fullPath)
 		if err != nil {
 			if os.IsNotExist(err) {

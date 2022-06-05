@@ -2,7 +2,7 @@ package scenes
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -101,9 +101,9 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			newPath := ""
 			_, err := os.ReadDir(m.input.Value())
 			if err == nil {
-				newPath = path.Join(m.input.Value(), newDir)
+				newPath = filepath.Join(m.input.Value(), newDir)
 			} else {
-				newPath = path.Join(path.Dir(m.input.Value()), newDir)
+				newPath = filepath.Join(filepath.Dir(m.input.Value()), newDir)
 			}
 
 			m.input.SetValue(newPath + string(os.PathSeparator))
@@ -150,7 +150,7 @@ func (m newInstallation) View() string {
 	}
 
 	if len(m.dirList.Items()) > 0 {
-		m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory))
+		m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory)-1)
 
 		return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.dirList.View())
 	}
@@ -162,9 +162,9 @@ func getDirItems(inputValue string) []list.Item {
 	filter := ""
 	dir, err := os.ReadDir(inputValue)
 	if err != nil {
-		dir, err = os.ReadDir(path.Dir(inputValue))
+		dir, err = os.ReadDir(filepath.Dir(inputValue))
 		if err == nil {
-			filter = path.Base(inputValue)
+			filter = filepath.Base(inputValue)
 		}
 	}
 

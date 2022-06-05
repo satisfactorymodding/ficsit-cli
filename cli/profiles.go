@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -54,7 +54,7 @@ type ProfileMod struct {
 func InitProfiles() (*Profiles, error) {
 	localDir := viper.GetString("local-dir")
 
-	profilesFile := path.Join(localDir, viper.GetString("profiles-file"))
+	profilesFile := filepath.Join(localDir, viper.GetString("profiles-file"))
 	_, err := os.Stat(profilesFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -78,14 +78,14 @@ func InitProfiles() (*Profiles, error) {
 		}
 
 		// Import profiles from SMM if already exists
-		smmProfilesDir := path.Join(viper.GetString("base-local-dir"), "SatisfactoryModManager", "profiles")
+		smmProfilesDir := filepath.Join(viper.GetString("base-local-dir"), "SatisfactoryModManager", "profiles")
 		_, err = os.Stat(smmProfilesDir)
 		if err == nil {
 			dir, err := os.ReadDir(smmProfilesDir)
 			if err == nil {
 				for _, entry := range dir {
 					if entry.IsDir() {
-						manifestFile := path.Join(smmProfilesDir, entry.Name(), "manifest.json")
+						manifestFile := filepath.Join(smmProfilesDir, entry.Name(), "manifest.json")
 						_, err := os.Stat(manifestFile)
 						if err == nil {
 							manifestBytes, err := os.ReadFile(manifestFile)
@@ -169,7 +169,7 @@ func (p *Profiles) Save() error {
 		return nil
 	}
 
-	profilesFile := path.Join(viper.GetString("local-dir"), viper.GetString("profiles-file"))
+	profilesFile := filepath.Join(viper.GetString("local-dir"), viper.GetString("profiles-file"))
 
 	log.Info().Str("path", profilesFile).Msg("saving profiles")
 

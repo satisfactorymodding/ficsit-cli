@@ -167,9 +167,13 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m mainMenu) View() string {
-	banner := lipgloss.NewStyle().Margin(2, 0, 0, 2).Render(m.banner)
+	header := m.root.View()
 
-	header := lipgloss.JoinVertical(lipgloss.Left, banner, m.root.View())
+	banner := lipgloss.NewStyle().Margin(2, 0, 0, 2).Render(m.banner)
+	totalHeight := m.root.Height() + len(m.list.Items()) + lipgloss.Height(banner) + 4
+	if totalHeight < m.root.Size().Height {
+		header = lipgloss.JoinVertical(lipgloss.Left, banner, m.root.View())
+	}
 
 	if m.error != nil {
 		err := (*m.error).View()

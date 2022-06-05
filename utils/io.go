@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -46,14 +46,14 @@ type GenericUpdate struct {
 }
 
 func DownloadOrCache(cacheKey string, hash string, url string, updates chan GenericUpdate) (r io.ReaderAt, size int64, err error) {
-	downloadCache := path.Join(viper.GetString("cache-dir"), "downloadCache")
+	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0777); err != nil {
 		if !os.IsExist(err) {
 			return nil, 0, errors.Wrap(err, "failed creating download cache")
 		}
 	}
 
-	location := path.Join(downloadCache, cacheKey)
+	location := filepath.Join(downloadCache, cacheKey)
 
 	stat, err := os.Stat(location)
 	if err == nil {
@@ -162,9 +162,9 @@ func ExtractMod(f io.ReaderAt, size int64, location string, updates chan Generic
 
 	for i, file := range reader.File {
 		if !file.FileInfo().IsDir() {
-			outFileLocation := path.Join(location, file.Name)
+			outFileLocation := filepath.Join(location, file.Name)
 
-			if err := os.MkdirAll(path.Dir(outFileLocation), 0777); err != nil {
+			if err := os.MkdirAll(filepath.Dir(outFileLocation), 0777); err != nil {
 				return errors.Wrap(err, "failed to create mod directory: "+location)
 			}
 

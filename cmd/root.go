@@ -3,7 +3,6 @@ package cmd
 import (
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -96,7 +95,7 @@ func init() {
 	case "windows":
 		baseLocalDir = os.Getenv("APPDATA")
 	case "linux":
-		baseLocalDir = path.Join(os.Getenv("HOME"), ".local", "share")
+		baseLocalDir = filepath.Join(os.Getenv("HOME"), ".local", "share")
 	default:
 		panic("unsupported platform: " + runtime.GOOS)
 	}
