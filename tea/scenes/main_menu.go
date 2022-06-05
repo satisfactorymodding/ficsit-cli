@@ -1,6 +1,7 @@
 package scenes
 
 import (
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -14,14 +15,46 @@ import (
 var _ tea.Model = (*mainMenu)(nil)
 
 type mainMenu struct {
-	root  components.RootModel
-	list  list.Model
-	error *components.ErrorComponent
+	root   components.RootModel
+	list   list.Model
+	error  *components.ErrorComponent
+	banner string
 }
 
+const logoBanner = `
+███████╗██╗ ██████╗███████╗██╗████████╗
+██╔════╝██║██╔════╝██╔════╝██║╚══██╔══╝
+█████╗  ██║██║     ███████╗██║   ██║
+██╔══╝  ██║██║     ╚════██║██║   ██║
+██║     ██║╚██████╗███████║██║   ██║
+╚═╝     ╚═╝ ╚═════╝╚══════╝╚═╝   ╚═╝`
+
 func NewMainMenu(root components.RootModel) tea.Model {
+	trimmedBanner := strings.TrimSpace(logoBanner)
+	var finalBanner strings.Builder
+
+	for i, s := range strings.Split(trimmedBanner, "\n") {
+		if i > 0 {
+			finalBanner.WriteRune('\n')
+		}
+
+		foreground := utils.LogoForegroundStyles[i]
+		background := utils.LogoBackgroundStyles[i]
+
+		for _, c := range s {
+			if c == '█' {
+				finalBanner.WriteString(foreground.Render("█"))
+			} else if c != ' ' {
+				finalBanner.WriteString(background.Render(string(c)))
+			} else {
+				finalBanner.WriteRune(c)
+			}
+		}
+	}
+
 	model := mainMenu{
-		root: root,
+		root:   root,
+		banner: finalBanner.String(),
 	}
 
 	items := []list.Item{
@@ -134,12 +167,16 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m mainMenu) View() string {
+	banner := lipgloss.NewStyle().Margin(2, 0, 0, 2).Render(m.banner)
+
+	header := lipgloss.JoinVertical(lipgloss.Left, banner, m.root.View())
+
 	if m.error != nil {
 		err := (*m.error).View()
-		m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
-		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, m.list.View())
+		m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header)-lipgloss.Height(err))
+		return lipgloss.JoinVertical(lipgloss.Left, header, err, m.list.View())
 	}
 
-	m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height())
-	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
+	m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header))
+	return lipgloss.JoinVertical(lipgloss.Left, header, m.list.View())
 }

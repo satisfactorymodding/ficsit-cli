@@ -143,11 +143,11 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m newInstallation) View() string {
 	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
 
-	if m.error != nil {
-		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, (*m.error).View(), inputView)
-	}
-
 	mandatory := lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
+
+	if m.error != nil {
+		return lipgloss.JoinVertical(lipgloss.Left, mandatory, (*m.error).View())
+	}
 
 	if len(m.dirList.Items()) > 0 {
 		m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory))

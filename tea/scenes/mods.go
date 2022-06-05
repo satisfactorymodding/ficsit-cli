@@ -61,7 +61,7 @@ func (n SimpleItemMod[any]) Title() string {
 		profile := n.Context.Profiles.Profiles[n.Context.Profiles.SelectedProfile]
 		if profile != nil {
 			if profile.HasMod(n.Mod.Mod_reference) {
-				return lipgloss.NewStyle().Foreground(lipgloss.Color("34")).Render("✓ " + n.ItemTitle)
+				return lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ " + n.ItemTitle)
 			}
 		}
 	}
