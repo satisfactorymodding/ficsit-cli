@@ -21,7 +21,7 @@ type modVersionMenu struct {
 }
 
 func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
-	model := modMenu{
+	model := modVersionMenu{
 		root:   root,
 		parent: parent,
 	}
@@ -108,7 +108,6 @@ func (m modVersionMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					newModel, cmd := i.Activate(msg, m)
 					if newModel != nil || cmd != nil {
 						if newModel == nil {
-							newModel.Update(m.root.Size())
 							newModel = m
 						}
 						return newModel, cmd

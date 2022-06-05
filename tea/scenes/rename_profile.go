@@ -40,7 +40,7 @@ func NewRenameProfile(root components.RootModel, parent tea.Model, profileData *
 }
 
 func (m renameProfile) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
 }
 
 func (m renameProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -68,6 +68,10 @@ func (m renameProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.root.SetSize(msg)
 	case components.ErrorComponentTimeoutMsg:
 		m.error = nil
+	default:
+		var cmd tea.Cmd
+		m.input, cmd = m.input.Update(msg)
+		return m, cmd
 	}
 
 	return m, nil

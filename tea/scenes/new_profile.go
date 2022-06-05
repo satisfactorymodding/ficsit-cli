@@ -35,7 +35,7 @@ func NewNewProfile(root components.RootModel, parent tea.Model) tea.Model {
 }
 
 func (m newProfile) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
 }
 
 func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -63,6 +63,10 @@ func (m newProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.root.SetSize(msg)
 	case components.ErrorComponentTimeoutMsg:
 		m.error = nil
+	default:
+		var cmd tea.Cmd
+		m.input, cmd = m.input.Update(msg)
+		return m, cmd
 	}
 
 	return m, nil
@@ -75,5 +79,12 @@ func (m newProfile) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, (*m.error).View(), inputView)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
+	infoBox := lipgloss.NewStyle().
+		BorderStyle(lipgloss.ThickBorder()).
+		BorderForeground(lipgloss.Color("39")).
+		Padding(0, 1).
+		Margin(0, 0, 0, 2).
+		Render("Enter the name of the profile")
+
+	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView, infoBox)
 }

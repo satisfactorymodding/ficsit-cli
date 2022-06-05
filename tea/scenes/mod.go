@@ -124,7 +124,6 @@ func (m modMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					newModel, cmd := i.Activate(msg, m)
 					if newModel != nil || cmd != nil {
 						if newModel == nil {
-							newModel.Update(m.root.Size())
 							newModel = m
 						}
 						return newModel, cmd

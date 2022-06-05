@@ -1,18 +1,21 @@
 package scenes
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/sahilm/fuzzy"
-
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/truncate"
+	"github.com/sahilm/fuzzy"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
@@ -29,7 +32,9 @@ type newInstallation struct {
 }
 
 func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
-	l := list.New([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	listDelegate := CustomDelegate{ItemDelegate: utils.NewItemDelegate()}
+
+	l := list.New([]list.Item{}, listDelegate, root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.SetSpinner(spinner.MiniDot)
@@ -58,7 +63,7 @@ func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 }
 
 func (m newInstallation) Init() tea.Cmd {
-	return nil
+	return textinput.Blink
 }
 
 func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -96,7 +101,7 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 
-			newDir := newDirItem.(utils.SimpleItem[newInstallation]).ItemTitle
+			newDir := newDirItem.(utils.SimpleItemExtra[newInstallation, string]).ItemTitle
 
 			newPath := ""
 			_, err := os.ReadDir(m.input.Value())
@@ -135,6 +140,10 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.root.SetSize(msg)
 	case components.ErrorComponentTimeoutMsg:
 		m.error = nil
+	default:
+		var cmd tea.Cmd
+		m.input, cmd = m.input.Update(msg)
+		return m, cmd
 	}
 
 	return m, nil
@@ -151,12 +160,21 @@ func (m newInstallation) View() string {
 
 	if len(m.dirList.Items()) > 0 {
 		m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory)-1)
-
 		return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.dirList.View())
 	}
 
-	return mandatory
+	infoBox := lipgloss.NewStyle().
+		BorderStyle(lipgloss.ThickBorder()).
+		BorderForeground(lipgloss.Color("39")).
+		Padding(0, 1).
+		Margin(0, 0, 0, 2).
+		Render("Enter the path to the satisfactory installation")
+
+	return lipgloss.JoinVertical(lipgloss.Left, mandatory, infoBox)
 }
+
+// I know this is awful, but beats re-implementing the entire list model
+var globalMatches []fuzzy.Match
 
 func getDirItems(inputValue string) []list.Item {
 	filter := ""
@@ -170,22 +188,81 @@ func getDirItems(inputValue string) []list.Item {
 
 	newItems := make([]list.Item, 0)
 
-	if inputValue != "" {
-		for _, entry := range dir {
-			if entry.IsDir() {
-				if filter != "" {
-					matches := fuzzy.Find(filter, []string{entry.Name()})
-					if len(matches) == 0 {
-						continue
-					}
-				}
+	globalMatches = nil
 
-				newItems = append(newItems, utils.SimpleItem[newInstallation]{
-					ItemTitle: entry.Name(),
+	if inputValue != "" {
+		if filter != "" {
+			dirNames := make([]string, 0)
+			for _, entry := range dir {
+				if entry.IsDir() {
+					dirNames = append(dirNames, entry.Name())
+				}
+			}
+
+			matches := fuzzy.Find(filter, dirNames)
+			sort.Stable(matches)
+
+			for _, match := range matches {
+				newItems = append(newItems, utils.SimpleItemExtra[newInstallation, string]{
+					SimpleItem: utils.SimpleItem[newInstallation]{
+						ItemTitle: match.Str,
+					},
+					Extra: match.Str,
 				})
+			}
+
+			globalMatches = matches
+		} else {
+			for _, entry := range dir {
+				if entry.IsDir() {
+					newItems = append(newItems, utils.SimpleItemExtra[newInstallation, string]{
+						SimpleItem: utils.SimpleItem[newInstallation]{
+							ItemTitle: entry.Name(),
+						},
+						Extra: entry.Name(),
+					})
+				}
 			}
 		}
 	}
 
 	return newItems
+}
+
+type CustomDelegate struct {
+	list.ItemDelegate
+}
+
+func (c CustomDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	realItem := item.(utils.SimpleItemExtra[newInstallation, string])
+	realDelegate := c.ItemDelegate.(list.DefaultDelegate)
+
+	title := realItem.Title()
+
+	s := &realDelegate.Styles
+
+	if m.Width() <= 0 {
+		return
+	}
+
+	textwidth := uint(m.Width() - s.NormalTitle.GetPaddingLeft() - s.NormalTitle.GetPaddingRight())
+	title = truncate.StringWithTail(title, textwidth, "…")
+
+	if index == m.Index() {
+		if globalMatches != nil {
+			unmatched := s.SelectedTitle.Inline(true)
+			matched := unmatched.Copy().Inherit(s.FilterMatch)
+			title = lipgloss.StyleRunes(title, globalMatches[index].MatchedIndexes, matched, unmatched)
+		}
+		title = s.SelectedTitle.Render(title)
+	} else {
+		if globalMatches != nil {
+			unmatched := s.NormalTitle.Inline(true)
+			matched := unmatched.Copy().Inherit(s.FilterMatch)
+			title = lipgloss.StyleRunes(title, globalMatches[index].MatchedIndexes, matched, unmatched)
+		}
+		title = s.NormalTitle.Render(title)
+	}
+
+	fmt.Fprintf(w, "%s", title)
 }
