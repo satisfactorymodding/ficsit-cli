@@ -60,11 +60,16 @@ var rootCmd = &cobra.Command{
 
 		log.Logger = zerolog.New(io.MultiWriter(writers...)).With().Timestamp().Logger()
 
+		log.Info().
+			Str("version", viper.GetString("version")).
+			Str("commit", viper.GetString("commit")).
+			Msg("initialized")
+
 		return nil
 	},
 }
 
-func Execute() {
+func Execute(version string, commit string) {
 	// Execute tea as default
 	cmd, _, err := rootCmd.Find(os.Args[1:])
 
@@ -82,6 +87,9 @@ func Execute() {
 	if cli {
 		viper.Set("quiet", true)
 	}
+
+	viper.Set("version", version)
+	viper.Set("commit", commit)
 
 	if err := rootCmd.Execute(); err != nil {
 		panic(err)

@@ -1,9 +1,21 @@
 package utils
 
-func CopyMap[T comparable, M any](m map[T]M) map[T]M {
-	m2 := make(map[T]M, len(m))
-	for k, v := range m {
-		m2[k] = v
+import (
+	"encoding/json"
+
+	"github.com/pkg/errors"
+)
+
+func Copy[T any](obj T) (*T, error) {
+	marshal, err := json.Marshal(obj)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal object")
 	}
-	return m2
+
+	out := new(T)
+	if err := json.Unmarshal(marshal, out); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal object")
+	}
+
+	return out, nil
 }

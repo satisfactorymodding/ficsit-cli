@@ -43,7 +43,7 @@ func (m *rootModel) SetCurrentProfile(profile *cli.Profile) error {
 		return errors.Wrap(err, "failed setting profile on installation")
 	}
 
-	return m.global.Save()
+	return nil
 }
 
 func (m *rootModel) GetCurrentInstallation() *cli.Installation {
@@ -53,7 +53,7 @@ func (m *rootModel) GetCurrentInstallation() *cli.Installation {
 func (m *rootModel) SetCurrentInstallation(installation *cli.Installation) error {
 	m.global.Installations.SelectedInstallation = installation.Path
 	m.global.Profiles.SelectedProfile = installation.Profile
-	return m.global.Save()
+	return nil
 }
 
 func (m *rootModel) GetAPIClient() graphql.Client {

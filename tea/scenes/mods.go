@@ -2,17 +2,18 @@ package scenes
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"sort"
 	"time"
 
-	"github.com/satisfactorymodding/ficsit-cli/cli"
-
 	"github.com/charmbracelet/bubbles/key"
-
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/truncate"
+	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -29,11 +30,16 @@ const (
 
 const modsTitle = "Mods"
 
+type listUpdate struct {
+	Items []list.Item
+	Done  bool
+}
+
 type modsList struct {
 	root   components.RootModel
 	list   list.Model
 	parent tea.Model
-	items  chan []list.Item
+	items  chan listUpdate
 
 	sortingField string
 	sortingOrder sortOrder
@@ -48,29 +54,11 @@ type modsList struct {
 	error *components.ErrorComponent
 }
 
-var _ list.DefaultItem = (*SimpleItemMod[tea.Model])(nil)
-
-type SimpleItemMod[T tea.Model] struct {
-	utils.SimpleItem[T]
-	Mod     ficsit.ModsGetModsModsMod
-	Context *cli.GlobalContext
-}
-
-func (n SimpleItemMod[any]) Title() string {
-	if n.Context != nil {
-		profile := n.Context.Profiles.Profiles[n.Context.Profiles.SelectedProfile]
-		if profile != nil {
-			if profile.HasMod(n.Mod.Mod_reference) {
-				return lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ " + n.ItemTitle)
-			}
-		}
-	}
-
-	return n.ItemTitle
-}
-
 func NewMods(root components.RootModel, parent tea.Model) tea.Model {
-	l := list.New([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	l := list.New([]list.Item{}, ModsListDelegate{
+		ItemDelegate: utils.NewItemDelegate(),
+		Context:      root.GetGlobal(),
+	}, root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
 	l.SetShowFilter(true)
 	l.SetFilteringEnabled(true)
@@ -98,67 +86,81 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	}
 
 	sortFieldList := list.New([]list.Item{
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Name",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingField = "name"
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Name",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = "name"
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Last Version Date",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingField = "last_version_date"
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Last Version Date",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = "last_version_date"
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Creation Date",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingField = "created_at"
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Creation Date",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = "created_at"
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Downloads",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingField = "downloads"
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Downloads",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = "downloads"
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Views",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingField = "views"
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Views",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = "views"
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Popularity (recent downloads)",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingField = "popularity"
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Popularity (recent downloads)",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = "popularity"
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Hotness (recent views)",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingField = "hotness"
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Hotness (recent views)",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = "hotness"
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
 	}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
@@ -172,22 +174,26 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortFieldList.DisableQuitKeybindings()
 
 	sortOrderList := list.New([]list.Item{
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Ascending",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingOrder = sortOrderAsc
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Ascending",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingOrder = sortOrderAsc
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
-		utils.SimpleItem[modsList]{
-			ItemTitle: "Descending",
-			Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-				m.sortingOrder = sortOrderDesc
-				cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
-				m.list.ResetSelected()
-				return m, cmd
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+
+			SimpleItem: utils.SimpleItem[modsList]{ItemTitle: "Descending",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingOrder = sortOrderDesc
+					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
 			},
 		},
 	}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
@@ -204,7 +210,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 		root:          root,
 		list:          l,
 		parent:        parent,
-		items:         make(chan []list.Item),
+		items:         make(chan listUpdate),
 		sortingField:  "last_version_date",
 		sortingOrder:  sortOrderDesc,
 		sortFieldList: sortFieldList,
@@ -214,7 +220,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 
 	go func() {
 		items := make([]list.Item, 0)
-		allMods := make([]ficsit.ModsGetModsModsMod, 0)
+		allMods := make([]ficsit.ModsModsGetModsModsMod, 0)
 		offset := 0
 		for {
 			mods, err := ficsit.Mods(context.TODO(), root.GetAPIClient(), ficsit.ModFilter{
@@ -229,36 +235,42 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 				return
 			}
 
-			if len(mods.GetMods.Mods) == 0 {
+			if len(mods.Mods.Mods) == 0 {
 				break
 			}
 
-			allMods = append(allMods, mods.GetMods.Mods...)
+			allMods = append(allMods, mods.Mods.Mods...)
 
-			for i := 0; i < len(mods.GetMods.Mods); i++ {
+			for i := 0; i < len(mods.Mods.Mods); i++ {
 				currentOffset := offset
 				currentI := i
-				items = append(items, SimpleItemMod[modsList]{
+				items = append(items, utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
 					SimpleItem: utils.SimpleItem[modsList]{
-						ItemTitle: mods.GetMods.Mods[i].Name,
+						ItemTitle: mods.Mods.Mods[i].Name,
 						Activate: func(msg tea.Msg, currentModel modsList) (tea.Model, tea.Cmd) {
 							mod := allMods[currentOffset+currentI]
 							return NewModMenu(root, currentModel, utils.Mod{
 								Name:      mod.Name,
-								ID:        mod.Id,
 								Reference: mod.Mod_reference,
 							}), nil
 						},
 					},
-					Mod:     allMods[currentOffset+currentI],
-					Context: root.GetGlobal(),
+					Extra: allMods[currentOffset+currentI],
 				})
 			}
 
-			offset += len(mods.GetMods.Mods)
+			offset += len(mods.Mods.Mods)
+
+			m.items <- listUpdate{
+				Items: items,
+				Done:  false,
+			}
 		}
 
-		m.items <- items
+		m.items <- listUpdate{
+			Items: items,
+			Done:  true,
+		}
 	}()
 
 	return m
@@ -308,7 +320,7 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyEnter:
 			if m.showSortFieldList {
 				m.showSortFieldList = false
-				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItem[modsList])
+				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
 				if ok {
 					return m.processActivation(i, msg)
 				}
@@ -317,16 +329,16 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if m.showSortOrderList {
 				m.showSortOrderList = false
-				i, ok := m.sortOrderList.SelectedItem().(utils.SimpleItem[modsList])
+				i, ok := m.sortOrderList.SelectedItem().(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
 				if ok {
 					return m.processActivation(i, msg)
 				}
 				return m, nil
 			}
 
-			i, ok := m.list.SelectedItem().(SimpleItemMod[modsList])
+			i, ok := m.list.SelectedItem().(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
 			if ok {
-				return m.processActivation(i.SimpleItem, msg)
+				return m.processActivation(i, msg)
 			}
 			return m, nil
 		}
@@ -337,9 +349,12 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case utils.TickMsg:
 		select {
 		case items := <-m.items:
-			m.list.StopSpinner()
-			cmd := m.list.SetItems(items)
-			return m, cmd
+			cmd := m.list.SetItems(items.Items)
+			if items.Done {
+				m.list.StopSpinner()
+				return m, cmd
+			}
+			return m, tea.Batch(utils.Ticker(), cmd)
 		case err := <-m.err:
 			errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
 			m.error = errorComponent
@@ -392,52 +407,52 @@ func sortItems(items []list.Item, field string, direction sortOrder) []list.Item
 	switch field {
 	case "last_version_date":
 		sort.Slice(sortedItems, func(i, j int) bool {
-			a := sortedItems[i].(SimpleItemMod[modsList])
-			b := sortedItems[j].(SimpleItemMod[modsList])
-			return ascDesc(direction, a.Mod.Last_version_date.Before(b.Mod.Last_version_date))
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Last_version_date.Before(b.Extra.Last_version_date))
 		})
 	case "created_at":
 		sort.Slice(sortedItems, func(i, j int) bool {
-			a := sortedItems[i].(SimpleItemMod[modsList])
-			b := sortedItems[j].(SimpleItemMod[modsList])
-			return ascDesc(direction, a.Mod.Created_at.Before(b.Mod.Created_at))
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Created_at.Before(b.Extra.Created_at))
 		})
 	case "name":
 		sort.Slice(sortedItems, func(i, j int) bool {
-			a := sortedItems[i].(SimpleItemMod[modsList])
-			b := sortedItems[j].(SimpleItemMod[modsList])
-			return ascDesc(direction, a.Mod.Name < b.Mod.Name)
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Name < b.Extra.Name)
 		})
 	case "downloads":
 		sort.Slice(sortedItems, func(i, j int) bool {
-			a := sortedItems[i].(SimpleItemMod[modsList])
-			b := sortedItems[j].(SimpleItemMod[modsList])
-			return ascDesc(direction, a.Mod.Downloads < b.Mod.Downloads)
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Downloads < b.Extra.Downloads)
 		})
 	case "views":
 		sort.Slice(sortedItems, func(i, j int) bool {
-			a := sortedItems[i].(SimpleItemMod[modsList])
-			b := sortedItems[j].(SimpleItemMod[modsList])
-			return ascDesc(direction, a.Mod.Views < b.Mod.Views)
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Views < b.Extra.Views)
 		})
 	case "popularity":
 		sort.Slice(sortedItems, func(i, j int) bool {
-			a := sortedItems[i].(SimpleItemMod[modsList])
-			b := sortedItems[j].(SimpleItemMod[modsList])
-			return ascDesc(direction, a.Mod.Popularity < b.Mod.Popularity)
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Popularity < b.Extra.Popularity)
 		})
 	case "hotness":
 		sort.Slice(sortedItems, func(i, j int) bool {
-			a := sortedItems[i].(SimpleItemMod[modsList])
-			b := sortedItems[j].(SimpleItemMod[modsList])
-			return ascDesc(direction, a.Mod.Hotness < b.Mod.Hotness)
+			a := sortedItems[i].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Hotness < b.Extra.Hotness)
 		})
 	}
 
 	return sortedItems
 }
 
-func (m modsList) processActivation(item utils.SimpleItem[modsList], msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m modsList) processActivation(item utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod], msg tea.Msg) (tea.Model, tea.Cmd) {
 	if item.Activate != nil {
 		newModel, cmd := item.Activate(msg, m)
 		if newModel != nil || cmd != nil {
@@ -456,4 +471,84 @@ func ascDesc(order sortOrder, result bool) bool {
 		return result
 	}
 	return !result
+}
+
+type ModsListDelegate struct {
+	list.ItemDelegate
+	Context *cli.GlobalContext
+}
+
+func (c ModsListDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	realItem := item.(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
+	realDelegate := c.ItemDelegate.(list.DefaultDelegate)
+
+	title := realItem.Title()
+
+	s := &realDelegate.Styles
+
+	if m.Width() <= 0 {
+		return
+	}
+
+	textwidth := uint(m.Width() - s.NormalTitle.GetPaddingLeft() - s.NormalTitle.GetPaddingRight())
+	title = truncate.StringWithTail(title, textwidth, "…")
+
+	var (
+		isSelected  = index == m.Index()
+		emptyFilter = m.FilterState() == list.Filtering && m.FilterValue() == ""
+		isFiltered  = m.FilterState() == list.Filtering || m.FilterState() == list.FilterApplied
+	)
+
+	var matchedRunes []int
+	if isFiltered && index < len(m.VisibleItems()) {
+		// Get indices of matched characters
+		matchedRunes = m.MatchesForItem(index)
+	}
+
+	isInstalled := false
+	if c.Context != nil {
+		profile := c.Context.Profiles.Profiles[c.Context.Profiles.SelectedProfile]
+		if profile != nil {
+			if profile.HasMod(realItem.Extra.Mod_reference) {
+				isInstalled = true
+			}
+		}
+	}
+
+	if emptyFilter {
+		if isInstalled {
+			title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ " + title)
+		}
+		title = s.DimmedTitle.Render(title)
+	} else if isSelected && m.FilterState() != list.Filtering {
+		if isFiltered {
+			unmatched := s.SelectedTitle.Inline(true)
+			matched := unmatched.Copy().Inherit(s.FilterMatch)
+			if isInstalled {
+				unmatched = unmatched.Foreground(lipgloss.Color("40"))
+				matched = matched.Foreground(lipgloss.Color("40"))
+			}
+			title = lipgloss.StyleRunes(title, matchedRunes, matched, unmatched)
+		}
+		if isInstalled {
+			title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ ") + title
+		}
+		title = s.SelectedTitle.Render(title)
+	} else {
+		if isFiltered {
+			unmatched := s.NormalTitle.Inline(true)
+			matched := unmatched.Copy().Inherit(s.FilterMatch)
+			if isInstalled {
+				unmatched = unmatched.Foreground(lipgloss.Color("40"))
+				matched = matched.Foreground(lipgloss.Color("40"))
+			}
+			title = lipgloss.StyleRunes(title, matchedRunes, matched, unmatched)
+		}
+		if isInstalled {
+			title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ ") + title
+		}
+		title = s.NormalTitle.Render(title)
+	}
+
+	fmt.Fprintf(w, "%s", title)
 }

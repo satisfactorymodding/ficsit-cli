@@ -1,6 +1,6 @@
 # @genqlient(omitempty: true)
 query Mods ($filter: ModFilter) {
-    getMods (filter: $filter) {
+    mods: getMods (filter: $filter) {
         count
         mods {
             id

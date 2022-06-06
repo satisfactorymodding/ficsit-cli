@@ -32,7 +32,7 @@ type newInstallation struct {
 }
 
 func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
-	listDelegate := CustomDelegate{ItemDelegate: utils.NewItemDelegate()}
+	listDelegate := NewInstallListDelegate{ItemDelegate: utils.NewItemDelegate()}
 
 	l := list.New([]list.Item{}, listDelegate, root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
@@ -229,11 +229,11 @@ func getDirItems(inputValue string) []list.Item {
 	return newItems
 }
 
-type CustomDelegate struct {
+type NewInstallListDelegate struct {
 	list.ItemDelegate
 }
 
-func (c CustomDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+func (c NewInstallListDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	realItem := item.(utils.SimpleItemExtra[newInstallation, string])
 	realDelegate := c.ItemDelegate.(list.DefaultDelegate)
 

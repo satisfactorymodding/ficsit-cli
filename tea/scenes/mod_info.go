@@ -30,7 +30,7 @@ type modInfo struct {
 	viewport viewport.Model
 	spinner  spinner.Model
 	parent   tea.Model
-	modData  chan ficsit.GetModGetMod
+	modData  chan ficsit.GetModMod
 	modError chan string
 	ready    bool
 	help     help.Model
@@ -67,7 +67,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 		viewport: viewport.Model{},
 		spinner:  spinner.New(),
 		parent:   parent,
-		modData:  make(chan ficsit.GetModGetMod),
+		modData:  make(chan ficsit.GetModMod),
 		modError: make(chan string),
 		ready:    false,
 		help:     help.New(),
@@ -87,7 +87,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	model.help.Width = root.Size().Width
 
 	go func() {
-		fullMod, err := ficsit.GetMod(context.TODO(), root.GetAPIClient(), mod.ID)
+		fullMod, err := ficsit.GetMod(context.TODO(), root.GetAPIClient(), mod.Reference)
 
 		if err != nil {
 			model.modError <- err.Error()
@@ -99,7 +99,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 			return
 		}
 
-		model.modData <- fullMod.GetMod
+		model.modData <- fullMod.Mod
 	}()
 
 	return model

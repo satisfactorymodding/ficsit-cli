@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
+	"github.com/spf13/viper"
 )
 
 var _ tea.Model = (*mainMenu)(nil)
@@ -73,9 +74,16 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			},
 		},
 		utils.SimpleItem[mainMenu]{
-			ItemTitle: "Mods",
+			ItemTitle: "All Mods",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				newModel := NewMods(root, currentModel)
+				return newModel, newModel.Init()
+			},
+		},
+		utils.SimpleItem[mainMenu]{
+			ItemTitle: "Installed Mods",
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
+				newModel := NewInstalledMods(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
@@ -170,9 +178,21 @@ func (m mainMenu) View() string {
 	header := m.root.View()
 
 	banner := lipgloss.NewStyle().Margin(2, 0, 0, 2).Render(m.banner)
-	totalHeight := m.root.Height() + len(m.list.Items()) + lipgloss.Height(banner) + 4
+
+	commit := viper.GetString("commit")
+	if len(commit) > 8 {
+		commit = commit[:8]
+	}
+
+	version := "\n"
+	version += utils.LabelStyle.Render("Version: ")
+	version += viper.GetString("version") + " - " + commit
+
+	header = lipgloss.JoinVertical(lipgloss.Left, version, header)
+
+	totalHeight := lipgloss.Height(header) + len(m.list.Items()) + lipgloss.Height(banner) + 5
 	if totalHeight < m.root.Size().Height {
-		header = lipgloss.JoinVertical(lipgloss.Left, banner, m.root.View())
+		header = lipgloss.JoinVertical(lipgloss.Left, banner, header)
 	}
 
 	if m.error != nil {

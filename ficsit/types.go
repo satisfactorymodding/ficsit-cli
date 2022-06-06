@@ -12,58 +12,58 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/ficsit/utils"
 )
 
-// GetModGetMod includes the requested fields of the GraphQL type Mod.
-type GetModGetMod struct {
-	Id               string                       `json:"id"`
-	Mod_reference    string                       `json:"mod_reference"`
-	Name             string                       `json:"name"`
-	Views            int                          `json:"views"`
-	Downloads        int                          `json:"downloads"`
-	Authors          []GetModGetModAuthorsUserMod `json:"authors"`
-	Full_description string                       `json:"full_description"`
-	Source_url       string                       `json:"source_url"`
-	Created_at       time.Time                    `json:"-"`
+// GetModMod includes the requested fields of the GraphQL type Mod.
+type GetModMod struct {
+	Id               string                    `json:"id"`
+	Mod_reference    string                    `json:"mod_reference"`
+	Name             string                    `json:"name"`
+	Views            int                       `json:"views"`
+	Downloads        int                       `json:"downloads"`
+	Authors          []GetModModAuthorsUserMod `json:"authors"`
+	Full_description string                    `json:"full_description"`
+	Source_url       string                    `json:"source_url"`
+	Created_at       time.Time                 `json:"-"`
 }
 
-// GetId returns GetModGetMod.Id, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetId() string { return v.Id }
+// GetId returns GetModMod.Id, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetId() string { return v.Id }
 
-// GetMod_reference returns GetModGetMod.Mod_reference, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetMod_reference() string { return v.Mod_reference }
+// GetMod_reference returns GetModMod.Mod_reference, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetMod_reference() string { return v.Mod_reference }
 
-// GetName returns GetModGetMod.Name, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetName() string { return v.Name }
+// GetName returns GetModMod.Name, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetName() string { return v.Name }
 
-// GetViews returns GetModGetMod.Views, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetViews() int { return v.Views }
+// GetViews returns GetModMod.Views, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetViews() int { return v.Views }
 
-// GetDownloads returns GetModGetMod.Downloads, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetDownloads() int { return v.Downloads }
+// GetDownloads returns GetModMod.Downloads, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetDownloads() int { return v.Downloads }
 
-// GetAuthors returns GetModGetMod.Authors, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetAuthors() []GetModGetModAuthorsUserMod { return v.Authors }
+// GetAuthors returns GetModMod.Authors, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetAuthors() []GetModModAuthorsUserMod { return v.Authors }
 
-// GetFull_description returns GetModGetMod.Full_description, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetFull_description() string { return v.Full_description }
+// GetFull_description returns GetModMod.Full_description, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetFull_description() string { return v.Full_description }
 
-// GetSource_url returns GetModGetMod.Source_url, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetSource_url() string { return v.Source_url }
+// GetSource_url returns GetModMod.Source_url, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetSource_url() string { return v.Source_url }
 
-// GetCreated_at returns GetModGetMod.Created_at, and is useful for accessing the field via an interface.
-func (v *GetModGetMod) GetCreated_at() time.Time { return v.Created_at }
+// GetCreated_at returns GetModMod.Created_at, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetCreated_at() time.Time { return v.Created_at }
 
-func (v *GetModGetMod) UnmarshalJSON(b []byte) error {
+func (v *GetModMod) UnmarshalJSON(b []byte) error {
 
 	if string(b) == "null" {
 		return nil
 	}
 
 	var firstPass struct {
-		*GetModGetMod
+		*GetModMod
 		Created_at json.RawMessage `json:"created_at"`
 		graphql.NoUnmarshalJSON
 	}
-	firstPass.GetModGetMod = v
+	firstPass.GetModMod = v
 
 	err := json.Unmarshal(b, &firstPass)
 	if err != nil {
@@ -78,14 +78,14 @@ func (v *GetModGetMod) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal GetModGetMod.Created_at: %w", err)
+					"Unable to unmarshal GetModMod.Created_at: %w", err)
 			}
 		}
 	}
 	return nil
 }
 
-type __premarshalGetModGetMod struct {
+type __premarshalGetModMod struct {
 	Id string `json:"id"`
 
 	Mod_reference string `json:"mod_reference"`
@@ -96,7 +96,7 @@ type __premarshalGetModGetMod struct {
 
 	Downloads int `json:"downloads"`
 
-	Authors []GetModGetModAuthorsUserMod `json:"authors"`
+	Authors []GetModModAuthorsUserMod `json:"authors"`
 
 	Full_description string `json:"full_description"`
 
@@ -105,7 +105,7 @@ type __premarshalGetModGetMod struct {
 	Created_at json.RawMessage `json:"created_at"`
 }
 
-func (v *GetModGetMod) MarshalJSON() ([]byte, error) {
+func (v *GetModMod) MarshalJSON() ([]byte, error) {
 	premarshaled, err := v.__premarshalJSON()
 	if err != nil {
 		return nil, err
@@ -113,8 +113,8 @@ func (v *GetModGetMod) MarshalJSON() ([]byte, error) {
 	return json.Marshal(premarshaled)
 }
 
-func (v *GetModGetMod) __premarshalJSON() (*__premarshalGetModGetMod, error) {
-	var retval __premarshalGetModGetMod
+func (v *GetModMod) __premarshalJSON() (*__premarshalGetModMod, error) {
+	var retval __premarshalGetModMod
 
 	retval.Id = v.Id
 	retval.Mod_reference = v.Mod_reference
@@ -133,39 +133,39 @@ func (v *GetModGetMod) __premarshalJSON() (*__premarshalGetModGetMod, error) {
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal GetModGetMod.Created_at: %w", err)
+				"Unable to marshal GetModMod.Created_at: %w", err)
 		}
 	}
 	return &retval, nil
 }
 
-// GetModGetModAuthorsUserMod includes the requested fields of the GraphQL type UserMod.
-type GetModGetModAuthorsUserMod struct {
-	Role string                         `json:"role"`
-	User GetModGetModAuthorsUserModUser `json:"user"`
+// GetModModAuthorsUserMod includes the requested fields of the GraphQL type UserMod.
+type GetModModAuthorsUserMod struct {
+	Role string                      `json:"role"`
+	User GetModModAuthorsUserModUser `json:"user"`
 }
 
-// GetRole returns GetModGetModAuthorsUserMod.Role, and is useful for accessing the field via an interface.
-func (v *GetModGetModAuthorsUserMod) GetRole() string { return v.Role }
+// GetRole returns GetModModAuthorsUserMod.Role, and is useful for accessing the field via an interface.
+func (v *GetModModAuthorsUserMod) GetRole() string { return v.Role }
 
-// GetUser returns GetModGetModAuthorsUserMod.User, and is useful for accessing the field via an interface.
-func (v *GetModGetModAuthorsUserMod) GetUser() GetModGetModAuthorsUserModUser { return v.User }
+// GetUser returns GetModModAuthorsUserMod.User, and is useful for accessing the field via an interface.
+func (v *GetModModAuthorsUserMod) GetUser() GetModModAuthorsUserModUser { return v.User }
 
-// GetModGetModAuthorsUserModUser includes the requested fields of the GraphQL type User.
-type GetModGetModAuthorsUserModUser struct {
+// GetModModAuthorsUserModUser includes the requested fields of the GraphQL type User.
+type GetModModAuthorsUserModUser struct {
 	Username string `json:"username"`
 }
 
-// GetUsername returns GetModGetModAuthorsUserModUser.Username, and is useful for accessing the field via an interface.
-func (v *GetModGetModAuthorsUserModUser) GetUsername() string { return v.Username }
+// GetUsername returns GetModModAuthorsUserModUser.Username, and is useful for accessing the field via an interface.
+func (v *GetModModAuthorsUserModUser) GetUsername() string { return v.Username }
 
 // GetModResponse is returned by GetMod on success.
 type GetModResponse struct {
-	GetMod GetModGetMod `json:"getMod"`
+	Mod GetModMod `json:"mod"`
 }
 
-// GetGetMod returns GetModResponse.GetMod, and is useful for accessing the field via an interface.
-func (v *GetModResponse) GetGetMod() GetModGetMod { return v.GetMod }
+// GetMod returns GetModResponse.Mod, and is useful for accessing the field via an interface.
+func (v *GetModResponse) GetMod() GetModMod { return v.Mod }
 
 type ModFields string
 
@@ -259,20 +259,20 @@ type ModVersionsResponse struct {
 // GetMod returns ModVersionsResponse.Mod, and is useful for accessing the field via an interface.
 func (v *ModVersionsResponse) GetMod() ModVersionsMod { return v.Mod }
 
-// ModsGetMods includes the requested fields of the GraphQL type GetMods.
-type ModsGetMods struct {
-	Count int                  `json:"count"`
-	Mods  []ModsGetModsModsMod `json:"mods"`
+// ModsModsGetMods includes the requested fields of the GraphQL type GetMods.
+type ModsModsGetMods struct {
+	Count int                      `json:"count"`
+	Mods  []ModsModsGetModsModsMod `json:"mods"`
 }
 
-// GetCount returns ModsGetMods.Count, and is useful for accessing the field via an interface.
-func (v *ModsGetMods) GetCount() int { return v.Count }
+// GetCount returns ModsModsGetMods.Count, and is useful for accessing the field via an interface.
+func (v *ModsModsGetMods) GetCount() int { return v.Count }
 
-// GetMods returns ModsGetMods.Mods, and is useful for accessing the field via an interface.
-func (v *ModsGetMods) GetMods() []ModsGetModsModsMod { return v.Mods }
+// GetMods returns ModsModsGetMods.Mods, and is useful for accessing the field via an interface.
+func (v *ModsModsGetMods) GetMods() []ModsModsGetModsModsMod { return v.Mods }
 
-// ModsGetModsModsMod includes the requested fields of the GraphQL type Mod.
-type ModsGetModsModsMod struct {
+// ModsModsGetModsModsMod includes the requested fields of the GraphQL type Mod.
+type ModsModsGetModsModsMod struct {
 	Id                string    `json:"id"`
 	Name              string    `json:"name"`
 	Mod_reference     string    `json:"mod_reference"`
@@ -284,46 +284,46 @@ type ModsGetModsModsMod struct {
 	Hotness           int       `json:"hotness"`
 }
 
-// GetId returns ModsGetModsModsMod.Id, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetId() string { return v.Id }
+// GetId returns ModsModsGetModsModsMod.Id, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetId() string { return v.Id }
 
-// GetName returns ModsGetModsModsMod.Name, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetName() string { return v.Name }
+// GetName returns ModsModsGetModsModsMod.Name, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetName() string { return v.Name }
 
-// GetMod_reference returns ModsGetModsModsMod.Mod_reference, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetMod_reference() string { return v.Mod_reference }
+// GetMod_reference returns ModsModsGetModsModsMod.Mod_reference, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetMod_reference() string { return v.Mod_reference }
 
-// GetLast_version_date returns ModsGetModsModsMod.Last_version_date, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetLast_version_date() time.Time { return v.Last_version_date }
+// GetLast_version_date returns ModsModsGetModsModsMod.Last_version_date, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetLast_version_date() time.Time { return v.Last_version_date }
 
-// GetCreated_at returns ModsGetModsModsMod.Created_at, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetCreated_at() time.Time { return v.Created_at }
+// GetCreated_at returns ModsModsGetModsModsMod.Created_at, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetCreated_at() time.Time { return v.Created_at }
 
-// GetViews returns ModsGetModsModsMod.Views, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetViews() int { return v.Views }
+// GetViews returns ModsModsGetModsModsMod.Views, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetViews() int { return v.Views }
 
-// GetDownloads returns ModsGetModsModsMod.Downloads, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetDownloads() int { return v.Downloads }
+// GetDownloads returns ModsModsGetModsModsMod.Downloads, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetDownloads() int { return v.Downloads }
 
-// GetPopularity returns ModsGetModsModsMod.Popularity, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetPopularity() int { return v.Popularity }
+// GetPopularity returns ModsModsGetModsModsMod.Popularity, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetPopularity() int { return v.Popularity }
 
-// GetHotness returns ModsGetModsModsMod.Hotness, and is useful for accessing the field via an interface.
-func (v *ModsGetModsModsMod) GetHotness() int { return v.Hotness }
+// GetHotness returns ModsModsGetModsModsMod.Hotness, and is useful for accessing the field via an interface.
+func (v *ModsModsGetModsModsMod) GetHotness() int { return v.Hotness }
 
-func (v *ModsGetModsModsMod) UnmarshalJSON(b []byte) error {
+func (v *ModsModsGetModsModsMod) UnmarshalJSON(b []byte) error {
 
 	if string(b) == "null" {
 		return nil
 	}
 
 	var firstPass struct {
-		*ModsGetModsModsMod
+		*ModsModsGetModsModsMod
 		Last_version_date json.RawMessage `json:"last_version_date"`
 		Created_at        json.RawMessage `json:"created_at"`
 		graphql.NoUnmarshalJSON
 	}
-	firstPass.ModsGetModsModsMod = v
+	firstPass.ModsModsGetModsModsMod = v
 
 	err := json.Unmarshal(b, &firstPass)
 	if err != nil {
@@ -338,7 +338,7 @@ func (v *ModsGetModsModsMod) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal ModsGetModsModsMod.Last_version_date: %w", err)
+					"Unable to unmarshal ModsModsGetModsModsMod.Last_version_date: %w", err)
 			}
 		}
 	}
@@ -351,14 +351,14 @@ func (v *ModsGetModsModsMod) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal ModsGetModsModsMod.Created_at: %w", err)
+					"Unable to unmarshal ModsModsGetModsModsMod.Created_at: %w", err)
 			}
 		}
 	}
 	return nil
 }
 
-type __premarshalModsGetModsModsMod struct {
+type __premarshalModsModsGetModsModsMod struct {
 	Id string `json:"id"`
 
 	Name string `json:"name"`
@@ -378,7 +378,7 @@ type __premarshalModsGetModsModsMod struct {
 	Hotness int `json:"hotness"`
 }
 
-func (v *ModsGetModsModsMod) MarshalJSON() ([]byte, error) {
+func (v *ModsModsGetModsModsMod) MarshalJSON() ([]byte, error) {
 	premarshaled, err := v.__premarshalJSON()
 	if err != nil {
 		return nil, err
@@ -386,8 +386,8 @@ func (v *ModsGetModsModsMod) MarshalJSON() ([]byte, error) {
 	return json.Marshal(premarshaled)
 }
 
-func (v *ModsGetModsModsMod) __premarshalJSON() (*__premarshalModsGetModsModsMod, error) {
-	var retval __premarshalModsGetModsModsMod
+func (v *ModsModsGetModsModsMod) __premarshalJSON() (*__premarshalModsModsGetModsModsMod, error) {
+	var retval __premarshalModsModsGetModsModsMod
 
 	retval.Id = v.Id
 	retval.Name = v.Name
@@ -401,7 +401,7 @@ func (v *ModsGetModsModsMod) __premarshalJSON() (*__premarshalModsGetModsModsMod
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal ModsGetModsModsMod.Last_version_date: %w", err)
+				"Unable to marshal ModsModsGetModsModsMod.Last_version_date: %w", err)
 		}
 	}
 	{
@@ -413,7 +413,7 @@ func (v *ModsGetModsModsMod) __premarshalJSON() (*__premarshalModsGetModsModsMod
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal ModsGetModsModsMod.Created_at: %w", err)
+				"Unable to marshal ModsModsGetModsModsMod.Created_at: %w", err)
 		}
 	}
 	retval.Views = v.Views
@@ -425,11 +425,11 @@ func (v *ModsGetModsModsMod) __premarshalJSON() (*__premarshalModsGetModsModsMod
 
 // ModsResponse is returned by Mods on success.
 type ModsResponse struct {
-	GetMods ModsGetMods `json:"getMods"`
+	Mods ModsModsGetMods `json:"mods"`
 }
 
-// GetGetMods returns ModsResponse.GetMods, and is useful for accessing the field via an interface.
-func (v *ModsResponse) GetGetMods() ModsGetMods { return v.GetMods }
+// GetMods returns ModsResponse.Mods, and is useful for accessing the field via an interface.
+func (v *ModsResponse) GetMods() ModsModsGetMods { return v.Mods }
 
 type Order string
 
@@ -644,8 +644,8 @@ func GetMod(
 		ctx,
 		"GetMod",
 		`
-query GetMod ($modId: ModID!) {
-	getMod(modId: $modId) {
+query GetMod ($modId: String!) {
+	mod: getModByIdOrReference(modIdOrReference: $modId) {
 		id
 		mod_reference
 		name
@@ -718,7 +718,7 @@ func Mods(
 		"Mods",
 		`
 query Mods ($filter: ModFilter) {
-	getMods(filter: $filter) {
+	mods: getMods(filter: $filter) {
 		count
 		mods {
 			id
