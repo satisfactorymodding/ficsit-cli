@@ -296,3 +296,30 @@ func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile, gameV
 
 	return resultLockfile, nil
 }
+
+func (p *Profile) IsModEnabled(reference string) bool {
+	if p.Mods == nil {
+		return false
+	}
+
+	if mod, ok := p.Mods[reference]; ok {
+		return mod.Enabled
+	}
+
+	return false
+}
+
+func (p *Profile) SetModEnabled(reference string, enabled bool) {
+	if p.Mods == nil {
+		return
+	}
+
+	if _, ok := p.Mods[reference]; !ok {
+		return
+	}
+
+	p.Mods[reference] = ProfileMod{
+		Version: p.Mods[reference].Version,
+		Enabled: enabled,
+	}
+}

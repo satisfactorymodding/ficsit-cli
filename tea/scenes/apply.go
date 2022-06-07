@@ -144,7 +144,7 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyEnter:
 			if m.status.done {
 				if m.parent != nil {
-					return m.parent, nil
+					return m.parent, m.parent.Init()
 				}
 			}
 			return m, nil

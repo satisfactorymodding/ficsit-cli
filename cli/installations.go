@@ -329,8 +329,13 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 	for _, entry := range dir {
 		if entry.IsDir() {
 			if _, ok := lockfile[entry.Name()]; !ok {
-				if err := os.RemoveAll(filepath.Join(modsDirectory, entry.Name())); err != nil {
-					return errors.Wrap(err, "failed to delete mod directory")
+				modDir := filepath.Join(modsDirectory, entry.Name())
+				_, err := os.Stat(filepath.Join(modDir, ".smm"))
+				if err == nil {
+					log.Info().Str("mod_reference", entry.Name()).Msg("deleting mod")
+					if err := os.RemoveAll(modDir); err != nil {
+						return errors.Wrap(err, "failed to delete mod directory")
+					}
 				}
 			}
 		}
@@ -384,7 +389,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 			downloading = false
 
 			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("extracting mod")
-			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), genericUpdates); err != nil {
+			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), version.Hash, genericUpdates); err != nil {
 				return errors.Wrap(err, "could not extract "+modReference)
 			}
 

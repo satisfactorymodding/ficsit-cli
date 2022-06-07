@@ -140,7 +140,19 @@ func SHA256Data(f io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func ExtractMod(f io.ReaderAt, size int64, location string, updates chan GenericUpdate) error {
+func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan GenericUpdate) error {
+	hashFile := filepath.Join(location, ".smm")
+	hashBytes, err := os.ReadFile(hashFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return errors.Wrap(err, "failed to read .smm mod hash file")
+		}
+	} else {
+		if hash == string(hashBytes) {
+			return nil
+		}
+	}
+
 	if err := os.MkdirAll(location, 0777); err != nil {
 		if !os.IsExist(err) {
 			return errors.Wrap(err, "failed to create mod directory: "+location)
@@ -179,6 +191,10 @@ func ExtractMod(f io.ReaderAt, size int64, location string, updates chan Generic
 			default:
 			}
 		}
+	}
+
+	if err := os.WriteFile(hashFile, []byte(hash), 0777); err != nil {
+		return errors.Wrap(err, "failed to write .smm mod hash file")
 	}
 
 	if updates != nil {

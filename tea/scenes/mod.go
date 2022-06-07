@@ -44,6 +44,24 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 				},
 			},
 		}
+
+		if root.GetCurrentProfile().IsModEnabled(mod.Reference) {
+			items = append(items, utils.SimpleItem[modMenu]{
+				ItemTitle: "Disable Mod",
+				Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
+					root.GetCurrentProfile().SetModEnabled(mod.Reference, false)
+					return currentModel.parent, currentModel.parent.Init()
+				},
+			})
+		} else {
+			items = append(items, utils.SimpleItem[modMenu]{
+				ItemTitle: "Enable Mod",
+				Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
+					root.GetCurrentProfile().SetModEnabled(mod.Reference, true)
+					return currentModel.parent, currentModel.parent.Init()
+				},
+			})
+		}
 	} else {
 		items = []list.Item{
 			utils.SimpleItem[modMenu]{

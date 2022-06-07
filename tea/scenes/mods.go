@@ -510,18 +510,24 @@ func (c ModsListDelegate) Render(w io.Writer, m list.Model, index int, item list
 	}
 
 	isInstalled := false
+	isDisabled := false
 	if c.Context != nil {
 		profile := c.Context.Profiles.Profiles[c.Context.Profiles.SelectedProfile]
 		if profile != nil {
 			if profile.HasMod(realItem.Extra.Mod_reference) {
 				isInstalled = true
+				isDisabled = !profile.IsModEnabled(realItem.Extra.Mod_reference)
 			}
 		}
 	}
 
 	if emptyFilter {
 		if isInstalled {
-			title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ " + title)
+			if isDisabled {
+				title = lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Render("✓ " + title)
+			} else {
+				title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ " + title)
+			}
 		}
 		title = s.DimmedTitle.Render(title)
 	} else if isSelected && m.FilterState() != list.Filtering {
@@ -529,13 +535,22 @@ func (c ModsListDelegate) Render(w io.Writer, m list.Model, index int, item list
 			unmatched := s.SelectedTitle.Inline(true)
 			matched := unmatched.Copy().Inherit(s.FilterMatch)
 			if isInstalled {
-				unmatched = unmatched.Foreground(lipgloss.Color("40"))
-				matched = matched.Foreground(lipgloss.Color("40"))
+				if isDisabled {
+					unmatched = unmatched.Foreground(lipgloss.Color("220"))
+					matched = matched.Foreground(lipgloss.Color("220"))
+				} else {
+					unmatched = unmatched.Foreground(lipgloss.Color("40"))
+					matched = matched.Foreground(lipgloss.Color("40"))
+				}
 			}
 			title = lipgloss.StyleRunes(title, matchedRunes, matched, unmatched)
 		}
 		if isInstalled {
-			title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ ") + title
+			if isDisabled {
+				title = lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Render("✓ ") + title
+			} else {
+				title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ ") + title
+			}
 		}
 		title = s.SelectedTitle.Render(title)
 	} else {
@@ -543,13 +558,22 @@ func (c ModsListDelegate) Render(w io.Writer, m list.Model, index int, item list
 			unmatched := s.NormalTitle.Inline(true)
 			matched := unmatched.Copy().Inherit(s.FilterMatch)
 			if isInstalled {
-				unmatched = unmatched.Foreground(lipgloss.Color("40"))
-				matched = matched.Foreground(lipgloss.Color("40"))
+				if isDisabled {
+					unmatched = unmatched.Foreground(lipgloss.Color("220"))
+					matched = matched.Foreground(lipgloss.Color("220"))
+				} else {
+					unmatched = unmatched.Foreground(lipgloss.Color("40"))
+					matched = matched.Foreground(lipgloss.Color("40"))
+				}
 			}
 			title = lipgloss.StyleRunes(title, matchedRunes, matched, unmatched)
 		}
 		if isInstalled {
-			title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ ") + title
+			if isDisabled {
+				title = lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Render("✓ ") + title
+			} else {
+				title = lipgloss.NewStyle().Foreground(lipgloss.Color("40")).Render("✓ ") + title
+			}
 		}
 		title = s.NormalTitle.Render(title)
 	}
