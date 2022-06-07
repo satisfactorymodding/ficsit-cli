@@ -33,7 +33,7 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 				ItemTitle: "Remove Mod",
 				Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
 					root.GetCurrentProfile().RemoveMod(mod.Reference)
-					return currentModel.parent, nil
+					return currentModel.parent, currentModel.parent.Init()
 				},
 			},
 			utils.SimpleItem[modMenu]{

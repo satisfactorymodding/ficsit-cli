@@ -22,7 +22,7 @@ type installedModsList struct {
 	root   components.RootModel
 	list   list.Model
 	parent tea.Model
-	items  chan []list.Item
+	items  chan listUpdate
 
 	err   chan string
 	error *components.ErrorComponent
@@ -34,29 +34,7 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 		return parent
 	}
 
-	items := make([]list.Item, len(currentProfile.Mods))
-	i := 0
-	for reference := range currentProfile.Mods {
-		r := reference
-		items[i] = utils.SimpleItem[installedModsList]{
-			ItemTitle: reference,
-			Activate: func(msg tea.Msg, currentModel installedModsList) (tea.Model, tea.Cmd) {
-				return NewModMenu(root, currentModel, utils.Mod{
-					Name:      r,
-					Reference: r,
-				}), nil
-			},
-		}
-		i++
-	}
-
-	sort.Slice(items, func(i, j int) bool {
-		a := items[i].(utils.SimpleItem[installedModsList])
-		b := items[j].(utils.SimpleItem[installedModsList])
-		return ascDesc(sortOrderDesc, a.ItemTitle < b.ItemTitle)
-	})
-
-	l := list.New(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	l := list.New([]list.Item{}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	l.SetShowStatusBar(true)
 	l.SetShowFilter(true)
 	l.SetFilteringEnabled(true)
@@ -83,9 +61,45 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 		root:   root,
 		list:   l,
 		parent: parent,
-		items:  make(chan []list.Item),
+		items:  make(chan listUpdate),
 		err:    make(chan string),
 	}
+
+	return m
+}
+
+func (m installedModsList) Init() tea.Cmd {
+	m.LoadModData()
+	return utils.Ticker()
+}
+
+func (m installedModsList) LoadModData() {
+	currentProfile := m.root.GetCurrentProfile()
+	if currentProfile == nil {
+		return
+	}
+
+	items := make([]list.Item, len(currentProfile.Mods))
+	i := 0
+	for reference := range currentProfile.Mods {
+		r := reference
+		items[i] = utils.SimpleItem[installedModsList]{
+			ItemTitle: reference,
+			Activate: func(msg tea.Msg, currentModel installedModsList) (tea.Model, tea.Cmd) {
+				return NewModMenu(m.root, currentModel, utils.Mod{
+					Name:      r,
+					Reference: r,
+				}), nil
+			},
+		}
+		i++
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		a := items[i].(utils.SimpleItem[installedModsList])
+		b := items[j].(utils.SimpleItem[installedModsList])
+		return ascDesc(sortOrderDesc, a.ItemTitle < b.ItemTitle)
+	})
 
 	go func() {
 		references := make([]string, len(currentProfile.Mods))
@@ -95,7 +109,7 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 			i++
 		}
 
-		mods, err := ficsit.Mods(context.TODO(), root.GetAPIClient(), ficsit.ModFilter{
+		mods, err := ficsit.Mods(context.TODO(), m.root.GetAPIClient(), ficsit.ModFilter{
 			References: references,
 		})
 
@@ -116,7 +130,7 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 				SimpleItem: utils.SimpleItem[installedModsList]{
 					ItemTitle: mods.Mods.Mods[i].Name,
 					Activate: func(msg tea.Msg, currentModel installedModsList) (tea.Model, tea.Cmd) {
-						return NewModMenu(root, currentModel, utils.Mod{
+						return NewModMenu(m.root, currentModel, utils.Mod{
 							Name:      mod.Name,
 							Reference: mod.Mod_reference,
 						}), nil
@@ -132,14 +146,18 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 			return ascDesc(sortOrderDesc, a.Extra.Mod_reference < b.Extra.Mod_reference)
 		})
 
-		m.items <- items
+		m.items <- listUpdate{
+			Items: items,
+			Done:  true,
+		}
 	}()
 
-	return m
-}
-
-func (m installedModsList) Init() tea.Cmd {
-	return utils.Ticker()
+	go func() {
+		m.items <- listUpdate{
+			Items: items,
+			Done:  false,
+		}
+	}()
 }
 
 func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -181,9 +199,12 @@ func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case utils.TickMsg:
 		select {
 		case items := <-m.items:
-			cmd := m.list.SetItems(items)
-			m.list.StopSpinner()
-			return m, cmd
+			cmd := m.list.SetItems(items.Items)
+			if items.Done {
+				m.list.StopSpinner()
+				return m, cmd
+			}
+			return m, tea.Batch(utils.Ticker(), cmd)
 		case err := <-m.err:
 			errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
 			m.error = errorComponent
