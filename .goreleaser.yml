@@ -52,3 +52,14 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
+aurs:
+  - name: ficsit-cli-bin
+    homepage: https://github.com/Vilsol/ficsit-cli
+    maintainers:
+      - 'Vilsol <me at vil dot so>'
+    license: GPL3
+    private_key: '{{ .Env.AUR_KEY }}'
+    git_url: 'ssh://aur@aur.archlinux.org/ficsit-cli-bin.git'
+    package: |
+      install -Dm755 "./${pkgname}_${pkgver}_${CARCH}.binary" "${pkgdir}/usr/bin/ficsit"
