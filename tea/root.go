@@ -39,8 +39,10 @@ func (m *rootModel) GetCurrentProfile() *cli.Profile {
 func (m *rootModel) SetCurrentProfile(profile *cli.Profile) error {
 	m.global.Profiles.SelectedProfile = profile.Name
 
-	if err := m.GetCurrentInstallation().SetProfile(m.global, profile.Name); err != nil {
-		return errors.Wrap(err, "failed setting profile on installation")
+	if m.GetCurrentInstallation() != nil {
+		if err := m.GetCurrentInstallation().SetProfile(m.global, profile.Name); err != nil {
+			return errors.Wrap(err, "failed setting profile on installation")
+		}
 	}
 
 	return nil
