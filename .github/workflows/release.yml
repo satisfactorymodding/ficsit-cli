@@ -23,6 +23,11 @@ jobs:
       - name: Download GQL schema
         run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 
+      - uses: kielabokkie/ssh-key-and-known-hosts-action@v1
+        with:
+          ssh-private-key: ${{ secrets.AUR_KEY }}
+          ssh-host: aur.archlinux.org
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
