@@ -277,6 +277,10 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 }
 
 func (m modsList) Init() tea.Cmd {
+	if len(m.list.Items()) > 0 {
+		return nil
+	}
+
 	return utils.Ticker()
 }
 
