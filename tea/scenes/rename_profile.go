@@ -52,7 +52,7 @@ func (m renameProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyEscape:
 			return m.parent, nil
 		case KeyEnter:
-			if err := m.root.GetGlobal().Profiles.RenameProfile(m.oldName, m.input.Value()); err != nil {
+			if err := m.root.GetGlobal().Profiles.RenameProfile(m.root.GetGlobal(), m.oldName, m.input.Value()); err != nil {
 				errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 				m.error = errorComponent
 				return m, cmd

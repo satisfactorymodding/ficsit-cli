@@ -218,7 +218,7 @@ func (p *Profiles) GetProfile(name string) *Profile {
 	return p.Profiles[name]
 }
 
-func (p *Profiles) RenameProfile(oldName string, newName string) error {
+func (p *Profiles) RenameProfile(ctx *GlobalContext, oldName string, newName string) error {
 	if _, ok := p.Profiles[newName]; ok {
 		return fmt.Errorf("profile with name %s already exists", newName)
 	}
@@ -233,6 +233,12 @@ func (p *Profiles) RenameProfile(oldName string, newName string) error {
 
 	if p.SelectedProfile == oldName {
 		p.SelectedProfile = newName
+	}
+
+	for _, installation := range ctx.Installations.Installations {
+		if installation.Profile == oldName {
+			installation.Profile = newName
+		}
 	}
 
 	return nil

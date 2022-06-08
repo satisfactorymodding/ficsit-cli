@@ -6,11 +6,11 @@ before:
     - go mod tidy
 
 builds:
-  - env:
+  - id: with-upx
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
-      - windows
       - darwin
     goarch:
       - amd64
@@ -20,9 +20,25 @@ builds:
       - 386
     goarm:
       - 7
+    hooks:
+      post: 'upx {{ .Path }}'
+  - id: without-upx
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - 386
+    goarm:
+      - 7
 
 universal_binaries:
   - replace: true
+    ids:
+      - with-upx
 
 archives:
   - format: binary
@@ -35,6 +51,7 @@ nfpms:
     maintainer: Satisfactory Modding Team <support@ficsit.app>
     description: CLI tool for Ficsit (Satisfactory Modding)
     license: GNU General Public License v3.0
+    file_name_template: "{{ .PackageName }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}"
     formats:
       - apk
       - deb
