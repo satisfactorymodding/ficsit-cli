@@ -28,6 +28,16 @@ jobs:
           ssh-private-key: ${{ secrets.AUR_KEY }}
           ssh-host: aur.archlinux.org
 
+      - name: Update UPX
+        run: |
+          mkdir ./upx
+          cd ./upx
+          wget https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz
+          tar -xvf upx-3.96-amd64_linux.tar.xz
+          sudo install upx-3.96-amd64_linux/upx /usr/local/bin/upx
+          cd ../
+          rm -rf ./upx/
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
