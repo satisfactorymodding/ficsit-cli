@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -194,7 +195,7 @@ func (m apply) View() string {
 	}
 
 	if m.status.done {
-		strs = append(strs, utils.LabelStyle.Padding(0).Margin(1).Render("Done! Press Enter to return"))
+		strs = append(strs, utils.LabelStyle.Copy().Padding(0).Margin(1).Render("Done! Press Enter to return"))
 	}
 
 	result := lipgloss.NewStyle().MarginLeft(1).Render(lipgloss.JoinVertical(lipgloss.Left, strs...))

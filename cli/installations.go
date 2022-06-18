@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 
@@ -341,43 +342,64 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		}
 	}
 
+	downloading := true
 	completed := 0
+
+	var genericUpdates chan utils.GenericUpdate
+	if updates != nil {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		defer wg.Wait()
+
+		genericUpdates = make(chan utils.GenericUpdate)
+		defer close(genericUpdates)
+
+		go func() {
+			defer wg.Done()
+
+			update := InstallUpdate{
+				OverallProgress:  float64(completed) / float64(len(lockfile)),
+				DownloadProgress: 0,
+				ExtractProgress:  0,
+			}
+
+			select {
+			case updates <- update:
+			default:
+			}
+
+			for up := range genericUpdates {
+				if downloading {
+					update.DownloadProgress = up.Progress
+				} else {
+					update.DownloadProgress = 1
+					update.ExtractProgress = up.Progress
+				}
+
+				if up.ModReference != nil {
+					update.ModName = *up.ModReference
+				}
+
+				update.OverallProgress = float64(completed) / float64(len(lockfile))
+
+				select {
+				case updates <- update:
+				default:
+				}
+			}
+		}()
+	}
+
 	for modReference, version := range lockfile {
 		// Only install if a link is provided, otherwise assume mod is already installed
 		if version.Link != "" {
-			downloading := true
+			downloading = true
 
-			var genericUpdates chan utils.GenericUpdate
-			if updates != nil {
-				genericUpdates = make(chan utils.GenericUpdate)
-
-				go func() {
-					update := InstallUpdate{
-						ModName:          modReference,
-						OverallProgress:  float64(completed) / float64(len(lockfile)),
-						DownloadProgress: 0,
-						ExtractProgress:  0,
-					}
-
-					select {
-					case updates <- update:
-					default:
-					}
-
-					for up := range genericUpdates {
-						if downloading {
-							update.DownloadProgress = up.Progress
-						} else {
-							update.DownloadProgress = 1
-							update.ExtractProgress = up.Progress
-						}
-
-						select {
-						case updates <- update:
-						default:
-						}
-					}
-				}()
+			if genericUpdates != nil {
+				select {
+				case genericUpdates <- utils.GenericUpdate{ModReference: &modReference}:
+				default:
+				}
 			}
 
 			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("downloading mod")
@@ -391,10 +413,6 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("extracting mod")
 			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), version.Hash, genericUpdates); err != nil {
 				return errors.Wrap(err, "could not extract "+modReference)
-			}
-
-			if genericUpdates != nil {
-				close(genericUpdates)
 			}
 		}
 

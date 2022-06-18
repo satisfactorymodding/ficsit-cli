@@ -42,7 +42,8 @@ func (pt *Progresser) Read(p []byte) (int, error) {
 }
 
 type GenericUpdate struct {
-	Progress float64
+	Progress     float64
+	ModReference *string
 }
 
 func DownloadOrCache(cacheKey string, hash string, url string, updates chan GenericUpdate) (r io.ReaderAt, size int64, err error) {
