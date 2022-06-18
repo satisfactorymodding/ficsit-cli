@@ -1,0 +1,52 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of our software are you running?
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: What OS are you seeing the problem on?
+      options:
+        - Linux
+        - Windows
+        - macOS
+    validations:
+      required: true
+  - type: dropdown
+    id: arch
+    attributes:
+      label: What architecture are you seeing the problem on?
+      options:
+        - amd64
+        - i386 (x86)
+        - arm64
+        - armv7
+        - ppc64le
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output.
+      render: shell
+  - type: textarea
+    id: extra-info
+    attributes:
+      label: "Any extra info:"
