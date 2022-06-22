@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/truncate"
 	"github.com/sahilm/fuzzy"
+
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
@@ -56,8 +57,6 @@ func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 
 	model.input.Focus()
 	model.input.Width = root.Size().Width
-
-	// TODO SSH/FTP/SFTP support
 
 	return model
 }

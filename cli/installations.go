@@ -3,12 +3,14 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 
 	"github.com/pkg/errors"
@@ -32,8 +34,9 @@ type Installations struct {
 }
 
 type Installation struct {
-	Path    string `json:"path"`
-	Profile string `json:"profile"`
+	Path         string    `json:"path"`
+	Profile      string    `json:"profile"`
+	DiskInstance disk.Disk `json:"-"`
 }
 
 func InitInstallations() (*Installations, error) {
@@ -107,10 +110,18 @@ func (i *Installations) Save() error {
 }
 
 func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, profile string) (*Installation, error) {
-	absolutePath, err := filepath.Abs(installPath)
-
+	parsed, err := url.Parse(installPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not resolve absolute path of: "+installPath)
+		return nil, errors.Wrap(err, "failed to parse path")
+	}
+
+	var absolutePath = installPath
+	if parsed.Scheme == "" {
+		absolutePath, err = filepath.Abs(installPath)
+
+		if err != nil {
+			return nil, errors.Wrap(err, "could not resolve absolute path of: "+installPath)
+		}
 	}
 
 	installation := &Installation{
@@ -118,24 +129,19 @@ func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, 
 		Profile: profile,
 	}
 
+	// ftp://one:1234@localhost:21/
+
+	log.Info().Msg("installPath: " + installPath)
+	log.Info().Msg("absolutePath: " + absolutePath)
+
 	if err := installation.Validate(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to validate installation")
 	}
 
-	newStat, err := os.Stat(installation.Path)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to stat installation directory")
-	}
-
 	found := false
 	for _, install := range i.Installations {
-		stat, err := os.Stat(install.Path)
-		if err != nil {
-			continue
-		}
-
-		found = os.SameFile(newStat, stat)
-		if found {
+		if filepath.Clean(installation.Path) == filepath.Clean(install.Path) {
+			found = true
 			break
 		}
 	}
@@ -190,29 +196,34 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 		return errors.New("profile not found")
 	}
 
+	d, err := i.GetDisk()
+	if err != nil {
+		return err
+	}
+
 	foundExecutable := false
 
-	_, err := os.Stat(filepath.Join(i.Path, "FactoryGame.exe"))
+	err = d.Exists(filepath.Join(i.BasePath(), "FactoryGame.exe"))
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !d.IsNotExist(err) {
 			return errors.Wrap(err, "failed reading FactoryGame.exe")
 		}
 	} else {
 		foundExecutable = true
 	}
 
-	_, err = os.Stat(filepath.Join(i.Path, "FactoryServer.sh"))
+	err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.sh"))
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !d.IsNotExist(err) {
 			return errors.Wrap(err, "failed reading FactoryServer.sh")
 		}
 	} else {
 		foundExecutable = true
 	}
 
-	_, err = os.Stat(filepath.Join(i.Path, "FactoryServer.exe"))
+	err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.exe"))
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !d.IsNotExist(err) {
 			return errors.Wrap(err, "failed reading FactoryServer.exe")
 		}
 	} else {
@@ -220,7 +231,7 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 	}
 
 	if !foundExecutable {
-		return errors.New("did not find game executable in " + i.Path)
+		return errors.New("did not find game executable in " + i.BasePath())
 	}
 
 	return nil
@@ -244,7 +255,7 @@ func (i *Installation) LockFilePath(ctx *GlobalContext) (string, error) {
 	lockFileName = lockFileCleaner.ReplaceAllLiteralString(lockFileName, "-")
 	lockFileName = strings.ToLower(lockFileName) + "-lock.json"
 
-	return filepath.Join(i.Path, platform.LockfilePath, lockFileName), nil
+	return filepath.Join(i.BasePath(), platform.LockfilePath, lockFileName), nil
 }
 
 func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
@@ -253,10 +264,15 @@ func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
 		return nil, err
 	}
 
-	var lockFile *LockFile
-	lockFileJSON, err := os.ReadFile(lockfilePath)
+	d, err := i.GetDisk()
 	if err != nil {
-		if !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	var lockFile *LockFile
+	lockFileJSON, err := d.Read(lockfilePath)
+	if err != nil {
+		if !d.IsNotExist(err) {
 			return nil, errors.Wrap(err, "failed reading lockfile")
 		}
 	} else {
@@ -280,7 +296,12 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) erro
 		return errors.Wrap(err, "failed to serialize lockfile json")
 	}
 
-	if err := os.WriteFile(lockfilePath, marshaledLockfile, 0777); err != nil {
+	d, err := i.GetDisk()
+	if err != nil {
+		return err
+	}
+
+	if err := d.Write(lockfilePath, marshaledLockfile); err != nil {
 		return errors.Wrap(err, "failed writing lockfile")
 	}
 
@@ -317,12 +338,17 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		return errors.Wrap(err, "could not resolve mods")
 	}
 
-	modsDirectory := filepath.Join(i.Path, "FactoryGame", "Mods")
-	if err := os.MkdirAll(modsDirectory, 0777); err != nil {
+	d, err := i.GetDisk()
+	if err != nil {
+		return err
+	}
+
+	modsDirectory := filepath.Join(i.BasePath(), "FactoryGame", "Mods")
+	if err := d.MkDir(modsDirectory); err != nil {
 		return errors.Wrap(err, "failed creating Mods directory")
 	}
 
-	dir, err := os.ReadDir(modsDirectory)
+	dir, err := d.ReadDir(modsDirectory)
 	if err != nil {
 		return errors.Wrap(err, "failed to read mods directory")
 	}
@@ -331,10 +357,10 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		if entry.IsDir() {
 			if _, ok := lockfile[entry.Name()]; !ok {
 				modDir := filepath.Join(modsDirectory, entry.Name())
-				_, err := os.Stat(filepath.Join(modDir, ".smm"))
+				err := d.Exists(filepath.Join(modDir, ".smm"))
 				if err == nil {
 					log.Info().Str("mod_reference", entry.Name()).Msg("deleting mod")
-					if err := os.RemoveAll(modDir); err != nil {
+					if err := d.Remove(modDir); err != nil {
 						return errors.Wrap(err, "failed to delete mod directory")
 					}
 				}
@@ -396,10 +422,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 			downloading = true
 
 			if genericUpdates != nil {
-				select {
-				case genericUpdates <- utils.GenericUpdate{ModReference: &modReference}:
-				default:
-				}
+				genericUpdates <- utils.GenericUpdate{ModReference: &modReference}
 			}
 
 			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("downloading mod")
@@ -411,7 +434,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 			downloading = false
 
 			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("extracting mod")
-			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), version.Hash, genericUpdates); err != nil {
+			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), version.Hash, genericUpdates, d); err != nil {
 				return errors.Wrap(err, "could not extract "+modReference)
 			}
 		}
@@ -466,10 +489,15 @@ func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
 		return 0, err
 	}
 
-	fullPath := filepath.Join(i.Path, platform.VersionPath)
-	file, err := os.ReadFile(fullPath)
+	d, err := i.GetDisk()
 	if err != nil {
-		if os.IsNotExist(err) {
+		return 0, err
+	}
+
+	fullPath := filepath.Join(i.BasePath(), platform.VersionPath)
+	file, err := d.Read(fullPath)
+	if err != nil {
+		if d.IsNotExist(err) {
 			return 0, errors.Wrap(err, "could not find game version file")
 		}
 		return 0, errors.Wrap(err, "failed reading version file")
@@ -488,11 +516,16 @@ func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 		return nil, errors.Wrap(err, "failed to validate installation")
 	}
 
+	d, err := i.GetDisk()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, platform := range platforms {
-		fullPath := filepath.Join(i.Path, platform.VersionPath)
-		_, err := os.Stat(fullPath)
+		fullPath := filepath.Join(i.BasePath(), platform.VersionPath)
+		err := d.Exists(fullPath)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if d.IsNotExist(err) {
 				continue
 			} else {
 				return nil, errors.Wrap(err, "failed detecting version file")
@@ -502,4 +535,22 @@ func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 	}
 
 	return nil, errors.New("no platform detected")
+}
+
+func (i *Installation) GetDisk() (disk.Disk, error) {
+	if i.DiskInstance != nil {
+		return i.DiskInstance, nil
+	}
+
+	var err error
+	i.DiskInstance, err = disk.FromPath(i.Path)
+	return i.DiskInstance, err
+}
+
+func (i *Installation) BasePath() string {
+	parsed, err := url.Parse(i.Path)
+	if err != nil {
+		return i.Path
+	}
+	return parsed.Path
 }

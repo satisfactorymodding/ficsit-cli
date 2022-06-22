@@ -11,11 +11,12 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/satisfactorymodding/ficsit-cli/cmd/installation"
 	"github.com/satisfactorymodding/ficsit-cli/cmd/mod"
 	"github.com/satisfactorymodding/ficsit-cli/cmd/profile"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var RootCmd = &cobra.Command{

@@ -12,6 +12,7 @@ require (
 	github.com/charmbracelet/bubbletea v0.21.0
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/charmbracelet/lipgloss v0.5.0
+	github.com/jlaffaye/ftp v0.0.0-20220612151834-60a941566ce4
 	github.com/muesli/reflow v0.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.41
@@ -40,6 +41,8 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
@@ -76,5 +79,5 @@ require (
 	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

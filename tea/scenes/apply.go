@@ -37,6 +37,8 @@ type apply struct {
 	status        update
 	updateChannel chan update
 	errorChannel  chan error
+	cancelChannel chan bool
+	cancelled     bool
 }
 
 func NewApply(root components.RootModel, parent tea.Model) tea.Model {
@@ -45,6 +47,7 @@ func NewApply(root components.RootModel, parent tea.Model) tea.Model {
 
 	updateChannel := make(chan update)
 	errorChannel := make(chan error)
+	cancelChannel := make(chan bool, 1)
 
 	model := &apply{
 		root:    root,
@@ -67,6 +70,8 @@ func NewApply(root components.RootModel, parent tea.Model) tea.Model {
 		},
 		updateChannel: updateChannel,
 		errorChannel:  errorChannel,
+		cancelChannel: cancelChannel,
+		cancelled:     false,
 	}
 
 	go func() {
@@ -119,6 +124,17 @@ func NewApply(root components.RootModel, parent tea.Model) tea.Model {
 			result.installTotal = 100
 			result.completed = append(result.completed, installation.Path)
 			updateChannel <- *result
+
+			stop := false
+			select {
+			case <-cancelChannel:
+				stop = true
+			default:
+			}
+
+			if stop {
+				break
+			}
 		}
 
 		result.done = true
@@ -140,7 +156,8 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case KeyControlC:
 			return m, tea.Quit
 		case KeyEscape:
-			// TODO Cancel
+			m.cancelled = true
+			m.cancelChannel <- true
 			return m, nil
 		case KeyEnter:
 			if m.status.done {
@@ -195,7 +212,11 @@ func (m apply) View() string {
 	}
 
 	if m.status.done {
-		strs = append(strs, utils.LabelStyle.Copy().Padding(0).Margin(1).Render("Done! Press Enter to return"))
+		if m.cancelled {
+			strs = append(strs, utils.LabelStyle.Copy().Foreground(lipgloss.Color("196")).Padding(0).Margin(1).Render("Cancelled! Press Enter to return"))
+		} else {
+			strs = append(strs, utils.LabelStyle.Copy().Padding(0).Margin(1).Render("Done! Press Enter to return"))
+		}
 	}
 
 	result := lipgloss.NewStyle().MarginLeft(1).Render(lipgloss.JoinVertical(lipgloss.Left, strs...))

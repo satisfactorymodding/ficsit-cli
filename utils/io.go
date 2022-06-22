@@ -12,6 +12,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 )
 
 type Progresser struct {
@@ -141,11 +143,11 @@ func SHA256Data(f io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan GenericUpdate) error {
+func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan GenericUpdate, d disk.Disk) error {
 	hashFile := filepath.Join(location, ".smm")
-	hashBytes, err := os.ReadFile(hashFile)
+	hashBytes, err := d.Read(hashFile)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !d.IsNotExist(err) {
 			return errors.Wrap(err, "failed to read .smm mod hash file")
 		}
 	} else {
@@ -154,16 +156,16 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 		}
 	}
 
-	if err := os.MkdirAll(location, 0777); err != nil {
-		if !os.IsExist(err) {
+	if err := d.MkDir(location); err != nil {
+		if !d.IsExist(err) {
 			return errors.Wrap(err, "failed to create mod directory: "+location)
 		}
-	} else {
-		if err := os.RemoveAll(location); err != nil {
+
+		if err := d.Remove(location); err != nil {
 			return errors.Wrap(err, "failed to remove directory: "+location)
 		}
 
-		if err := os.MkdirAll(location, 0777); err != nil {
+		if err := d.MkDir(location); err != nil {
 			return errors.Wrap(err, "failed to create mod directory: "+location)
 		}
 	}
@@ -177,11 +179,11 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 		if !file.FileInfo().IsDir() {
 			outFileLocation := filepath.Join(location, file.Name)
 
-			if err := os.MkdirAll(filepath.Dir(outFileLocation), 0777); err != nil {
+			if err := d.MkDir(filepath.Dir(outFileLocation)); err != nil {
 				return errors.Wrap(err, "failed to create mod directory: "+location)
 			}
 
-			if err := writeZipFile(outFileLocation, file); err != nil {
+			if err := writeZipFile(outFileLocation, file, d); err != nil {
 				return err
 			}
 		}
@@ -194,7 +196,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 		}
 	}
 
-	if err := os.WriteFile(hashFile, []byte(hash), 0777); err != nil {
+	if err := d.Write(hashFile, []byte(hash)); err != nil {
 		return errors.Wrap(err, "failed to write .smm mod hash file")
 	}
 
@@ -208,8 +210,8 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 	return nil
 }
 
-func writeZipFile(outFileLocation string, file *zip.File) error {
-	outFile, err := os.OpenFile(outFileLocation, os.O_CREATE|os.O_RDWR, 0644)
+func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk) error {
+	outFile, err := d.Open(outFileLocation, os.O_CREATE|os.O_RDWR)
 	if err != nil {
 		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
 	}
