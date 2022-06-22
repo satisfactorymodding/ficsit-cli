@@ -547,5 +547,10 @@ func (i *Installation) BasePath() string {
 	if err != nil {
 		return i.Path
 	}
+
+	if parsed.Scheme != "ftp" && parsed.Scheme != "sftp" {
+		return i.Path
+	}
+
 	return parsed.Path
 }
