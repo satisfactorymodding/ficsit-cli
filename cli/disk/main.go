@@ -31,8 +31,6 @@ func FromPath(path string) (Disk, error) {
 		return nil, errors.Wrap(err, "failed to parse path")
 	}
 
-	log.Info().Msg(path)
-	log.Info().Msg(parsed.Scheme)
 	switch parsed.Scheme {
 	case "ftp":
 		log.Info().Str("path", path).Msg("connecting to ftp")

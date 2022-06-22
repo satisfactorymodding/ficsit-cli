@@ -116,7 +116,7 @@ func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, 
 	}
 
 	var absolutePath = installPath
-	if parsed.Scheme == "" {
+	if parsed.Scheme != "ftp" && parsed.Scheme != "sftp" {
 		absolutePath, err = filepath.Abs(installPath)
 
 		if err != nil {
@@ -128,11 +128,6 @@ func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, 
 		Path:    absolutePath,
 		Profile: profile,
 	}
-
-	// ftp://one:1234@localhost:21/
-
-	log.Info().Msg("installPath: " + installPath)
-	log.Info().Msg("absolutePath: " + absolutePath)
 
 	if err := installation.Validate(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to validate installation")
