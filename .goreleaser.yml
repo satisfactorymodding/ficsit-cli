@@ -73,7 +73,7 @@ changelog:
 aurs:
   - name: ficsit-cli-bin
     description: A CLI for managing mods for the game Satisfactory
-    homepage: https://github.com/Vilsol/ficsit-cli
+    homepage: https://github.com/satisfactorymodding/ficsit-cli
     maintainers:
       - 'Vilsol <me at vil dot so>'
     license: GPL3
