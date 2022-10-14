@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/Khan/genqlient/graphql"
 	"github.com/Masterminds/semver/v3"
@@ -119,9 +120,14 @@ func (r *resolvingInstance) Step() error {
 					return errors.Errorf("could not find an SML version that matches constraint %s and game version %d", constraint, r.GameVersion)
 				}
 
+				smlVersionStr := chosenSMLVersion.String()
+				if !strings.HasPrefix(smlVersionStr, "v") {
+					smlVersionStr = "v" + smlVersionStr
+				}
+
 				r.OutputLock[id] = LockedMod{
 					Version:      chosenSMLVersion.String(),
-					Link:         fmt.Sprintf(smlDownloadTemplate, chosenSMLVersion.String()),
+					Link:         fmt.Sprintf(smlDownloadTemplate, smlVersionStr),
 					Dependencies: map[string]string{},
 				}
 			}
