@@ -4,14 +4,16 @@
 package main
 
 import (
-	_ "github.com/Khan/genqlient/generate"
-	"github.com/satisfactorymodding/ficsit-cli/cmd"
-	"github.com/spf13/cobra/doc"
 	"os"
+
+	_ "github.com/Khan/genqlient/generate"
+	"github.com/spf13/cobra/doc"
+
+	"github.com/satisfactorymodding/ficsit-cli/cmd"
 )
 
-//go:generate go run -tags tools tools.go
 //go:generate go run github.com/Khan/genqlient
+//go:generate go run -tags tools tools.go
 
 func main() {
 	_ = os.RemoveAll("./docs/")

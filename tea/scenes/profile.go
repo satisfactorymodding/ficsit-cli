@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -16,12 +17,12 @@ import (
 var _ tea.Model = (*profile)(nil)
 
 type profile struct {
-	root       components.RootModel
 	list       list.Model
+	root       components.RootModel
 	parent     tea.Model
 	profile    *cli.Profile
-	hadRenamed bool
 	error      *components.ErrorComponent
+	hadRenamed bool
 }
 
 func NewProfile(root components.RootModel, parent tea.Model, profileData *cli.Profile) tea.Model {
@@ -151,7 +152,7 @@ func (m profile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m profile) View() string {
 	if m.error != nil {
-		err := (*m.error).View()
+		err := m.error.View()
 		m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
 		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, m.list.View())
 	}

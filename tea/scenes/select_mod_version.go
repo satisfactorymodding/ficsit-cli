@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -68,7 +69,6 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 				Order:    ficsit.OrderDesc,
 				Order_by: ficsit.VersionFieldsCreatedAt,
 			})
-
 			if err != nil {
 				m.err <- err.Error()
 				return
@@ -172,7 +172,7 @@ func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m selectModVersionList) View() string {
 	if m.error != nil {
-		err := (*m.error).View()
+		err := m.error.View()
 		m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
 		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, m.list.View())
 	}

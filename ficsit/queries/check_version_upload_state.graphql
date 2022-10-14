@@ -1,0 +1,8 @@
+query CheckVersionUploadState ($modId: ModID!, $versionId: VersionID!) {
+    state: checkVersionUploadState(modId: $modId, versionId: $versionId) {
+        auto_approved
+        version {
+            id
+        }
+    }
+}

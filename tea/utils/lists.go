@@ -9,13 +9,13 @@ import (
 var _ list.DefaultItem = (*SimpleItem[tea.Model])(nil)
 
 type SimpleItem[T tea.Model] struct {
-	ItemTitle string
 	Activate  func(msg tea.Msg, currentModel T) (tea.Model, tea.Cmd)
+	ItemTitle string
 }
 
 type SimpleItemExtra[T tea.Model, E any] struct {
-	SimpleItem[T]
 	Extra E
+	SimpleItem[T]
 }
 
 func (n SimpleItem[any]) Title() string {

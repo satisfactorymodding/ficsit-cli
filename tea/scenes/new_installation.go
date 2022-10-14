@@ -24,12 +24,12 @@ import (
 var _ tea.Model = (*newInstallation)(nil)
 
 type newInstallation struct {
+	dirList list.Model
+	input   textinput.Model
 	root    components.RootModel
 	parent  tea.Model
-	input   textinput.Model
-	title   string
 	error   *components.ErrorComponent
-	dirList list.Model
+	title   string
 }
 
 func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
@@ -154,7 +154,7 @@ func (m newInstallation) View() string {
 	mandatory := lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
 
 	if m.error != nil {
-		return lipgloss.JoinVertical(lipgloss.Left, mandatory, (*m.error).View())
+		return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.error.View())
 	}
 
 	if len(m.dirList.Items()) > 0 {

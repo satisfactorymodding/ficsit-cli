@@ -8,7 +8,7 @@ import (
 )
 
 func TestProfileResolution(t *testing.T) {
-	ctx, err := InitCLI()
+	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 
 	resolver := NewDependencyResolver(ctx.APIClient)

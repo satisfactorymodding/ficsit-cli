@@ -8,8 +8,9 @@ import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
-	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
 const smlDownloadTemplate = `https://github.com/satisfactorymodding/SatisfactoryModLoader/releases/download/%s/SML.zip`

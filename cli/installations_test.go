@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
+
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
 
@@ -19,7 +20,7 @@ func TestInstallationsInit(t *testing.T) {
 }
 
 func TestAddInstallation(t *testing.T) {
-	ctx, err := InitCLI()
+	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 
 	profileName := "InstallationTest"

@@ -1,0 +1,3 @@
+mutation FinalizeCreateVersion ($modId: ModID!, $versionId: VersionID!, $version: NewVersion!) {
+    success: finalizeCreateVersion(modId: $modId, versionId: $versionId, version: $version)
+}

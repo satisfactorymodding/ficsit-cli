@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/pkg/errors"
+
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
@@ -14,30 +15,34 @@ type GlobalContext struct {
 
 var globalContext *GlobalContext
 
-func InitCLI() (*GlobalContext, error) {
+func InitCLI(apiOnly bool) (*GlobalContext, error) {
 	if globalContext != nil {
 		return globalContext, nil
 	}
 
-	profiles, err := InitProfiles()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize profiles")
+	if !apiOnly {
+		profiles, err := InitProfiles()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to initialize profiles")
+		}
+
+		installations, err := InitInstallations()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to initialize installations")
+		}
+
+		globalContext = &GlobalContext{
+			Installations: installations,
+			Profiles:      profiles,
+			APIClient:     ficsit.InitAPI(),
+		}
+	} else {
+		globalContext = &GlobalContext{
+			APIClient: ficsit.InitAPI(),
+		}
 	}
 
-	installations, err := InitInstallations()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to initialize installations")
-	}
-
-	ctx := &GlobalContext{
-		Installations: installations,
-		Profiles:      profiles,
-		APIClient:     ficsit.InitAPI(),
-	}
-
-	globalContext = ctx
-
-	return ctx, nil
+	return globalContext, nil
 }
 
 func (g *GlobalContext) Save() error {

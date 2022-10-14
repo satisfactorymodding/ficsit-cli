@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
@@ -13,12 +14,12 @@ import (
 var _ tea.Model = (*modSemver)(nil)
 
 type modSemver struct {
+	input  textinput.Model
 	root   components.RootModel
 	parent tea.Model
-	input  textinput.Model
-	title  string
-	mod    utils.Mod
 	error  *components.ErrorComponent
+	mod    utils.Mod
+	title  string
 }
 
 func NewModSemver(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
@@ -79,7 +80,7 @@ func (m modSemver) View() string {
 	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
 
 	if m.error != nil {
-		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, (*m.error).View(), inputView)
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, m.error.View(), inputView)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)

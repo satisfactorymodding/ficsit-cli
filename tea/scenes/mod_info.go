@@ -6,11 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
-	"github.com/PuerkitoBio/goquery"
-
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -18,6 +15,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/rs/zerolog/log"
+
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -27,15 +26,15 @@ var _ tea.Model = (*modVersionMenu)(nil)
 
 type modInfo struct {
 	root     components.RootModel
-	viewport viewport.Model
-	spinner  spinner.Model
 	parent   tea.Model
 	modData  chan ficsit.GetModMod
 	modError chan string
-	ready    bool
+	error    *components.ErrorComponent
 	help     help.Model
 	keys     modInfoKeyMap
-	error    *components.ErrorComponent
+	viewport viewport.Model
+	spinner  spinner.Model
+	ready    bool
 }
 
 type modInfoKeyMap struct {
@@ -88,7 +87,6 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 
 	go func() {
 		fullMod, err := ficsit.GetMod(context.TODO(), root.GetAPIClient(), mod.Reference)
-
 		if err != nil {
 			model.modError <- err.Error()
 			return
@@ -225,7 +223,7 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m modInfo) View() string {
 	if m.error != nil {
 		helpBar := lipgloss.NewStyle().Padding(1, 2).Render(m.help.View(m.keys))
-		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), (*m.error).View(), m.viewport.View(), helpBar)
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.error.View(), m.viewport.View(), helpBar)
 	}
 
 	if m.viewport.Height == 0 {

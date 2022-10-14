@@ -22,3 +22,5 @@ bindings:
   Date:
     type: time.Time
     unmarshaler: github.com/satisfactorymodding/ficsit-cli/ficsit/utils.UnmarshalDateTime
+  TagID:
+    type: string

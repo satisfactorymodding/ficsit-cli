@@ -8,9 +8,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
+
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
-	"github.com/spf13/viper"
 )
 
 var _ tea.Model = (*mainMenu)(nil)
@@ -196,7 +197,7 @@ func (m mainMenu) View() string {
 	}
 
 	if m.error != nil {
-		err := (*m.error).View()
+		err := m.error.View()
 		m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header)-lipgloss.Height(err))
 		return lipgloss.JoinVertical(lipgloss.Left, header, err, m.list.View())
 	}

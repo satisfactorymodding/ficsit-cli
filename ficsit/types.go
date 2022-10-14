@@ -12,6 +12,56 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/ficsit/utils"
 )
 
+// CheckVersionUploadStateResponse is returned by CheckVersionUploadState on success.
+type CheckVersionUploadStateResponse struct {
+	State CheckVersionUploadStateStateCreateVersionResponse `json:"state"`
+}
+
+// GetState returns CheckVersionUploadStateResponse.State, and is useful for accessing the field via an interface.
+func (v *CheckVersionUploadStateResponse) GetState() CheckVersionUploadStateStateCreateVersionResponse {
+	return v.State
+}
+
+// CheckVersionUploadStateStateCreateVersionResponse includes the requested fields of the GraphQL type CreateVersionResponse.
+type CheckVersionUploadStateStateCreateVersionResponse struct {
+	Auto_approved bool                                                     `json:"auto_approved"`
+	Version       CheckVersionUploadStateStateCreateVersionResponseVersion `json:"version"`
+}
+
+// GetAuto_approved returns CheckVersionUploadStateStateCreateVersionResponse.Auto_approved, and is useful for accessing the field via an interface.
+func (v *CheckVersionUploadStateStateCreateVersionResponse) GetAuto_approved() bool {
+	return v.Auto_approved
+}
+
+// GetVersion returns CheckVersionUploadStateStateCreateVersionResponse.Version, and is useful for accessing the field via an interface.
+func (v *CheckVersionUploadStateStateCreateVersionResponse) GetVersion() CheckVersionUploadStateStateCreateVersionResponseVersion {
+	return v.Version
+}
+
+// CheckVersionUploadStateStateCreateVersionResponseVersion includes the requested fields of the GraphQL type Version.
+type CheckVersionUploadStateStateCreateVersionResponseVersion struct {
+	Id string `json:"id"`
+}
+
+// GetId returns CheckVersionUploadStateStateCreateVersionResponseVersion.Id, and is useful for accessing the field via an interface.
+func (v *CheckVersionUploadStateStateCreateVersionResponseVersion) GetId() string { return v.Id }
+
+// CreateVersionResponse is returned by CreateVersion on success.
+type CreateVersionResponse struct {
+	VersionID string `json:"versionID"`
+}
+
+// GetVersionID returns CreateVersionResponse.VersionID, and is useful for accessing the field via an interface.
+func (v *CreateVersionResponse) GetVersionID() string { return v.VersionID }
+
+// FinalizeCreateVersionResponse is returned by FinalizeCreateVersion on success.
+type FinalizeCreateVersionResponse struct {
+	Success bool `json:"success"`
+}
+
+// GetSuccess returns FinalizeCreateVersionResponse.Success, and is useful for accessing the field via an interface.
+func (v *FinalizeCreateVersionResponse) GetSuccess() bool { return v.Success }
+
 // GetModMod includes the requested fields of the GraphQL type Mod.
 type GetModMod struct {
 	Id               string                    `json:"id"`
@@ -190,6 +240,7 @@ type ModFilter struct {
 	Order_by   ModFields `json:"order_by,omitempty"`
 	References []string  `json:"references,omitempty"`
 	Search     string    `json:"search,omitempty"`
+	TagIDs     []string  `json:"tagIDs,omitempty"`
 }
 
 // GetHidden returns ModFilter.Hidden, and is useful for accessing the field via an interface.
@@ -215,6 +266,9 @@ func (v *ModFilter) GetReferences() []string { return v.References }
 
 // GetSearch returns ModFilter.Search, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetSearch() string { return v.Search }
+
+// GetTagIDs returns ModFilter.TagIDs, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetTagIDs() []string { return v.TagIDs }
 
 type ModVersionConstraint struct {
 	ModIdOrReference string `json:"modIdOrReference"`
@@ -431,6 +485,17 @@ type ModsResponse struct {
 // GetMods returns ModsResponse.Mods, and is useful for accessing the field via an interface.
 func (v *ModsResponse) GetMods() ModsModsGetMods { return v.Mods }
 
+type NewVersion struct {
+	Changelog string             `json:"changelog"`
+	Stability VersionStabilities `json:"stability"`
+}
+
+// GetChangelog returns NewVersion.Changelog, and is useful for accessing the field via an interface.
+func (v *NewVersion) GetChangelog() string { return v.Changelog }
+
+// GetStability returns NewVersion.Stability, and is useful for accessing the field via an interface.
+func (v *NewVersion) GetStability() VersionStabilities { return v.Stability }
+
 type Order string
 
 const (
@@ -593,6 +658,50 @@ func (v *VersionFilter) GetOrder_by() VersionFields { return v.Order_by }
 // GetSearch returns VersionFilter.Search, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetSearch() string { return v.Search }
 
+type VersionStabilities string
+
+const (
+	VersionStabilitiesAlpha   VersionStabilities = "alpha"
+	VersionStabilitiesBeta    VersionStabilities = "beta"
+	VersionStabilitiesRelease VersionStabilities = "release"
+)
+
+// __CheckVersionUploadStateInput is used internally by genqlient
+type __CheckVersionUploadStateInput struct {
+	ModId     string `json:"modId"`
+	VersionId string `json:"versionId"`
+}
+
+// GetModId returns __CheckVersionUploadStateInput.ModId, and is useful for accessing the field via an interface.
+func (v *__CheckVersionUploadStateInput) GetModId() string { return v.ModId }
+
+// GetVersionId returns __CheckVersionUploadStateInput.VersionId, and is useful for accessing the field via an interface.
+func (v *__CheckVersionUploadStateInput) GetVersionId() string { return v.VersionId }
+
+// __CreateVersionInput is used internally by genqlient
+type __CreateVersionInput struct {
+	ModId string `json:"modId"`
+}
+
+// GetModId returns __CreateVersionInput.ModId, and is useful for accessing the field via an interface.
+func (v *__CreateVersionInput) GetModId() string { return v.ModId }
+
+// __FinalizeCreateVersionInput is used internally by genqlient
+type __FinalizeCreateVersionInput struct {
+	ModId     string     `json:"modId"`
+	VersionId string     `json:"versionId"`
+	Version   NewVersion `json:"version"`
+}
+
+// GetModId returns __FinalizeCreateVersionInput.ModId, and is useful for accessing the field via an interface.
+func (v *__FinalizeCreateVersionInput) GetModId() string { return v.ModId }
+
+// GetVersionId returns __FinalizeCreateVersionInput.VersionId, and is useful for accessing the field via an interface.
+func (v *__FinalizeCreateVersionInput) GetVersionId() string { return v.VersionId }
+
+// GetVersion returns __FinalizeCreateVersionInput.Version, and is useful for accessing the field via an interface.
+func (v *__FinalizeCreateVersionInput) GetVersion() NewVersion { return v.Version }
+
 // __GetModInput is used internally by genqlient
 type __GetModInput struct {
 	ModId string `json:"modId"`
@@ -629,21 +738,115 @@ type __ResolveModDependenciesInput struct {
 // GetFilter returns __ResolveModDependenciesInput.Filter, and is useful for accessing the field via an interface.
 func (v *__ResolveModDependenciesInput) GetFilter() []ModVersionConstraint { return v.Filter }
 
+func CheckVersionUploadState(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+	versionId string,
+) (*CheckVersionUploadStateResponse, error) {
+	req := &graphql.Request{
+		OpName: "CheckVersionUploadState",
+		Query: `
+query CheckVersionUploadState ($modId: ModID!, $versionId: VersionID!) {
+	state: checkVersionUploadState(modId: $modId, versionId: $versionId) {
+		auto_approved
+		version {
+			id
+		}
+	}
+}
+`,
+		Variables: &__CheckVersionUploadStateInput{
+			ModId:     modId,
+			VersionId: versionId,
+		},
+	}
+	var err error
+
+	var data CheckVersionUploadStateResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
+func CreateVersion(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+) (*CreateVersionResponse, error) {
+	req := &graphql.Request{
+		OpName: "CreateVersion",
+		Query: `
+mutation CreateVersion ($modId: ModID!) {
+	versionID: createVersion(modId: $modId)
+}
+`,
+		Variables: &__CreateVersionInput{
+			ModId: modId,
+		},
+	}
+	var err error
+
+	var data CreateVersionResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
+func FinalizeCreateVersion(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+	versionId string,
+	version NewVersion,
+) (*FinalizeCreateVersionResponse, error) {
+	req := &graphql.Request{
+		OpName: "FinalizeCreateVersion",
+		Query: `
+mutation FinalizeCreateVersion ($modId: ModID!, $versionId: VersionID!, $version: NewVersion!) {
+	success: finalizeCreateVersion(modId: $modId, versionId: $versionId, version: $version)
+}
+`,
+		Variables: &__FinalizeCreateVersionInput{
+			ModId:     modId,
+			VersionId: versionId,
+			Version:   version,
+		},
+	}
+	var err error
+
+	var data FinalizeCreateVersionResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
 func GetMod(
 	ctx context.Context,
 	client graphql.Client,
 	modId string,
 ) (*GetModResponse, error) {
-	__input := __GetModInput{
-		ModId: modId,
-	}
-	var err error
-
-	var retval GetModResponse
-	err = client.MakeRequest(
-		ctx,
-		"GetMod",
-		`
+	req := &graphql.Request{
+		OpName: "GetMod",
+		Query: `
 query GetMod ($modId: String!) {
 	mod: getModByIdOrReference(modIdOrReference: $modId) {
 		id
@@ -663,10 +866,22 @@ query GetMod ($modId: String!) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__GetModInput{
+			ModId: modId,
+		},
+	}
+	var err error
+
+	var data GetModResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func ModVersions(
@@ -675,17 +890,9 @@ func ModVersions(
 	modId string,
 	filter VersionFilter,
 ) (*ModVersionsResponse, error) {
-	__input := __ModVersionsInput{
-		ModId:  modId,
-		Filter: filter,
-	}
-	var err error
-
-	var retval ModVersionsResponse
-	err = client.MakeRequest(
-		ctx,
-		"ModVersions",
-		`
+	req := &graphql.Request{
+		OpName: "ModVersions",
+		Query: `
 query ModVersions ($modId: String!, $filter: VersionFilter) {
 	mod: getModByIdOrReference(modIdOrReference: $modId) {
 		id
@@ -696,10 +903,23 @@ query ModVersions ($modId: String!, $filter: VersionFilter) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__ModVersionsInput{
+			ModId:  modId,
+			Filter: filter,
+		},
+	}
+	var err error
+
+	var data ModVersionsResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func Mods(
@@ -707,16 +927,9 @@ func Mods(
 	client graphql.Client,
 	filter ModFilter,
 ) (*ModsResponse, error) {
-	__input := __ModsInput{
-		Filter: filter,
-	}
-	var err error
-
-	var retval ModsResponse
-	err = client.MakeRequest(
-		ctx,
-		"Mods",
-		`
+	req := &graphql.Request{
+		OpName: "Mods",
+		Query: `
 query Mods ($filter: ModFilter) {
 	mods: getMods(filter: $filter) {
 		count
@@ -734,10 +947,22 @@ query Mods ($filter: ModFilter) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__ModsInput{
+			Filter: filter,
+		},
+	}
+	var err error
+
+	var data ModsResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func ResolveModDependencies(
@@ -745,16 +970,9 @@ func ResolveModDependencies(
 	client graphql.Client,
 	filter []ModVersionConstraint,
 ) (*ResolveModDependenciesResponse, error) {
-	__input := __ResolveModDependenciesInput{
-		Filter: filter,
-	}
-	var err error
-
-	var retval ResolveModDependenciesResponse
-	err = client.MakeRequest(
-		ctx,
-		"ResolveModDependencies",
-		`
+	req := &graphql.Request{
+		OpName: "ResolveModDependencies",
+		Query: `
 query ResolveModDependencies ($filter: [ModVersionConstraint!]!) {
 	mods: resolveModVersions(filter: $filter) {
 		id
@@ -773,23 +991,31 @@ query ResolveModDependencies ($filter: [ModVersionConstraint!]!) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__ResolveModDependenciesInput{
+			Filter: filter,
+		},
+	}
+	var err error
+
+	var data ResolveModDependenciesResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func SMLVersions(
 	ctx context.Context,
 	client graphql.Client,
 ) (*SMLVersionsResponse, error) {
-	var err error
-
-	var retval SMLVersionsResponse
-	err = client.MakeRequest(
-		ctx,
-		"SMLVersions",
-		`
+	req := &graphql.Request{
+		OpName: "SMLVersions",
+		Query: `
 query SMLVersions {
 	smlVersions: getSMLVersions(filter: {limit:100}) {
 		count
@@ -801,8 +1027,17 @@ query SMLVersions {
 	}
 }
 `,
-		&retval,
-		nil,
+	}
+	var err error
+
+	var data SMLVersionsResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }

@@ -13,19 +13,39 @@ linters-settings:
     ignorePackageGlobs:
       - github.com/satisfactorymodding/ficsit-cli/*
 
+  govet:
+    check-shadowing: true
+    enable-all: true
+    disable:
+      - shadow
+
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+
+  gci:
+    custom-order: true
+    sections:
+      - standard
+      - default
+      - prefix(github.com/satisfactorymodding/ficsit-cli)
+      - blank
+      - dot
+
+run:
+  skip-files:
+    - ./ficsit/types.go
+
 linters:
   disable-all: true
   enable:
-    - deadcode
     - errcheck
     - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - structcheck
     - typecheck
     - unused
-    - varcheck
     - bidichk
     - contextcheck
     - durationcheck
@@ -33,8 +53,11 @@ linters:
     - goconst
     - goimports
     - revive
-    - ifshort
     - misspell
     - prealloc
     - whitespace
     - wrapcheck
+    - gci
+    - gocritic
+    - gofumpt
+    - nonamedreturns

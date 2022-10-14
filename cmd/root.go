@@ -17,6 +17,7 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/cmd/installation"
 	"github.com/satisfactorymodding/ficsit-cli/cmd/mod"
 	"github.com/satisfactorymodding/ficsit-cli/cmd/profile"
+	"github.com/satisfactorymodding/ficsit-cli/cmd/smr"
 )
 
 var RootCmd = &cobra.Command{
@@ -52,8 +53,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		if viper.GetString("log-file") != "" {
-			logFile, err := os.OpenFile(viper.GetString("log-file"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
-
+			logFile, err := os.OpenFile(viper.GetString("log-file"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o777)
 			if err != nil {
 				return errors.Wrap(err, "failed to open log file")
 			}
@@ -102,6 +102,7 @@ func init() {
 	RootCmd.AddCommand(profile.Cmd)
 	RootCmd.AddCommand(installation.Cmd)
 	RootCmd.AddCommand(mod.Cmd)
+	RootCmd.AddCommand(smr.Cmd)
 
 	var baseLocalDir string
 
@@ -135,6 +136,7 @@ func init() {
 
 	RootCmd.PersistentFlags().String("api-base", "https://api.ficsit.app", "URL for API")
 	RootCmd.PersistentFlags().String("graphql-api", "/v2/query", "Path for GraphQL API")
+	RootCmd.PersistentFlags().String("api-key", "", "API key to use when sending requests")
 
 	_ = viper.BindPFlag("log", RootCmd.PersistentFlags().Lookup("log"))
 	_ = viper.BindPFlag("log-file", RootCmd.PersistentFlags().Lookup("log-file"))
@@ -150,4 +152,5 @@ func init() {
 
 	_ = viper.BindPFlag("api-base", RootCmd.PersistentFlags().Lookup("api-base"))
 	_ = viper.BindPFlag("graphql-api", RootCmd.PersistentFlags().Lookup("graphql-api"))
+	_ = viper.BindPFlag("api-key", RootCmd.PersistentFlags().Lookup("api-key"))
 }

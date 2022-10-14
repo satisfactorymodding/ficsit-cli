@@ -13,31 +13,27 @@ import (
 var _ tea.Model = (*apply)(nil)
 
 type update struct {
-	completed []string
-
 	installName    string
+	modName        string
+	completed      []string
 	installTotal   int
 	installCurrent int
-
-	modName    string
-	modTotal   int
-	modCurrent int
-
-	done bool
+	modTotal       int
+	modCurrent     int
+	done           bool
 }
 
 type apply struct {
-	root    components.RootModel
-	parent  tea.Model
-	title   string
-	error   *components.ErrorComponent
-	overall progress.Model
-	sub     progress.Model
-
-	status        update
+	root          components.RootModel
+	parent        tea.Model
+	error         *components.ErrorComponent
 	updateChannel chan update
 	errorChannel  chan error
 	cancelChannel chan bool
+	title         string
+	status        update
+	overall       progress.Model
+	sub           progress.Model
 	cancelled     bool
 }
 
@@ -222,7 +218,7 @@ func (m apply) View() string {
 	result := lipgloss.NewStyle().MarginLeft(1).Render(lipgloss.JoinVertical(lipgloss.Left, strs...))
 
 	if m.error != nil {
-		return lipgloss.JoinVertical(lipgloss.Left, m.title, (*m.error).View(), result)
+		return lipgloss.JoinVertical(lipgloss.Left, m.title, m.error.View(), result)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, m.title, result)

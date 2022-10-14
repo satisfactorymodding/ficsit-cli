@@ -6,6 +6,7 @@ import (
 
 	"github.com/Khan/genqlient/graphql"
 	"github.com/MarvinJWendt/testza"
+
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
 

@@ -9,8 +9,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"github.com/satisfactorymodding/ficsit-cli/utils"
 	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
 const DefaultProfileName = "Default"
@@ -36,14 +37,14 @@ type smmProfileFile struct {
 }
 
 type Profiles struct {
-	Version         ProfilesVersion     `json:"version"`
 	Profiles        map[string]*Profile `json:"profiles"`
 	SelectedProfile string              `json:"selected_profile"`
+	Version         ProfilesVersion     `json:"version"`
 }
 
 type Profile struct {
-	Name string                `json:"name"`
 	Mods map[string]ProfileMod `json:"mods"`
+	Name string                `json:"name"`
 }
 
 type ProfileMod struct {
@@ -67,7 +68,7 @@ func InitProfiles() (*Profiles, error) {
 				return nil, errors.Wrap(err, "failed to read cache directory")
 			}
 
-			err = os.MkdirAll(localDir, 0755)
+			err = os.MkdirAll(localDir, 0o755)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to create cache directory")
 			}
@@ -178,7 +179,7 @@ func (p *Profiles) Save() error {
 		return errors.Wrap(err, "failed to marshal profiles")
 	}
 
-	if err := os.WriteFile(profilesFile, profilesJSON, 0755); err != nil {
+	if err := os.WriteFile(profilesFile, profilesJSON, 0o755); err != nil {
 		return errors.Wrap(err, "failed to write profiles")
 	}
 

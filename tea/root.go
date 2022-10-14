@@ -5,16 +5,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
+
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes"
 )
 
 type rootModel struct {
-	global             *cli.GlobalContext
-	currentSize        tea.WindowSizeMsg
 	headerComponent    tea.Model
 	dependencyResolver cli.DependencyResolver
+	global             *cli.GlobalContext
+	currentSize        tea.WindowSizeMsg
 }
 
 func newModel(global *cli.GlobalContext) *rootModel {

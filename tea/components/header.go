@@ -3,6 +3,7 @@ package components
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 

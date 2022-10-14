@@ -1,8 +1,9 @@
 package installation
 
 import (
-	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/spf13/cobra"
+
+	"github.com/satisfactorymodding/ficsit-cli/cli"
 )
 
 func init() {
@@ -14,7 +15,7 @@ var removeCmd = &cobra.Command{
 	Short: "Remove an installation",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		global, err := cli.InitCLI()
+		global, err := cli.InitCLI(false)
 		if err != nil {
 			return err
 		}

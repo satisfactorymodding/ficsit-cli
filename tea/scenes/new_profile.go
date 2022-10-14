@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
@@ -13,11 +14,11 @@ import (
 var _ tea.Model = (*newProfile)(nil)
 
 type newProfile struct {
+	input  textinput.Model
 	root   components.RootModel
 	parent tea.Model
-	input  textinput.Model
-	title  string
 	error  *components.ErrorComponent
+	title  string
 }
 
 func NewNewProfile(root components.RootModel, parent tea.Model) tea.Model {
@@ -76,7 +77,7 @@ func (m newProfile) View() string {
 	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
 
 	if m.error != nil {
-		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, (*m.error).View(), inputView)
+		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, m.error.View(), inputView)
 	}
 
 	infoBox := lipgloss.NewStyle().

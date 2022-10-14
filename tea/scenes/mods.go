@@ -13,6 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/truncate"
+
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
@@ -36,22 +37,18 @@ type listUpdate struct {
 }
 
 type modsList struct {
-	root   components.RootModel
-	list   list.Model
-	parent tea.Model
-	items  chan listUpdate
-
-	sortingField string
-	sortingOrder sortOrder
-
-	showSortFieldList bool
+	list              list.Model
 	sortFieldList     list.Model
-
-	showSortOrderList bool
 	sortOrderList     list.Model
-
-	err   chan string
-	error *components.ErrorComponent
+	root              components.RootModel
+	parent            tea.Model
+	items             chan listUpdate
+	err               chan string
+	error             *components.ErrorComponent
+	sortingField      string
+	sortingOrder      sortOrder
+	showSortFieldList bool
+	showSortOrderList bool
 }
 
 func NewMods(root components.RootModel, parent tea.Model) tea.Model {
@@ -186,8 +183,8 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 			},
 		},
 		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
-
-			SimpleItem: utils.SimpleItem[modsList]{ItemTitle: "Descending",
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Descending",
 				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
 					m.sortingOrder = sortOrderDesc
 					cmd := m.list.SetItems(sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
@@ -229,7 +226,6 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 				Order_by: ficsit.ModFieldsLastVersionDate,
 				Order:    ficsit.OrderDesc,
 			})
-
 			if err != nil {
 				m.err <- err.Error()
 				return
@@ -395,7 +391,7 @@ func (m modsList) View() string {
 	}
 
 	if m.error != nil {
-		err := (*m.error).View()
+		err := m.error.View()
 		bottomList.SetSize(bottomList.Width(), m.root.Size().Height-m.root.Height()-lipgloss.Height(err))
 		return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), err, bottomList.View())
 	}

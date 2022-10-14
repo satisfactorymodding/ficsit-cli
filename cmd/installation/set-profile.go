@@ -2,8 +2,9 @@ package installation
 
 import (
 	"github.com/pkg/errors"
-	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/spf13/cobra"
+
+	"github.com/satisfactorymodding/ficsit-cli/cli"
 )
 
 func init() {
@@ -15,7 +16,7 @@ var setProfileCmd = &cobra.Command{
 	Short: "Change the profile of an installation",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		global, err := cli.InitCLI()
+		global, err := cli.InitCLI(false)
 		if err != nil {
 			return err
 		}

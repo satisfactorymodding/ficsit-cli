@@ -5,9 +5,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
 func init() {
@@ -43,7 +44,6 @@ var searchCmd = &cobra.Command{
 			Order_by: ficsit.ModFields(viper.GetString("order-by")),
 			Search:   search,
 		})
-
 		if err != nil {
 			return err
 		}

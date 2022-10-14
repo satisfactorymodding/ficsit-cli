@@ -3,6 +3,7 @@ package components
 import (
 	"github.com/Khan/genqlient/graphql"
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 )
 

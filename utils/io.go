@@ -18,9 +18,9 @@ import (
 
 type Progresser struct {
 	io.Reader
+	updates chan GenericUpdate
 	total   int64
 	running int64
-	updates chan GenericUpdate
 }
 
 func (pt *Progresser) Read(p []byte) (int, error) {
@@ -44,13 +44,13 @@ func (pt *Progresser) Read(p []byte) (int, error) {
 }
 
 type GenericUpdate struct {
-	Progress     float64
 	ModReference *string
+	Progress     float64
 }
 
-func DownloadOrCache(cacheKey string, hash string, url string, updates chan GenericUpdate) (r io.ReaderAt, size int64, err error) {
+func DownloadOrCache(cacheKey string, hash string, url string, updates chan GenericUpdate) (io.ReaderAt, int64, error) {
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
-	if err := os.MkdirAll(downloadCache, 0777); err != nil {
+	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
 		if !os.IsExist(err) {
 			return nil, 0, errors.Wrap(err, "failed creating download cache")
 		}
@@ -86,10 +86,8 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan Gene
 		if err := os.Remove(location); err != nil {
 			return nil, 0, errors.Wrap(err, "failed to delete file: "+location)
 		}
-	} else {
-		if !os.IsNotExist(err) {
-			return nil, 0, errors.Wrap(err, "failed to stat file: "+location)
-		}
+	} else if !os.IsNotExist(err) {
+		return nil, 0, errors.Wrap(err, "failed to stat file: "+location)
 	}
 
 	out, err := os.Create(location)

@@ -16,8 +16,8 @@ import (
 var _ Disk = (*ftpDisk)(nil)
 
 type ftpDisk struct {
-	path     string
 	client   *ftp.ServerConn
+	path     string
 	stepLock sync.Mutex
 }
 

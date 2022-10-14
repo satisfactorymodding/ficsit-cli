@@ -10,12 +10,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
-	"github.com/satisfactorymodding/ficsit-cli/utils"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
+	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
 type InstallationsVersion int
@@ -28,15 +28,15 @@ const (
 )
 
 type Installations struct {
-	Version              InstallationsVersion `json:"version"`
-	Installations        []*Installation      `json:"installations"`
 	SelectedInstallation string               `json:"selected_installation"`
+	Installations        []*Installation      `json:"installations"`
+	Version              InstallationsVersion `json:"version"`
 }
 
 type Installation struct {
+	DiskInstance disk.Disk `json:"-"`
 	Path         string    `json:"path"`
 	Profile      string    `json:"profile"`
-	DiskInstance disk.Disk `json:"-"`
 }
 
 func InitInstallations() (*Installations, error) {
@@ -55,7 +55,7 @@ func InitInstallations() (*Installations, error) {
 				return nil, errors.Wrap(err, "failed to read cache directory")
 			}
 
-			err = os.MkdirAll(localDir, 0755)
+			err = os.MkdirAll(localDir, 0o755)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to create cache directory")
 			}
@@ -102,7 +102,7 @@ func (i *Installations) Save() error {
 		return errors.Wrap(err, "failed to marshal installations")
 	}
 
-	if err := os.WriteFile(installationsFile, installationsJSON, 0755); err != nil {
+	if err := os.WriteFile(installationsFile, installationsJSON, 0o755); err != nil {
 		return errors.Wrap(err, "failed to write installations")
 	}
 
@@ -115,7 +115,7 @@ func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, 
 		return nil, errors.Wrap(err, "failed to parse path")
 	}
 
-	var absolutePath = installPath
+	absolutePath := installPath
 	if parsed.Scheme != "ftp" && parsed.Scheme != "sftp" {
 		absolutePath, err = filepath.Abs(installPath)
 
@@ -286,7 +286,6 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) erro
 	}
 
 	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
-
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize lockfile json")
 	}
@@ -328,7 +327,6 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 	}
 
 	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(resolver, lockFile, gameVersion)
-
 	if err != nil {
 		return errors.Wrap(err, "could not resolve mods")
 	}
@@ -463,6 +461,8 @@ func (i *Installation) SetProfile(ctx *GlobalContext, profile string) error {
 }
 
 type gameVersionFile struct {
+	BranchName           string `json:"BranchName"`
+	BuildID              string `json:"BuildId"`
 	MajorVersion         int    `json:"MajorVersion"`
 	MinorVersion         int    `json:"MinorVersion"`
 	PatchVersion         int    `json:"PatchVersion"`
@@ -470,8 +470,6 @@ type gameVersionFile struct {
 	CompatibleChangelist int    `json:"CompatibleChangelist"`
 	IsLicenseeVersion    int    `json:"IsLicenseeVersion"`
 	IsPromotedBuild      int    `json:"IsPromotedBuild"`
-	BranchName           string `json:"BranchName"`
-	BuildID              string `json:"BuildId"`
 }
 
 func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {

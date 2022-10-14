@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/satisfactorymodding/ficsit-cli/ficsit"
-
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
@@ -112,7 +112,6 @@ func (m installedModsList) LoadModData() {
 		mods, err := ficsit.Mods(context.TODO(), m.root.GetAPIClient(), ficsit.ModFilter{
 			References: references,
 		})
-
 		if err != nil {
 			m.err <- err.Error()
 			return
