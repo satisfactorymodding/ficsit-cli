@@ -1,0 +1,18 @@
+{
+  // needs to attach to running dlv process execute
+  //   dlv debug --headless --listen=:2345 .
+  // in the root of the package first
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach to Process",
+      "type": "go",
+      "debugAdapter": "dlv-dap",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "${workspaceFolder}",
+      "host": "127.0.0.1",
+      "port": 2345
+    }
+  ]
+}
