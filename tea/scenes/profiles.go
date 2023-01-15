@@ -28,12 +28,10 @@ func NewProfiles(root components.RootModel, parent tea.Model) tea.Model {
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
-	l.DisableQuitKeybindings()
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-			key.NewBinding(key.WithHelp("n", "new profile")),
+			key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new profile")),
 		}
 	}
 
@@ -51,9 +49,6 @@ func (m profiles) Init() tea.Cmd {
 }
 
 func (m profiles) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// List enables its own keybindings when they were previously disabled
-	m.list.DisableQuitKeybindings()
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.list.SettingFilter() {

@@ -127,7 +127,6 @@ func NewMainMenu(root components.RootModel) tea.Model {
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = "Main Menu"
 	model.list.Styles = utils.ListStyles
-	model.list.DisableQuitKeybindings()
 
 	return model
 }

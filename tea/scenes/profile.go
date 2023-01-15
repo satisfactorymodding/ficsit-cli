@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -78,19 +77,7 @@ func NewProfile(root components.RootModel, parent tea.Model, profileData *cli.Pr
 	model.list.Styles = utils.ListStyles
 	model.list.SetSize(model.list.Width(), model.list.Height())
 	model.list.StatusMessageLifetime = time.Second * 3
-	model.list.DisableQuitKeybindings()
-
-	model.list.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-		}
-	}
-
-	model.list.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-		}
-	}
+	model.list.KeyMap.Quit.SetHelp("q", "back")
 
 	return model
 }

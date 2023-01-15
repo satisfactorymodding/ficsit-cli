@@ -42,8 +42,6 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 	l.Title = "Installed Mods"
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
-	l.KeyMap.Quit.SetHelp("q", "back")
-	l.DisableQuitKeybindings()
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
@@ -160,8 +158,7 @@ func (m installedModsList) LoadModData() {
 }
 
 func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// List enables its own keybindings when they were previously disabled
-	m.list.DisableQuitKeybindings()
+	m.list.KeyMap.Quit.SetHelp("q", "back")
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:

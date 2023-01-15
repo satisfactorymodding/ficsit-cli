@@ -43,8 +43,6 @@ func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("esc", "back")
-	l.DisableQuitKeybindings()
-	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
 
 	model := newInstallation{
@@ -149,7 +147,8 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m newInstallation) View() string {
-	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
+	style := lipgloss.NewStyle().Padding(1, 2)
+	inputView := style.Render(m.input.View())
 
 	mandatory := lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
 
@@ -157,19 +156,18 @@ func (m newInstallation) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.error.View())
 	}
 
-	if len(m.dirList.Items()) > 0 {
-		m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory)-1)
-		return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.dirList.View())
+	if len(m.dirList.Items()) == 0 {
+		infoBox := lipgloss.NewStyle().
+			BorderStyle(lipgloss.ThickBorder()).
+			BorderForeground(lipgloss.Color("39")).
+			Padding(0, 1).
+			Margin(0, 0, 0, 2).
+			Render("Enter the path to the satisfactory installation")
+		mandatory = lipgloss.JoinVertical(lipgloss.Left, mandatory, infoBox)
 	}
 
-	infoBox := lipgloss.NewStyle().
-		BorderStyle(lipgloss.ThickBorder()).
-		BorderForeground(lipgloss.Color("39")).
-		Padding(0, 1).
-		Margin(0, 0, 0, 2).
-		Render("Enter the path to the satisfactory installation")
-
-	return lipgloss.JoinVertical(lipgloss.Left, mandatory, infoBox)
+	m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory)-1)
+	return lipgloss.JoinVertical(lipgloss.Left, mandatory, style.Render(m.dirList.View()))
 }
 
 // I know this is awful, but beats re-implementing the entire list model

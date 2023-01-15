@@ -63,8 +63,6 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	l.Title = modsTitle
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
-	l.KeyMap.Quit.SetHelp("q", "back")
-	l.DisableQuitKeybindings()
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
@@ -167,8 +165,6 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortFieldList.Title = modsTitle
 	sortFieldList.Styles = utils.ListStyles
 	sortFieldList.SetSize(l.Width(), l.Height())
-	sortFieldList.KeyMap.Quit.SetHelp("q", "back")
-	sortFieldList.DisableQuitKeybindings()
 
 	sortOrderList := list.New([]list.Item{
 		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
@@ -200,8 +196,6 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortOrderList.Title = modsTitle
 	sortOrderList.Styles = utils.ListStyles
 	sortOrderList.SetSize(l.Width(), l.Height())
-	sortOrderList.KeyMap.Quit.SetHelp("q", "back")
-	sortOrderList.DisableQuitKeybindings()
 
 	m := &modsList{
 		root:          root,
@@ -281,8 +275,7 @@ func (m modsList) Init() tea.Cmd {
 }
 
 func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// List enables its own keybindings when they were previously disabled
-	m.list.DisableQuitKeybindings()
+	m.list.KeyMap.Quit.SetHelp("q", "back")
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
