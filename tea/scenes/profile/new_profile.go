@@ -1,4 +1,4 @@
-package scenes
+package profile
 
 import (
 	"time"
@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -50,15 +51,15 @@ func NewNewProfile(root components.RootModel, parent tea.Model) tea.Model {
 		help:   help.New(),
 		keys: keyMap{
 			Back: key.NewBinding(
-				key.WithKeys(KeyEscape, KeyControlC),
-				key.WithHelp(KeyEscape, "back"),
+				key.WithKeys(keys.KeyEscape, keys.KeyControlC),
+				key.WithHelp(keys.KeyEscape, "back"),
 			),
 			Enter: key.NewBinding(
-				key.WithKeys(KeyEnter),
-				key.WithHelp(KeyEnter, "create"),
+				key.WithKeys(keys.KeyEnter),
+				key.WithHelp(keys.KeyEnter, "create"),
 			),
 			Quit: key.NewBinding(
-				key.WithKeys(KeyControlC),
+				key.WithKeys(keys.KeyControlC),
 			),
 		},
 	}

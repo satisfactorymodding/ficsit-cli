@@ -1,4 +1,4 @@
-package scenes
+package installation
 
 import (
 	"fmt"
@@ -19,6 +19,7 @@ import (
 	"github.com/sahilm/fuzzy"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -50,7 +51,7 @@ func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 	l.KeyMap.CursorUp.SetHelp("↑", "up")
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			key.NewBinding(key.WithKeys(KeyTab), key.WithHelp(KeyTab, "select")),
+			key.NewBinding(key.WithKeys(keys.KeyTab), key.WithHelp(keys.KeyTab, "select")),
 		}
 	}
 
@@ -76,11 +77,11 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
-		case KeyEscape:
+		case keys.KeyEscape:
 			return m.parent, nil
-		case KeyEnter:
+		case keys.KeyEnter:
 			newInstall, err := m.root.GetGlobal().Installations.AddInstallation(m.root.GetGlobal(), m.input.Value(), m.root.GetGlobal().Profiles.SelectedProfile)
 			if err != nil {
 				errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
@@ -97,7 +98,7 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			return m.parent, updateInstallationListCmd
-		case KeyTab:
+		case keys.KeyTab:
 			var cmd tea.Cmd
 			m.input, cmd = m.input.Update(msg)
 

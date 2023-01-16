@@ -1,4 +1,4 @@
-package scenes
+package mods
 
 import (
 	"time"
@@ -9,6 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/errors"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -50,8 +52,8 @@ func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) t
 				Activate: func(msg tea.Msg, currentModel modVersionMenu) (tea.Model, tea.Cmd) {
 					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
 					if err != nil {
-						log.Error().Err(err).Msg(ErrorFailedAddMod)
-						cmd := currentModel.list.NewStatusMessage(ErrorFailedAddMod)
+						log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
+						cmd := currentModel.list.NewStatusMessage(errors.ErrorFailedAddMod)
 						return currentModel, cmd
 					}
 					return currentModel.parent, nil
@@ -80,7 +82,7 @@ func (m modVersionMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {
@@ -88,7 +90,7 @@ func (m modVersionMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.parent, nil
 			}
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[modVersionMenu])
 			if ok {
 				if i.Activate != nil {

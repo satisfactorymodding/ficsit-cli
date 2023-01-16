@@ -1,4 +1,4 @@
-package scenes
+package installation
 
 import (
 	"github.com/charmbracelet/bubbles/key"
@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -61,7 +62,7 @@ func (m installations) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "n":
 			newModel := NewNewInstallation(m.root, m)
 			return newModel, newModel.Init()
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {
@@ -69,7 +70,7 @@ func (m installations) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.parent, nil
 			}
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[installations])
 			if ok {
 				if i.Activate != nil {

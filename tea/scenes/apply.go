@@ -7,6 +7,7 @@ import (
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -149,13 +150,13 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
-		case KeyEscape:
+		case keys.KeyEscape:
 			m.cancelled = true
 			m.cancelChannel <- true
 			return m, nil
-		case KeyEnter:
+		case keys.KeyEnter:
 			if m.status.done {
 				if m.parent != nil {
 					return m.parent, m.parent.Init()

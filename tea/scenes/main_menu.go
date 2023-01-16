@@ -11,6 +11,11 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/errors"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/installation"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/mods"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/profile"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -63,28 +68,28 @@ func NewMainMenu(root components.RootModel) tea.Model {
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Installations",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewInstallations(root, currentModel)
+				newModel := installation.NewInstallations(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Profiles",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewProfiles(root, currentModel)
+				newModel := profile.NewProfiles(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "All Mods",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewMods(root, currentModel)
+				newModel := mods.NewMods(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Installed Mods",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewInstalledMods(root, currentModel)
+				newModel := mods.NewInstalledMods(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
@@ -92,7 +97,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			ItemTitle: "Apply Changes",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					log.Error().Err(err).Msg(ErrorFailedAddMod)
+					log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
 					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 					currentModel.error = errorComponent
 					return currentModel, cmd
@@ -106,7 +111,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			ItemTitle: "Save",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					log.Error().Err(err).Msg(ErrorFailedAddMod)
+					log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
 					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 					currentModel.error = errorComponent
 					return currentModel, cmd
@@ -139,11 +144,11 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[mainMenu])
 			if ok {
 				if i.Activate != nil {

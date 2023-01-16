@@ -1,4 +1,4 @@
-package scenes
+package mods
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -133,7 +134,7 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {

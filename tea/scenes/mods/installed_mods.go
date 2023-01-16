@@ -1,11 +1,10 @@
-package scenes
+package mods
 
 import (
 	"context"
 	"sort"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -42,18 +42,7 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 	l.Title = "Installed Mods"
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
-
-	l.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-		}
-	}
-
-	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-		}
-	}
+	l.KeyMap.Quit.SetHelp("q", "back")
 
 	m := &installedModsList{
 		root:   root,
@@ -158,8 +147,6 @@ func (m installedModsList) LoadModData() {
 }
 
 func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	m.list.KeyMap.Quit.SetHelp("q", "back")
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.list.SettingFilter() {
@@ -169,7 +156,7 @@ func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {
@@ -177,7 +164,7 @@ func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.parent, nil
 			}
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[installedModsList])
 			if ok {
 				return m.processActivation(i, msg)

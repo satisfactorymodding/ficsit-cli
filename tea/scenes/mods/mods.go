@@ -1,4 +1,4 @@
-package scenes
+package mods
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -35,6 +36,8 @@ type listUpdate struct {
 	Items []list.Item
 	Done  bool
 }
+
+// type keys
 
 type modsList struct {
 	list              list.Model
@@ -63,22 +66,15 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	l.Title = modsTitle
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
+	l.KeyMap.Quit.SetHelp("q", "back")
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-			key.NewBinding(key.WithHelp("s", "sort")),
-			key.NewBinding(key.WithHelp("o", "order")),
+			key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "sort")),
+			key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "order")),
 		}
 	}
-
-	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-			key.NewBinding(key.WithHelp("s", "sort")),
-			key.NewBinding(key.WithHelp("o", "order")),
-		}
-	}
+	l.AdditionalFullHelpKeys = l.AdditionalShortHelpKeys
 
 	sortFieldList := list.New([]list.Item{
 		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
@@ -292,7 +288,7 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "o":
 			m.showSortOrderList = !m.showSortOrderList
 			return m, nil
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.showSortFieldList {
@@ -310,7 +306,7 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.parent, nil
 			}
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			if m.showSortFieldList {
 				m.showSortFieldList = false
 				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
