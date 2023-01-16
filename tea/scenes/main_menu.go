@@ -201,6 +201,6 @@ func (m mainMenu) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, header, err, m.list.View())
 	}
 
-	m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header))
+	m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header)-1)
 	return lipgloss.JoinVertical(lipgloss.Left, header, m.list.View())
 }
