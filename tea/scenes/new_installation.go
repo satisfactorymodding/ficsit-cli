@@ -3,6 +3,7 @@ package scenes
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -42,8 +43,16 @@ func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 	l.SetShowTitle(false)
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
-	l.KeyMap.Quit.SetHelp("esc", "back")
 	l.SetShowStatusBar(false)
+	l.KeyMap.ShowFullHelp.Unbind()
+	l.KeyMap.Quit.SetHelp("esc", "back")
+	l.KeyMap.CursorDown.SetHelp("↓", "down")
+	l.KeyMap.CursorUp.SetHelp("↑", "up")
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys(KeyTab), key.WithHelp(KeyTab, "select")),
+		}
+	}
 
 	model := newInstallation{
 		root:    root,
@@ -167,7 +176,7 @@ func (m newInstallation) View() string {
 	}
 
 	m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory)-1)
-	return lipgloss.JoinVertical(lipgloss.Left, mandatory, style.Render(m.dirList.View()))
+	return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.dirList.View())
 }
 
 // I know this is awful, but beats re-implementing the entire list model
@@ -191,7 +200,7 @@ func getDirItems(inputValue string) []list.Item {
 		if filter != "" {
 			dirNames := make([]string, 0)
 			for _, entry := range dir {
-				if entry.IsDir() {
+				if entry.IsDir() || entry.Type() == fs.ModeSymlink {
 					dirNames = append(dirNames, entry.Name())
 				}
 			}
@@ -211,7 +220,7 @@ func getDirItems(inputValue string) []list.Item {
 			globalMatches = matches
 		} else {
 			for _, entry := range dir {
-				if entry.IsDir() {
+				if entry.IsDir() || entry.Type() == fs.ModeSymlink {
 					newItems = append(newItems, utils.SimpleItemExtra[newInstallation, string]{
 						SimpleItem: utils.SimpleItem[newInstallation]{
 							ItemTitle: entry.Name(),
