@@ -37,6 +37,7 @@ type Installation struct {
 	DiskInstance disk.Disk `json:"-"`
 	Path         string    `json:"path"`
 	Profile      string    `json:"profile"`
+	Vanilla      bool      `json:"vanilla"`
 }
 
 func InitInstallations() (*Installations, error) {
@@ -127,6 +128,7 @@ func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, 
 	installation := &Installation{
 		Path:    absolutePath,
 		Profile: profile,
+		Vanilla: false,
 	}
 
 	if err := installation.Validate(ctx); err != nil {
@@ -302,6 +304,31 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) erro
 	return nil
 }
 
+func (i *Installation) ResolveProfile(ctx *GlobalContext) (LockFile, error) {
+	lockFile, err := i.LockFile(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resolver := NewDependencyResolver(ctx.APIClient)
+
+	gameVersion, err := i.GetGameVersion(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to detect game version")
+	}
+
+	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(resolver, lockFile, gameVersion)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not resolve mods")
+	}
+
+	if err := i.WriteLockFile(ctx, lockfile); err != nil {
+		return nil, err
+	}
+
+	return lockfile, nil
+}
+
 type InstallUpdate struct {
 	ModName          string
 	OverallProgress  float64
@@ -314,21 +341,14 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		return errors.Wrap(err, "failed to validate installation")
 	}
 
-	lockFile, err := i.LockFile(ctx)
-	if err != nil {
-		return err
-	}
+	lockfile := make(LockFile)
 
-	resolver := NewDependencyResolver(ctx.APIClient)
-
-	gameVersion, err := i.GetGameVersion(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to detect game version")
-	}
-
-	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(resolver, lockFile, gameVersion)
-	if err != nil {
-		return errors.Wrap(err, "could not resolve mods")
+	if !i.Vanilla {
+		var err error
+		lockfile, err = i.ResolveProfile(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to resolve lockfile")
+		}
 	}
 
 	d, err := i.GetDisk()
@@ -433,10 +453,6 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		}
 
 		completed++
-	}
-
-	if err := i.WriteLockFile(ctx, lockfile); err != nil {
-		return err
 	}
 
 	return nil
