@@ -15,7 +15,7 @@ func init() {
 
 var setVanillaCmd = &cobra.Command{
 	Use:   "set-vanilla <path>",
-	Short: "Change the profile of an installation",
+	Short: "Set the installation to vanilla mode or not",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		global, err := cli.InitCLI(false)
