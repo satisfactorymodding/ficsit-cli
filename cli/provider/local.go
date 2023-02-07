@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -97,6 +98,17 @@ func (p localProvider) GetMod(_ context.Context, modReference string) (*ficsit.G
 		return nil, errors.New("mod not found")
 	}
 
+	authors := make([]ficsit.GetModModAuthorsUserMod, 0)
+
+	for _, author := range strings.Split(cachedModFiles[0].Plugin.CreatedBy, ",") {
+		authors = append(authors, ficsit.GetModModAuthorsUserMod{
+			Role: "Unknown",
+			User: ficsit.GetModModAuthorsUserModUser{
+				Username: author,
+			},
+		})
+	}
+
 	return &ficsit.GetModResponse{
 		Mod: ficsit.GetModMod{
 			Id:               modReference,
@@ -105,7 +117,7 @@ func (p localProvider) GetMod(_ context.Context, modReference string) (*ficsit.G
 			Created_at:       time.Now(),
 			Views:            0,
 			Downloads:        0,
-			Authors:          []ficsit.GetModModAuthorsUserMod{}, // TODO: Create some dummy data from the CreatedBy field
+			Authors:          authors,
 			Full_description: "",
 			Source_url:       "",
 		},
