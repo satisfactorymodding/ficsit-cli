@@ -287,14 +287,21 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) erro
 		return err
 	}
 
-	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize lockfile json")
-	}
-
 	d, err := i.GetDisk()
 	if err != nil {
 		return err
+	}
+
+	lockfileDir := filepath.Dir(lockfilePath)
+	if err := d.Exists(lockfileDir); d.IsNotExist(err) {
+		if err := d.MkDir(lockfileDir); err != nil {
+			return errors.Wrap(err, "failed creating lockfile directory")
+		}
+	}
+
+	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, "failed to serialize lockfile json")
 	}
 
 	if err := d.Write(lockfilePath, marshaledLockfile); err != nil {
@@ -323,7 +330,7 @@ func (i *Installation) ResolveProfile(ctx *GlobalContext) (LockFile, error) {
 	}
 
 	if err := i.WriteLockFile(ctx, lockfile); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to write lockfile")
 	}
 
 	return lockfile, nil
