@@ -45,5 +45,10 @@ func (h headerComponent) View() string {
 		out += "None"
 	}
 
+	if h.root.GetProvider().Offline {
+		out += "\n"
+		out += h.labelStyle.Render("Offline")
+	}
+
 	return lipgloss.NewStyle().Margin(1, 0).Render(out)
 }

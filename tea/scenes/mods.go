@@ -220,7 +220,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 		allMods := make([]ficsit.ModsModsGetModsModsMod, 0)
 		offset := 0
 		for {
-			mods, err := ficsit.Mods(context.TODO(), root.GetAPIClient(), ficsit.ModFilter{
+			mods, err := root.GetProvider().Mods(context.TODO(), ficsit.ModFilter{
 				Limit:    100,
 				Offset:   offset,
 				Order_by: ficsit.ModFieldsLastVersionDate,

@@ -138,6 +138,8 @@ func init() {
 	RootCmd.PersistentFlags().String("graphql-api", "/v2/query", "Path for GraphQL API")
 	RootCmd.PersistentFlags().String("api-key", "", "API key to use when sending requests")
 
+	RootCmd.PersistentFlags().Bool("offline", false, "Whether to only use local data")
+
 	_ = viper.BindPFlag("log", RootCmd.PersistentFlags().Lookup("log"))
 	_ = viper.BindPFlag("log-file", RootCmd.PersistentFlags().Lookup("log-file"))
 	_ = viper.BindPFlag("quiet", RootCmd.PersistentFlags().Lookup("quiet"))
@@ -153,4 +155,6 @@ func init() {
 	_ = viper.BindPFlag("api-base", RootCmd.PersistentFlags().Lookup("api-base"))
 	_ = viper.BindPFlag("graphql-api", RootCmd.PersistentFlags().Lookup("graphql-api"))
 	_ = viper.BindPFlag("api-key", RootCmd.PersistentFlags().Lookup("api-key"))
+
+	_ = viper.BindPFlag("offline", RootCmd.PersistentFlags().Lookup("offline"))
 }

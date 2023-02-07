@@ -11,7 +11,7 @@ func TestProfileResolution(t *testing.T) {
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 
-	resolver := NewDependencyResolver(ctx.APIClient)
+	resolver := NewDependencyResolver(ctx.Provider)
 
 	resolved, err := (&Profile{
 		Name: DefaultProfileName,

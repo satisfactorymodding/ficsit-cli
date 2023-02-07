@@ -6,28 +6,28 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Khan/genqlient/graphql"
 	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
 const smlDownloadTemplate = `https://github.com/satisfactorymodding/SatisfactoryModLoader/releases/download/%s/SML.zip`
 
 type DependencyResolver struct {
-	apiClient graphql.Client
+	provider provider.Provider
 }
 
-func NewDependencyResolver(apiClient graphql.Client) DependencyResolver {
-	return DependencyResolver{apiClient: apiClient}
+func NewDependencyResolver(provider provider.Provider) DependencyResolver {
+	return DependencyResolver{provider}
 }
 
 func (d DependencyResolver) ResolveModDependencies(constraints map[string]string, lockFile *LockFile, gameVersion int) (LockFile, error) {
-	smlVersionsDB, err := ficsit.SMLVersions(context.TODO(), d.apiClient)
+	smlVersionsDB, err := d.provider.SMLVersions(context.TODO())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed fetching SMl versions")
+		return nil, errors.Wrap(err, "failed fetching SML versions")
 	}
 
 	copied := make(map[string][]string, len(constraints))
@@ -136,7 +136,7 @@ func (r *resolvingInstance) Step() error {
 		nextResolve := make(map[string][]string)
 
 		// TODO Cache
-		dependencies, err := ficsit.ResolveModDependencies(context.TODO(), r.Resolver.apiClient, converted)
+		dependencies, err := r.Resolver.provider.ResolveModDependencies(context.TODO(), converted)
 		if err != nil {
 			return errors.Wrap(err, "failed resolving mod dependencies")
 		}

@@ -109,7 +109,7 @@ func (m installedModsList) LoadModData() {
 			i++
 		}
 
-		mods, err := ficsit.Mods(context.TODO(), m.root.GetAPIClient(), ficsit.ModFilter{
+		mods, err := m.root.GetProvider().Mods(context.TODO(), ficsit.ModFilter{
 			References: references,
 		})
 		if err != nil {
