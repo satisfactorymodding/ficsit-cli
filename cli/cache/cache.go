@@ -15,22 +15,22 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
-type CacheFile struct {
+type File struct {
 	ModReference string
 	Hash         string
 	Plugin       UPlugin
 }
 
-var loadedCache map[string][]CacheFile
+var loadedCache map[string][]File
 
-func GetCache() (map[string][]CacheFile, error) {
+func GetCache() (map[string][]File, error) {
 	if loadedCache != nil {
 		return loadedCache, nil
 	}
 	return LoadCache()
 }
 
-func GetCacheMod(mod string) ([]CacheFile, error) {
+func GetCacheMod(mod string) ([]File, error) {
 	cache, err := GetCache()
 	if err != nil {
 		return nil, err
@@ -38,11 +38,11 @@ func GetCacheMod(mod string) ([]CacheFile, error) {
 	return cache[mod], nil
 }
 
-func LoadCache() (map[string][]CacheFile, error) {
-	loadedCache = map[string][]CacheFile{}
+func LoadCache() (map[string][]File, error) {
+	loadedCache = map[string][]File{}
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if _, err := os.Stat(downloadCache); os.IsNotExist(err) {
-		return map[string][]CacheFile{}, nil
+		return map[string][]File{}, nil
 	}
 
 	items, err := os.ReadDir(downloadCache)
@@ -64,7 +64,7 @@ func LoadCache() (map[string][]CacheFile, error) {
 	return loadedCache, nil
 }
 
-func addFileToCache(path string) (*CacheFile, error) {
+func addFileToCache(path string) (*File, error) {
 	cacheFile, err := readCacheFile(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read cache file")
@@ -74,7 +74,7 @@ func addFileToCache(path string) (*CacheFile, error) {
 	return cacheFile, nil
 }
 
-func readCacheFile(path string) (*CacheFile, error) {
+func readCacheFile(path string) (*File, error) {
 	stat, err := os.Stat(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to stat file")
@@ -123,7 +123,7 @@ func readCacheFile(path string) (*CacheFile, error) {
 		return nil, errors.Wrap(err, "failed to hash uplugin file")
 	}
 
-	return &CacheFile{
+	return &File{
 		ModReference: modReference,
 		Hash:         hash,
 		Plugin:       uplugin,
