@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/pkg/errors"
+	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
@@ -40,6 +41,11 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 		installations, err := InitInstallations()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to initialize installations")
+		}
+
+		_, err = cache.LoadCache()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to load cache")
 		}
 
 		globalContext = &GlobalContext{
