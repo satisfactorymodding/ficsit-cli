@@ -3,15 +3,16 @@ package cache
 import (
 	"archive/zip"
 	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/satisfactorymodding/ficsit-cli/utils"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
 type CacheFile struct {

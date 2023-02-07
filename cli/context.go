@@ -3,9 +3,9 @@ package cli
 import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/pkg/errors"
-	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/spf13/viper"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )

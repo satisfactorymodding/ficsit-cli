@@ -2,16 +2,16 @@ package provider
 
 import (
 	"context"
-	"github.com/Masterminds/semver/v3"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
+
 	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
-type localProvider struct {
-}
+type localProvider struct{}
 
 func initLocalProvider() localProvider {
 	return localProvider{}

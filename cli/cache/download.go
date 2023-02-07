@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	"github.com/satisfactorymodding/ficsit-cli/utils"
 	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
 type Progresser struct {

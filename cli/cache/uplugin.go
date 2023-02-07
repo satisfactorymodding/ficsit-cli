@@ -9,8 +9,8 @@ type UPlugin struct {
 }
 type Plugins struct {
 	Name       string `json:"Name"`
+	SemVersion string `json:"SemVersion"`
 	Enabled    bool   `json:"Enabled"`
 	BasePlugin bool   `json:"BasePlugin"`
 	Optional   bool   `json:"Optional"`
-	SemVersion string `json:"SemVersion"`
 }

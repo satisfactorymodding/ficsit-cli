@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Khan/genqlient/graphql"
+
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
