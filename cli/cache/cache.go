@@ -3,6 +3,7 @@ package cache
 import (
 	"archive/zip"
 	"encoding/json"
+	"github.com/rs/zerolog/log"
 	"io"
 	"os"
 	"path/filepath"
@@ -56,7 +57,7 @@ func LoadCache() (map[string][]CacheFile, error) {
 		fullpath := filepath.Join(downloadCache, item.Name())
 		_, err = addFileToCache(fullpath)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to add file to cache %s", fullpath)
+			log.Err(err).Str("file", fullpath).Msg("failed to add file to cache")
 		}
 	}
 	return loadedCache, nil
