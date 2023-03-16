@@ -2,6 +2,7 @@ package cache
 
 import (
 	"archive/zip"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"os"
@@ -15,10 +16,14 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
+const IconFilename = "Resources/Icon128.png" // This is the path UE expects for the icon
+
 type File struct {
+	Icon         *string
 	ModReference string
 	Hash         string
 	Plugin       UPlugin
+	Size         int64
 }
 
 var loadedCache map[string][]File
@@ -86,7 +91,8 @@ func readCacheFile(path string) (*File, error) {
 	}
 	defer zipFile.Close()
 
-	reader, err := zip.NewReader(zipFile, stat.Size())
+	size := stat.Size()
+	reader, err := zip.NewReader(zipFile, size)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read zip")
 	}
@@ -123,9 +129,34 @@ func readCacheFile(path string) (*File, error) {
 		return nil, errors.Wrap(err, "failed to hash uplugin file")
 	}
 
+	var iconFile *zip.File
+	for _, file := range reader.File {
+		if file.Name == IconFilename {
+			iconFile = file
+			break
+		}
+	}
+	var icon *string
+	if iconFile != nil {
+		iconReader, err := iconFile.Open()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to open icon file")
+		}
+		defer iconReader.Close()
+
+		data, err := io.ReadAll(iconReader)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read icon file")
+		}
+		iconData := base64.StdEncoding.EncodeToString(data)
+		icon = &iconData
+	}
+
 	return &File{
 		ModReference: modReference,
 		Hash:         hash,
+		Size:         size,
+		Icon:         icon,
 		Plugin:       uplugin,
 	}, nil
 }
