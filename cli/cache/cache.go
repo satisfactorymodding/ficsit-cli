@@ -12,8 +12,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-
-	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
 const IconFilename = "Resources/Icon128.png" // This is the path UE expects for the icon
@@ -59,18 +57,20 @@ func LoadCache() (map[string][]File, error) {
 		if item.IsDir() {
 			continue
 		}
+		if item.Name() == integrityFilename {
+			continue
+		}
 
-		fullpath := filepath.Join(downloadCache, item.Name())
-		_, err = addFileToCache(fullpath)
+		_, err = addFileToCache(item.Name())
 		if err != nil {
-			log.Err(err).Str("file", fullpath).Msg("failed to add file to cache")
+			log.Err(err).Str("file", item.Name()).Msg("failed to add file to cache")
 		}
 	}
 	return loadedCache, nil
 }
 
-func addFileToCache(path string) (*File, error) {
-	cacheFile, err := readCacheFile(path)
+func addFileToCache(filename string) (*File, error) {
+	cacheFile, err := readCacheFile(filename)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read cache file")
 	}
@@ -79,7 +79,9 @@ func addFileToCache(path string) (*File, error) {
 	return cacheFile, nil
 }
 
-func readCacheFile(path string) (*File, error) {
+func readCacheFile(filename string) (*File, error) {
+	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
+	path := filepath.Join(downloadCache, filename)
 	stat, err := os.Stat(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to stat file")
@@ -124,9 +126,9 @@ func readCacheFile(path string) (*File, error) {
 
 	modReference := strings.TrimSuffix(upluginFile.Name, ".uplugin")
 
-	hash, err := utils.SHA256Data(zipFile)
+	hash, err := getFileHash(filename)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to hash uplugin file")
+		return nil, errors.Wrap(err, "failed to get file hash")
 	}
 
 	var iconFile *zip.File

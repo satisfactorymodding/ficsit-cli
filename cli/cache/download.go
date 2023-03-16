@@ -121,7 +121,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan util
 		}
 	}
 
-	_, err = addFileToCache(location)
+	_, err = addFileToCache(cacheKey)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed to add file to cache")
 	}
