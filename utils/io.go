@@ -194,7 +194,15 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 		return errors.Wrap(err, "failed to read file as zip")
 	}
 
-	for i, file := range reader.File {
+	totalSize := int64(0)
+
+	for _, file := range reader.File {
+		totalSize += int64(file.UncompressedSize64)
+	}
+
+	totalExtracted := int64(0)
+
+	for _, file := range reader.File {
 		if !file.FileInfo().IsDir() {
 			outFileLocation := filepath.Join(location, file.Name)
 
@@ -202,16 +210,30 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 				return errors.Wrap(err, "failed to create mod directory: "+location)
 			}
 
-			if err := writeZipFile(outFileLocation, file, d); err != nil {
+			var fileUpdates chan GenericProgress
+			if updates != nil {
+				fileUpdates = make(chan GenericProgress)
+				go func() {
+					for fileUpdate := range fileUpdates {
+						updates <- GenericProgress{
+							Completed: totalExtracted + fileUpdate.Completed,
+							Total:     totalSize,
+						}
+					}
+				}()
+			}
+
+			if err := writeZipFile(outFileLocation, file, d, fileUpdates); err != nil {
+				if fileUpdates != nil {
+					close(fileUpdates)
+				}
 				return err
 			}
-		}
-
-		if updates != nil {
-			select {
-			case updates <- GenericProgress{Completed: int64(i + 1), Total: int64(len(reader.File))}:
-			default:
+			if fileUpdates != nil {
+				close(fileUpdates)
 			}
+
+			totalExtracted += int64(file.UncompressedSize64)
 		}
 	}
 
@@ -219,17 +241,10 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 		return errors.Wrap(err, "failed to write .smm mod hash file")
 	}
 
-	if updates != nil {
-		select {
-		case updates <- GenericProgress{Completed: int64(len(reader.File)), Total: int64(len(reader.File))}:
-		default:
-		}
-	}
-
 	return nil
 }
 
-func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk) error {
+func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates chan<- GenericProgress) error {
 	outFile, err := d.Open(outFileLocation, os.O_CREATE|os.O_RDWR)
 	if err != nil {
 		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
@@ -241,8 +256,15 @@ func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to process mod zip")
 	}
+	defer inFile.Close()
 
-	if _, err := io.Copy(outFile, inFile); err != nil {
+	progressInReader := &Progresser{
+		Reader:  inFile,
+		total:   int64(file.UncompressedSize64),
+		updates: updates,
+	}
+
+	if _, err := io.Copy(outFile, progressInReader); err != nil {
 		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
 	}
 
