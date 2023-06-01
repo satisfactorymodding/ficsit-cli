@@ -20,6 +20,7 @@ require (
 	github.com/sahilm/fuzzy v0.1.0
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/viper v1.13.0
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 )
 
 replace github.com/Masterminds/semver/v3 v3.1.1 => github.com/Vilsol/semver/v3 v3.1.2-0.20220414201711-64ef71d40f9a

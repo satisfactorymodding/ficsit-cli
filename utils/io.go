@@ -18,7 +18,7 @@ import (
 
 type Progresser struct {
 	io.Reader
-	updates chan GenericUpdate
+	updates chan<- GenericProgress
 	total   int64
 	running int64
 }
@@ -30,7 +30,7 @@ func (pt *Progresser) Read(p []byte) (int, error) {
 	if err == nil {
 		if pt.updates != nil {
 			select {
-			case pt.updates <- GenericUpdate{Progress: float64(pt.running) / float64(pt.total)}:
+			case pt.updates <- GenericProgress{Completed: pt.running, Total: pt.total}:
 			default:
 			}
 		}
@@ -43,12 +43,19 @@ func (pt *Progresser) Read(p []byte) (int, error) {
 	return n, errors.Wrap(err, "failed to read")
 }
 
-type GenericUpdate struct {
-	ModReference *string
-	Progress     float64
+type GenericProgress struct {
+	Completed int64
+	Total     int64
 }
 
-func DownloadOrCache(cacheKey string, hash string, url string, updates chan GenericUpdate) (io.ReaderAt, int64, error) {
+func (gp GenericProgress) Percentage() float64 {
+	if gp.Total == 0 {
+		return 0
+	}
+	return float64(gp.Completed) / float64(gp.Total)
+}
+
+func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- GenericProgress, downloadSemaphore chan int) (io.ReaderAt, int64, error) {
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
 		if !os.IsExist(err) {
@@ -90,6 +97,20 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan Gene
 		return nil, 0, errors.Wrap(err, "failed to stat file: "+location)
 	}
 
+	if updates != nil {
+		headResp, err := http.Head(url)
+		if err != nil {
+			return nil, 0, errors.Wrap(err, "failed to head: "+url)
+		}
+		defer headResp.Body.Close()
+		updates <- GenericProgress{Total: headResp.ContentLength}
+	}
+
+	if downloadSemaphore != nil {
+		downloadSemaphore <- 1
+		defer func() { <-downloadSemaphore }()
+	}
+
 	out, err := os.Create(location)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed creating file at: "+location)
@@ -124,7 +145,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan Gene
 
 	if updates != nil {
 		select {
-		case updates <- GenericUpdate{Progress: 1}:
+		case updates <- GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}:
 		default:
 		}
 	}
@@ -141,7 +162,7 @@ func SHA256Data(f io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan GenericUpdate, d disk.Disk) error {
+func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan<- GenericProgress, d disk.Disk) error {
 	hashFile := filepath.Join(location, ".smm")
 	hashBytes, err := d.Read(hashFile)
 	if err != nil {
@@ -188,7 +209,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 
 		if updates != nil {
 			select {
-			case updates <- GenericUpdate{Progress: float64(i) / float64(len(reader.File)-1)}:
+			case updates <- GenericProgress{Completed: int64(i + 1), Total: int64(len(reader.File))}:
 			default:
 			}
 		}
@@ -200,7 +221,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 
 	if updates != nil {
 		select {
-		case updates <- GenericUpdate{Progress: 1}:
+		case updates <- GenericProgress{Completed: int64(len(reader.File)), Total: int64(len(reader.File))}:
 		default:
 		}
 	}
