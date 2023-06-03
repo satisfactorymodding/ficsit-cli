@@ -466,6 +466,44 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 	return nil
 }
 
+func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
+	if err := i.Validate(ctx); err != nil {
+		return errors.Wrap(err, "failed to validate installation")
+	}
+
+	lockFile, err := i.LockFile(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to read lock file")
+	}
+
+	resolver := NewDependencyResolver(ctx.APIClient)
+
+	gameVersion, err := i.GetGameVersion(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to detect game version")
+	}
+
+	profile := ctx.Profiles.GetProfile(i.Profile)
+	if profile == nil {
+		return errors.New("could not find profile " + i.Profile)
+	}
+
+	for _, modReference := range mods {
+		delete(lockFile, modReference)
+	}
+
+	newLockFile, err := profile.Resolve(resolver, lockFile, gameVersion)
+	if err != nil {
+		return errors.Wrap(err, "failed to resolve dependencies")
+	}
+
+	if err := i.WriteLockFile(ctx, newLockFile); err != nil {
+		return errors.Wrap(err, "failed to write lock file")
+	}
+
+	return nil
+}
+
 func (i *Installation) SetProfile(ctx *GlobalContext, profile string) error {
 	found := false
 	for _, p := range ctx.Profiles.Profiles {
