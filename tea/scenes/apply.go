@@ -151,19 +151,19 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case cli.InstallUpdateTypeOverall:
 				m.status.overallProgress = update.Progress
 			case cli.InstallUpdateTypeModDownload:
-				m.status.modProgresses[update.Mod] = modProgress{
+				m.status.modProgresses[update.Item.Mod] = modProgress{
 					downloadProgress: update.Progress,
 					downloading:      true,
 					complete:         false,
 				}
 			case cli.InstallUpdateTypeModExtract:
-				m.status.modProgresses[update.Mod] = modProgress{
+				m.status.modProgresses[update.Item.Mod] = modProgress{
 					extractProgress: update.Progress,
 					downloading:     false,
 					complete:        false,
 				}
 			case cli.InstallUpdateTypeModComplete:
-				m.status.modProgresses[update.Mod] = modProgress{
+				m.status.modProgresses[update.Item.Mod] = modProgress{
 					complete: true,
 				}
 			}

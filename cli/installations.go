@@ -314,8 +314,13 @@ var (
 
 type InstallUpdate struct {
 	Type     InstallUpdateType
-	Mod      string
+	Item     InstallUpdateItem
 	Progress utils.GenericProgress
+}
+
+type InstallUpdateItem struct {
+	Mod     string
+	Version string
 }
 
 func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate) error {
@@ -449,7 +454,10 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		go func() {
 			for up := range innerUpdates {
 				update := InstallUpdate{
-					Mod:      modReference,
+					Item: InstallUpdateItem{
+						Mod:     modReference,
+						Version: version,
+					},
 					Progress: up,
 				}
 				if downloading {
@@ -478,7 +486,10 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 	if updates != nil {
 		updates <- InstallUpdate{
 			Type: InstallUpdateTypeModComplete,
-			Mod:  modReference,
+			Item: InstallUpdateItem{
+				Mod:     modReference,
+				Version: version,
+			},
 		}
 	}
 
