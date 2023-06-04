@@ -6,6 +6,10 @@ query SMLVersions {
             id
             version
             satisfactory_version
+            targets {
+                targetName
+                link
+            }
         }
     }
 }

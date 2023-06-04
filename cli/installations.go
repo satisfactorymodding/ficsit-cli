@@ -314,6 +314,11 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		return errors.Wrap(err, "failed to validate installation")
 	}
 
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to detect platform")
+	}
+
 	lockFile, err := i.LockFile(ctx)
 	if err != nil {
 		return err
@@ -348,7 +353,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 
 	for _, entry := range dir {
 		if entry.IsDir() {
-			if _, ok := lockfile[entry.Name()]; !ok {
+			if _, ok := lockfile.Mods[entry.Name()]; !ok {
 				modDir := filepath.Join(modsDirectory, entry.Name())
 				err := d.Exists(filepath.Join(modDir, ".smm"))
 				if err == nil {
@@ -377,7 +382,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 			defer wg.Done()
 
 			update := InstallUpdate{
-				OverallProgress:  float64(completed) / float64(len(lockfile)),
+				OverallProgress:  float64(completed) / float64(len(lockfile.Mods)),
 				DownloadProgress: 0,
 				ExtractProgress:  0,
 			}
@@ -399,7 +404,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 					update.ModName = *up.ModReference
 				}
 
-				update.OverallProgress = float64(completed) / float64(len(lockfile))
+				update.OverallProgress = float64(completed) / float64(len(lockfile.Mods))
 
 				select {
 				case updates <- update:
@@ -409,25 +414,29 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		}()
 	}
 
-	for modReference, version := range lockfile {
+	for modReference, version := range lockfile.Mods {
 		// Only install if a link is provided, otherwise assume mod is already installed
-		if version.Link != "" {
+		target, ok := version.Targets[platform.TargetName]
+		if !ok {
+			return errors.Errorf("%s@%s not available for %s", modReference, version.Version, platform.TargetName)
+		}
+		if target.Link != "" {
 			downloading = true
 
 			if genericUpdates != nil {
 				genericUpdates <- utils.GenericUpdate{ModReference: &modReference}
 			}
 
-			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("downloading mod")
-			reader, size, err := utils.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link, genericUpdates)
+			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", target.Link).Msg("downloading mod")
+			reader, size, err := utils.DownloadOrCache(modReference+"_"+version.Version+".zip", target.Hash, target.Link, genericUpdates)
 			if err != nil {
-				return errors.Wrap(err, "failed to download "+modReference+" from: "+version.Link)
+				return errors.Wrap(err, "failed to download "+modReference+" from: "+target.Link)
 			}
 
 			downloading = false
 
-			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("extracting mod")
-			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), version.Hash, genericUpdates, d); err != nil {
+			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", target.Link).Msg("extracting mod")
+			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), target.Hash, genericUpdates, d); err != nil {
 				return errors.Wrap(err, "could not extract "+modReference)
 			}
 		}
@@ -435,7 +444,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		completed++
 	}
 
-	if err := i.WriteLockFile(ctx, lockfile); err != nil {
+	if err := i.WriteLockFile(ctx, *lockfile); err != nil {
 		return err
 	}
 

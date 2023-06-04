@@ -2,9 +2,7 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/Khan/genqlient/graphql"
 	"github.com/Masterminds/semver/v3"
@@ -14,8 +12,6 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
-const smlDownloadTemplate = `https://github.com/satisfactorymodding/SatisfactoryModLoader/releases/download/%s/SML.zip`
-
 type DependencyResolver struct {
 	apiClient graphql.Client
 }
@@ -24,7 +20,7 @@ func NewDependencyResolver(apiClient graphql.Client) DependencyResolver {
 	return DependencyResolver{apiClient: apiClient}
 }
 
-func (d DependencyResolver) ResolveModDependencies(constraints map[string]string, lockFile *LockFile, gameVersion int) (LockFile, error) {
+func (d DependencyResolver) ResolveModDependencies(constraints map[string]string, lockFile *LockFile, gameVersion int) (*LockFile, error) {
 	smlVersionsDB, err := ficsit.SMLVersions(context.TODO(), d.apiClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed fetching SMl versions")
@@ -39,7 +35,7 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		Resolver:    d,
 		InputLock:   lockFile,
 		ToResolve:   copied,
-		OutputLock:  make(LockFile),
+		OutputLock:  MakeLockfile(),
 		SMLVersions: smlVersionsDB,
 		GameVersion: gameVersion,
 	}
@@ -48,7 +44,7 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		return nil, err
 	}
 
-	return instance.OutputLock, nil
+	return &instance.OutputLock, nil
 }
 
 type resolvingInstance struct {
@@ -78,7 +74,7 @@ func (r *resolvingInstance) Step() error {
 					Version:          constraint[0],
 				})
 			} else {
-				if existingSML, ok := r.OutputLock[id]; ok {
+				if existingSML, ok := r.OutputLock.Mods[id]; ok {
 					for _, cs := range constraint {
 						smlVersionConstraint, _ := semver.NewConstraint(cs)
 						if !smlVersionConstraint.Check(semver.MustParse(existingSML.Version)) {
@@ -92,6 +88,7 @@ func (r *resolvingInstance) Step() error {
 				}
 
 				var chosenSMLVersion *semver.Version
+				var chosenSMLTargets []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget
 				for _, version := range r.SMLVersions.SmlVersions.Sml_versions {
 					if version.Satisfactory_version > r.GameVersion {
 						continue
@@ -112,6 +109,7 @@ func (r *resolvingInstance) Step() error {
 					if matches {
 						if chosenSMLVersion == nil || currentVersion.GreaterThan(chosenSMLVersion) {
 							chosenSMLVersion = currentVersion
+							chosenSMLTargets = version.Targets
 						}
 					}
 				}
@@ -120,14 +118,16 @@ func (r *resolvingInstance) Step() error {
 					return errors.Errorf("could not find an SML version that matches constraint %s and game version %d", constraint, r.GameVersion)
 				}
 
-				smlVersionStr := chosenSMLVersion.String()
-				if !strings.HasPrefix(smlVersionStr, "v") {
-					smlVersionStr = "v" + smlVersionStr
+				targets := make(map[string]LockedModTarget)
+				for _, target := range chosenSMLTargets {
+					targets[target.TargetName] = LockedModTarget{
+						Link: target.Link,
+					}
 				}
 
-				r.OutputLock[id] = LockedMod{
+				r.OutputLock.Mods[id] = LockedMod{
 					Version:      chosenSMLVersion.String(),
-					Link:         fmt.Sprintf(smlDownloadTemplate, smlVersionStr),
+					Targets:      targets,
 					Dependencies: map[string]string{},
 				}
 			}
@@ -154,11 +154,18 @@ func (r *resolvingInstance) Step() error {
 					}
 				}
 
+				versionTargets := make(map[string]VersionTarget)
+				for _, target := range version.Targets {
+					versionTargets[target.TargetName] = VersionTarget{
+						Link: viper.GetString("api-base") + target.Link,
+						Hash: target.Hash,
+					}
+				}
+
 				modVersions[i] = ModVersion{
 					ID:           version.Id,
 					Version:      version.Version,
-					Link:         viper.GetString("api-base") + version.Link,
-					Hash:         version.Hash,
+					Targets:      versionTargets,
 					Dependencies: versionDependencies,
 				}
 			}
@@ -193,8 +200,8 @@ func (r *resolvingInstance) Step() error {
 				return errors.Errorf("no version of %s matches constraints", mod.Mod_reference)
 			}
 
-			if _, ok := r.OutputLock[mod.Mod_reference]; ok {
-				if r.OutputLock[mod.Mod_reference].Version != selectedVersion.Version {
+			if _, ok := r.OutputLock.Mods[mod.Mod_reference]; ok {
+				if r.OutputLock.Mods[mod.Mod_reference].Version != selectedVersion.Version {
 					return errors.New("failed resolving dependencies. requires different versions of " + mod.Mod_reference)
 				}
 			}
@@ -206,15 +213,22 @@ func (r *resolvingInstance) Step() error {
 				}
 			}
 
-			r.OutputLock[mod.Mod_reference] = LockedMod{
+			targets := make(map[string]LockedModTarget)
+			for targetName, target := range selectedVersion.Targets {
+				targets[targetName] = LockedModTarget{
+					Link: target.Link,
+					Hash: target.Hash,
+				}
+			}
+
+			r.OutputLock.Mods[mod.Mod_reference] = LockedMod{
 				Version:      selectedVersion.Version,
-				Hash:         selectedVersion.Hash,
-				Link:         selectedVersion.Link,
+				Targets:      targets,
 				Dependencies: modDependencies,
 			}
 
 			for _, dependency := range selectedVersion.Dependencies {
-				if previousSelectedVersion, ok := r.OutputLock[dependency.ModReference]; ok {
+				if previousSelectedVersion, ok := r.OutputLock.Mods[dependency.ModReference]; ok {
 					constraint, _ := semver.NewConstraint(dependency.Constraint)
 					if !constraint.Check(semver.MustParse(previousSelectedVersion.Version)) {
 						return errors.Errorf("mod %s version %s does not match constraint %s",
@@ -252,7 +266,7 @@ func (r *resolvingInstance) Step() error {
 		r.ToResolve = nextResolve
 
 		for _, constraint := range converted {
-			if _, ok := r.OutputLock[constraint.ModIdOrReference]; !ok {
+			if _, ok := r.OutputLock.Mods[constraint.ModIdOrReference]; !ok {
 				return errors.New("failed resolving dependency: " + constraint.ModIdOrReference)
 			}
 		}
@@ -277,7 +291,7 @@ func (r *resolvingInstance) LockStep(viewed map[string]bool) error {
 
 			viewed[modReference] = true
 
-			if locked, ok := (*r.InputLock)[modReference]; ok {
+			if locked, ok := r.InputLock.Mods[modReference]; ok {
 				passes := true
 
 				for _, cs := range constraints {
@@ -290,7 +304,7 @@ func (r *resolvingInstance) LockStep(viewed map[string]bool) error {
 
 				if passes {
 					delete(r.ToResolve, modReference)
-					r.OutputLock[modReference] = locked
+					r.OutputLock.Mods[modReference] = locked
 					for k, v := range locked.Dependencies {
 						if alreadyResolving, ok := r.ToResolve[k]; ok {
 							newConstraint, _ := semver.NewConstraint(v)
@@ -311,7 +325,7 @@ func (r *resolvingInstance) LockStep(viewed map[string]bool) error {
 							continue
 						}
 
-						if outVersion, ok := r.OutputLock[k]; ok {
+						if outVersion, ok := r.OutputLock.Mods[k]; ok {
 							constraint, _ := semver.NewConstraint(v)
 							if !constraint.Check(semver.MustParse(outVersion.Version)) {
 								return errors.Errorf("mod %s version %s does not match constraint %s",

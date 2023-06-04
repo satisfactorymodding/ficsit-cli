@@ -221,33 +221,27 @@ type ModFields string
 
 const (
 	ModFieldsCreatedAt       ModFields = "created_at"
+	ModFieldsUpdatedAt       ModFields = "updated_at"
+	ModFieldsName            ModFields = "name"
+	ModFieldsViews           ModFields = "views"
 	ModFieldsDownloads       ModFields = "downloads"
 	ModFieldsHotness         ModFields = "hotness"
-	ModFieldsLastVersionDate ModFields = "last_version_date"
-	ModFieldsName            ModFields = "name"
 	ModFieldsPopularity      ModFields = "popularity"
+	ModFieldsLastVersionDate ModFields = "last_version_date"
 	ModFieldsSearch          ModFields = "search"
-	ModFieldsUpdatedAt       ModFields = "updated_at"
-	ModFieldsViews           ModFields = "views"
 )
 
 type ModFilter struct {
-	Hidden     bool      `json:"hidden,omitempty"`
-	Ids        []string  `json:"ids,omitempty"`
 	Limit      int       `json:"limit,omitempty"`
 	Offset     int       `json:"offset,omitempty"`
-	Order      Order     `json:"order,omitempty"`
 	Order_by   ModFields `json:"order_by,omitempty"`
-	References []string  `json:"references,omitempty"`
+	Order      Order     `json:"order,omitempty"`
 	Search     string    `json:"search,omitempty"`
+	Ids        []string  `json:"ids,omitempty"`
+	References []string  `json:"references,omitempty"`
+	Hidden     bool      `json:"hidden,omitempty"`
 	TagIDs     []string  `json:"tagIDs,omitempty"`
 }
-
-// GetHidden returns ModFilter.Hidden, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetHidden() bool { return v.Hidden }
-
-// GetIds returns ModFilter.Ids, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetIds() []string { return v.Ids }
 
 // GetLimit returns ModFilter.Limit, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetLimit() int { return v.Limit }
@@ -255,17 +249,23 @@ func (v *ModFilter) GetLimit() int { return v.Limit }
 // GetOffset returns ModFilter.Offset, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetOffset() int { return v.Offset }
 
+// GetOrder_by returns ModFilter.Order_by, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetOrder_by() ModFields { return v.Order_by }
+
 // GetOrder returns ModFilter.Order, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetOrder() Order { return v.Order }
 
-// GetOrder_by returns ModFilter.Order_by, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetOrder_by() ModFields { return v.Order_by }
+// GetSearch returns ModFilter.Search, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetSearch() string { return v.Search }
+
+// GetIds returns ModFilter.Ids, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetIds() []string { return v.Ids }
 
 // GetReferences returns ModFilter.References, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetReferences() []string { return v.References }
 
-// GetSearch returns ModFilter.Search, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetSearch() string { return v.Search }
+// GetHidden returns ModFilter.Hidden, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetHidden() bool { return v.Hidden }
 
 // GetTagIDs returns ModFilter.TagIDs, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetTagIDs() []string { return v.TagIDs }
@@ -525,8 +525,7 @@ func (v *ResolveModDependenciesModsModVersion) GetVersions() []ResolveModDepende
 type ResolveModDependenciesModsModVersionVersionsVersion struct {
 	Id           string                                                                             `json:"id"`
 	Version      string                                                                             `json:"version"`
-	Link         string                                                                             `json:"link"`
-	Hash         string                                                                             `json:"hash"`
+	Targets      []ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget          `json:"targets"`
 	Dependencies []ResolveModDependenciesModsModVersionVersionsVersionDependenciesVersionDependency `json:"dependencies"`
 }
 
@@ -536,11 +535,10 @@ func (v *ResolveModDependenciesModsModVersionVersionsVersion) GetId() string { r
 // GetVersion returns ResolveModDependenciesModsModVersionVersionsVersion.Version, and is useful for accessing the field via an interface.
 func (v *ResolveModDependenciesModsModVersionVersionsVersion) GetVersion() string { return v.Version }
 
-// GetLink returns ResolveModDependenciesModsModVersionVersionsVersion.Link, and is useful for accessing the field via an interface.
-func (v *ResolveModDependenciesModsModVersionVersionsVersion) GetLink() string { return v.Link }
-
-// GetHash returns ResolveModDependenciesModsModVersionVersionsVersion.Hash, and is useful for accessing the field via an interface.
-func (v *ResolveModDependenciesModsModVersionVersionsVersion) GetHash() string { return v.Hash }
+// GetTargets returns ResolveModDependenciesModsModVersionVersionsVersion.Targets, and is useful for accessing the field via an interface.
+func (v *ResolveModDependenciesModsModVersionVersionsVersion) GetTargets() []ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget {
+	return v.Targets
+}
 
 // GetDependencies returns ResolveModDependenciesModsModVersionVersionsVersion.Dependencies, and is useful for accessing the field via an interface.
 func (v *ResolveModDependenciesModsModVersionVersionsVersion) GetDependencies() []ResolveModDependenciesModsModVersionVersionsVersionDependenciesVersionDependency {
@@ -567,6 +565,28 @@ func (v *ResolveModDependenciesModsModVersionVersionsVersionDependenciesVersionD
 // GetOptional returns ResolveModDependenciesModsModVersionVersionsVersionDependenciesVersionDependency.Optional, and is useful for accessing the field via an interface.
 func (v *ResolveModDependenciesModsModVersionVersionsVersionDependenciesVersionDependency) GetOptional() bool {
 	return v.Optional
+}
+
+// ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget includes the requested fields of the GraphQL type VersionTarget.
+type ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget struct {
+	TargetName string `json:"targetName"`
+	Link       string `json:"link"`
+	Hash       string `json:"hash"`
+}
+
+// GetTargetName returns ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget.TargetName, and is useful for accessing the field via an interface.
+func (v *ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget) GetTargetName() string {
+	return v.TargetName
+}
+
+// GetLink returns ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget.Link, and is useful for accessing the field via an interface.
+func (v *ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget) GetLink() string {
+	return v.Link
+}
+
+// GetHash returns ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget.Hash, and is useful for accessing the field via an interface.
+func (v *ResolveModDependenciesModsModVersionVersionsVersionTargetsVersionTarget) GetHash() string {
+	return v.Hash
 }
 
 // ResolveModDependenciesResponse is returned by ResolveModDependencies on success.
@@ -605,9 +625,10 @@ func (v *SMLVersionsSmlVersionsGetSMLVersions) GetSml_versions() []SMLVersionsSm
 
 // SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion includes the requested fields of the GraphQL type SMLVersion.
 type SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion struct {
-	Id                   string `json:"id"`
-	Version              string `json:"version"`
-	Satisfactory_version int    `json:"satisfactory_version"`
+	Id                   string                                                                              `json:"id"`
+	Version              string                                                                              `json:"version"`
+	Satisfactory_version int                                                                                 `json:"satisfactory_version"`
+	Targets              []SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget `json:"targets"`
 }
 
 // GetId returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion.Id, and is useful for accessing the field via an interface.
@@ -623,25 +644,43 @@ func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion) GetSatisfac
 	return v.Satisfactory_version
 }
 
+// GetTargets returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion.Targets, and is useful for accessing the field via an interface.
+func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion) GetTargets() []SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget {
+	return v.Targets
+}
+
+// SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget includes the requested fields of the GraphQL type SMLVersionTarget.
+type SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget struct {
+	TargetName string `json:"targetName"`
+	Link       string `json:"link"`
+}
+
+// GetTargetName returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget.TargetName, and is useful for accessing the field via an interface.
+func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget) GetTargetName() string {
+	return v.TargetName
+}
+
+// GetLink returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget.Link, and is useful for accessing the field via an interface.
+func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget) GetLink() string {
+	return v.Link
+}
+
 type VersionFields string
 
 const (
 	VersionFieldsCreatedAt VersionFields = "created_at"
-	VersionFieldsDownloads VersionFields = "downloads"
 	VersionFieldsUpdatedAt VersionFields = "updated_at"
+	VersionFieldsDownloads VersionFields = "downloads"
 )
 
 type VersionFilter struct {
-	Ids      []string      `json:"ids,omitempty"`
 	Limit    int           `json:"limit,omitempty"`
 	Offset   int           `json:"offset,omitempty"`
-	Order    Order         `json:"order,omitempty"`
 	Order_by VersionFields `json:"order_by,omitempty"`
+	Order    Order         `json:"order,omitempty"`
 	Search   string        `json:"search,omitempty"`
+	Ids      []string      `json:"ids,omitempty"`
 }
-
-// GetIds returns VersionFilter.Ids, and is useful for accessing the field via an interface.
-func (v *VersionFilter) GetIds() []string { return v.Ids }
 
 // GetLimit returns VersionFilter.Limit, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetLimit() int { return v.Limit }
@@ -649,14 +688,17 @@ func (v *VersionFilter) GetLimit() int { return v.Limit }
 // GetOffset returns VersionFilter.Offset, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetOffset() int { return v.Offset }
 
-// GetOrder returns VersionFilter.Order, and is useful for accessing the field via an interface.
-func (v *VersionFilter) GetOrder() Order { return v.Order }
-
 // GetOrder_by returns VersionFilter.Order_by, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetOrder_by() VersionFields { return v.Order_by }
 
+// GetOrder returns VersionFilter.Order, and is useful for accessing the field via an interface.
+func (v *VersionFilter) GetOrder() Order { return v.Order }
+
 // GetSearch returns VersionFilter.Search, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetSearch() string { return v.Search }
+
+// GetIds returns VersionFilter.Ids, and is useful for accessing the field via an interface.
+func (v *VersionFilter) GetIds() []string { return v.Ids }
 
 type VersionStabilities string
 
@@ -980,8 +1022,11 @@ query ResolveModDependencies ($filter: [ModVersionConstraint!]!) {
 		versions {
 			id
 			version
-			link
-			hash
+			targets {
+				targetName
+				link
+				hash
+			}
 			dependencies {
 				condition
 				mod_id
@@ -1023,6 +1068,10 @@ query SMLVersions {
 			id
 			version
 			satisfactory_version
+			targets {
+				targetName
+				link
+			}
 		}
 	}
 }
