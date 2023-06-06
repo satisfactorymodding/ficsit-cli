@@ -7,11 +7,17 @@ import (
 	"github.com/MarvinJWendt/testza"
 )
 
-func TestProfileResolution(t *testing.T) {
+func profilesGetResolver() DependencyResolver {
 	ctx, err := InitCLI(false)
-	testza.AssertNoError(t, err)
+	if err != nil {
+		panic(err)
+	}
 
-	resolver := NewDependencyResolver(ctx.APIClient)
+	return NewDependencyResolver(ctx.APIClient)
+}
+
+func TestProfileResolution(t *testing.T) {
+	resolver := profilesGetResolver()
 
 	resolved, err := (&Profile{
 		Name: DefaultProfileName,
@@ -26,8 +32,12 @@ func TestProfileResolution(t *testing.T) {
 	testza.AssertNoError(t, err)
 	testza.AssertNotNil(t, resolved)
 	testza.AssertLen(t, resolved, 4)
+}
 
-	_, err = (&Profile{
+func TestProfileRequiredOlderVersion(t *testing.T) {
+	resolver := profilesGetResolver()
+
+	_, err := (&Profile{
 		Name: DefaultProfileName,
 		Mods: map[string]ProfileMod{
 			"RefinedPower": {
@@ -42,8 +52,12 @@ func TestProfileResolution(t *testing.T) {
 	}).Resolve(resolver, nil, math.MaxInt)
 
 	testza.AssertEqual(t, "failed resolving profile dependencies: failed resolving dependencies. requires different versions of RefinedRDLib", err.Error())
+}
 
-	_, err = (&Profile{
+func TestResolutionNonExistentMod(t *testing.T) {
+	resolver := profilesGetResolver()
+
+	_, err := (&Profile{
 		Name: DefaultProfileName,
 		Mods: map[string]ProfileMod{
 			"ThisModDoesNotExist$$$": {
