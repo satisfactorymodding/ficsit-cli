@@ -442,44 +442,54 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 }
 
 func downloadAndExtractMod(modReference string, version string, link string, hash string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) error {
-	downloading := true
-
-	var innerUpdates chan utils.GenericProgress
+	var downloadUpdates chan utils.GenericProgress
 
 	if updates != nil {
 		// Forward the inner updates as InstallUpdates
-		innerUpdates = make(chan utils.GenericProgress)
-		defer close(innerUpdates)
+		downloadUpdates = make(chan utils.GenericProgress)
 
 		go func() {
-			for up := range innerUpdates {
-				update := InstallUpdate{
+			for up := range downloadUpdates {
+				updates <- InstallUpdate{
 					Item: InstallUpdateItem{
 						Mod:     modReference,
 						Version: version,
 					},
+					Type:     InstallUpdateTypeModDownload,
 					Progress: up,
 				}
-				if downloading {
-					update.Type = InstallUpdateTypeModDownload
-				} else {
-					update.Type = InstallUpdateTypeModExtract
-				}
-				updates <- update
 			}
 		}()
 	}
 
 	log.Info().Str("mod_reference", modReference).Str("version", version).Str("link", link).Msg("downloading mod")
-	reader, size, err := utils.DownloadOrCache(modReference+"_"+version+".zip", hash, link, innerUpdates, downloadSemaphore)
+	reader, size, err := utils.DownloadOrCache(modReference+"_"+version+".zip", hash, link, downloadUpdates, downloadSemaphore)
 	if err != nil {
 		return errors.Wrap(err, "failed to download "+modReference+" from: "+link)
 	}
 
-	downloading = false
+	var extractUpdates chan utils.GenericProgress
+
+	if updates != nil {
+		// Forward the inner updates as InstallUpdates
+		extractUpdates = make(chan utils.GenericProgress)
+
+		go func() {
+			for up := range extractUpdates {
+				updates <- InstallUpdate{
+					Item: InstallUpdateItem{
+						Mod:     modReference,
+						Version: version,
+					},
+					Type:     InstallUpdateTypeModExtract,
+					Progress: up,
+				}
+			}
+		}()
+	}
 
 	log.Info().Str("mod_reference", modReference).Str("version", version).Str("link", link).Msg("extracting mod")
-	if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), hash, innerUpdates, d); err != nil {
+	if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), hash, extractUpdates, d); err != nil {
 		return errors.Wrap(err, "could not extract "+modReference)
 	}
 

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -56,6 +57,10 @@ func (gp GenericProgress) Percentage() float64 {
 }
 
 func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- GenericProgress, downloadSemaphore chan int) (io.ReaderAt, int64, error) {
+	if updates != nil {
+		defer close(updates)
+	}
+
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
 		if !os.IsExist(err) {
@@ -201,6 +206,14 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 	}
 
 	totalExtracted := int64(0)
+	channelUsers := sync.WaitGroup{}
+
+	if updates != nil {
+		defer func() {
+			channelUsers.Wait()
+			close(updates)
+		}()
+	}
 
 	for _, file := range reader.File {
 		if !file.FileInfo().IsDir() {
@@ -213,7 +226,9 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 			var fileUpdates chan GenericProgress
 			if updates != nil {
 				fileUpdates = make(chan GenericProgress)
+				channelUsers.Add(1)
 				go func() {
+					defer channelUsers.Done()
 					for fileUpdate := range fileUpdates {
 						updates <- GenericProgress{
 							Completed: totalExtracted + fileUpdate.Completed,
@@ -224,13 +239,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 			}
 
 			if err := writeZipFile(outFileLocation, file, d, fileUpdates); err != nil {
-				if fileUpdates != nil {
-					close(fileUpdates)
-				}
 				return err
-			}
-			if fileUpdates != nil {
-				close(fileUpdates)
 			}
 
 			totalExtracted += int64(file.UncompressedSize64)
@@ -245,6 +254,10 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 }
 
 func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates chan<- GenericProgress) error {
+	if updates != nil {
+		defer close(updates)
+	}
+
 	outFile, err := d.Open(outFileLocation, os.O_CREATE|os.O_RDWR)
 	if err != nil {
 		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
