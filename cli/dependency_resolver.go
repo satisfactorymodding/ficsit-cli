@@ -141,6 +141,10 @@ func (r *resolvingInstance) Step() error {
 			return errors.Wrap(err, "failed resolving mod dependencies")
 		}
 
+		sort.Slice(dependencies.Mods, func(i, j int) bool {
+			return dependencies.Mods[i].Mod_reference < dependencies.Mods[j].Mod_reference
+		})
+
 		for _, mod := range dependencies.Mods {
 			modVersions := make([]ModVersion, len(mod.Versions))
 			for i, version := range mod.Versions {

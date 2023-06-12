@@ -41,7 +41,7 @@ func TestProfileResolution(t *testing.T) {
 		},
 	}).Resolve(resolver, nil, math.MaxInt)
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: mod RefinedRDLib version 1.0.6 does not match constraint ^1.0.7", err.Error())
+	testza.AssertEqual(t, "failed resolving profile dependencies: failed resolving dependencies. requires different versions of RefinedRDLib", err.Error())
 
 	_, err = (&Profile{
 		Name: DefaultProfileName,
