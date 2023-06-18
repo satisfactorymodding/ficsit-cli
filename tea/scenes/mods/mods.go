@@ -55,7 +55,7 @@ type modsList struct {
 }
 
 func NewMods(root components.RootModel, parent tea.Model) tea.Model {
-	l := list.New([]list.Item{}, ModsListDelegate{
+	l := list.New([]list.Item{}, ListDelegate{
 		ItemDelegate: utils.NewItemDelegate(),
 		Context:      root.GetGlobal(),
 	}, root.Size().Width, root.Size().Height-root.Height())
@@ -462,12 +462,12 @@ func ascDesc(order sortOrder, result bool) bool {
 	return !result
 }
 
-type ModsListDelegate struct {
+type ListDelegate struct {
 	list.ItemDelegate
 	Context *cli.GlobalContext
 }
 
-func (c ModsListDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+func (c ListDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	realItem := item.(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
 	realDelegate := c.ItemDelegate.(list.DefaultDelegate)
 
