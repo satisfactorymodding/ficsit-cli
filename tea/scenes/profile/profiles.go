@@ -1,4 +1,4 @@
-package scenes
+package profile
 
 import (
 	"github.com/charmbracelet/bubbles/key"
@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -28,12 +29,10 @@ func NewProfiles(root components.RootModel, parent tea.Model) tea.Model {
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
-	l.DisableQuitKeybindings()
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-			key.NewBinding(key.WithHelp("n", "new profile")),
+			key.NewBinding(key.WithKeys("n"), key.WithHelp("n", "new profile")),
 		}
 	}
 
@@ -51,9 +50,6 @@ func (m profiles) Init() tea.Cmd {
 }
 
 func (m profiles) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// List enables its own keybindings when they were previously disabled
-	m.list.DisableQuitKeybindings()
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.list.SettingFilter() {
@@ -66,7 +62,7 @@ func (m profiles) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "n":
 			newModel := NewNewProfile(m.root, m)
 			return newModel, newModel.Init()
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {
@@ -74,7 +70,7 @@ func (m profiles) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.parent, nil
 			}
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[profiles])
 			if ok {
 				if i.Activate != nil {
