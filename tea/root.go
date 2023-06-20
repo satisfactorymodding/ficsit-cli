@@ -59,6 +59,14 @@ func (m *rootModel) SetCurrentInstallation(installation *cli.Installation) error
 	return nil
 }
 
+func (m *rootModel) GetSavedChangesStatus() bool {
+	return false // TODO: implement
+}
+
+func (m *rootModel) GetAppliedStatus() bool {
+	return false // TODO: implement
+}
+
 func (m *rootModel) GetAPIClient() graphql.Client {
 	return m.global.APIClient
 }

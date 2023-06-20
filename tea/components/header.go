@@ -44,6 +44,22 @@ func (h headerComponent) View() string {
 	} else {
 		out += "None"
 	}
+	out += "\n"
+
+	out += h.labelStyle.Render("Status: ")
+	if h.root.GetSavedChangesStatus() {
+		out += "No Unsaved Changes"
+	} else {
+		out += "Unsaved Changes!"
+	}
+
+	out += " • "
+
+	if h.root.GetAppliedStatus() {
+		out += "No Changes to Apply"
+	} else {
+		out += "Unapplied Changes!"
+	}
 
 	return lipgloss.NewStyle().Margin(1, 0).Render(out)
 }

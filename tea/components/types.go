@@ -16,6 +16,9 @@ type RootModel interface {
 	GetCurrentInstallation() *cli.Installation
 	SetCurrentInstallation(installation *cli.Installation) error
 
+	GetSavedChangesStatus() bool
+	GetAppliedStatus() bool
+
 	GetAPIClient() graphql.Client
 
 	Size() tea.WindowSizeMsg
