@@ -89,6 +89,15 @@ func (m installedModsList) LoadModData() {
 	})
 
 	go func() {
+		if len(currentProfile.Mods) == 0 {
+			m.items <- listUpdate{
+				Items: items,
+				Done:  true,
+			}
+			return
+			// Continuing past this point would load info about mods we don't have installed
+		}
+
 		references := make([]string, len(currentProfile.Mods))
 		i := 0
 		for reference := range currentProfile.Mods {
