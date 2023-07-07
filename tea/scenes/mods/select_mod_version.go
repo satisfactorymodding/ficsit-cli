@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -36,6 +37,11 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	m := &selectModVersionList{
 		root:   root,

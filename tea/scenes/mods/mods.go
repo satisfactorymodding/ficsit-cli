@@ -72,6 +72,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 		return []key.Binding{
 			key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "sort")),
 			key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "order")),
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 		}
 	}
 	l.AdditionalFullHelpKeys = l.AdditionalShortHelpKeys
@@ -161,6 +162,11 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortFieldList.Title = modsTitle
 	sortFieldList.Styles = utils.ListStyles
 	sortFieldList.SetSize(l.Width(), l.Height())
+	sortFieldList.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	sortOrderList := list.New([]list.Item{
 		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
@@ -192,6 +198,11 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortOrderList.Title = modsTitle
 	sortOrderList.Styles = utils.ListStyles
 	sortOrderList.SetSize(l.Width(), l.Height())
+	sortOrderList.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	m := &modsList{
 		root:          root,
@@ -272,6 +283,11 @@ func (m modsList) Init() tea.Cmd {
 
 func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.list.KeyMap.Quit.SetHelp("q", "back")
+	m.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:

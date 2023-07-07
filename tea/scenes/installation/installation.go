@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -67,6 +68,11 @@ func NewInstallation(root components.RootModel, parent tea.Model, installationDa
 	model.list.SetSize(model.list.Width(), model.list.Height())
 	model.list.StatusMessageLifetime = time.Second * 3
 	model.list.KeyMap.Quit.SetHelp("q", "back")
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	return model
 }

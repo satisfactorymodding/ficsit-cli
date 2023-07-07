@@ -60,6 +60,7 @@ Download the "all" build [here](https://github.com/Vilsol/ficsit-cli/releases/la
 ## Troubleshooting
 
 * Config files are located in `%APPDATA%\ficsit\`
+* Cached downloads are located at `%LOCALAPPDATA%\ficsit\downloadCache`
 
 ## Development
 
