@@ -52,6 +52,7 @@ func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
 			key.NewBinding(key.WithKeys(keys.KeyTab), key.WithHelp(keys.KeyTab, "select")),
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "continue")),
 		}
 	}
 

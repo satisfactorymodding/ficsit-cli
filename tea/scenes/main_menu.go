@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -132,6 +133,11 @@ func NewMainMenu(root components.RootModel) tea.Model {
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = "Main Menu"
 	model.list.Styles = utils.ListStyles
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	return model
 }
