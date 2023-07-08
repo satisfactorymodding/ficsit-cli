@@ -174,7 +174,8 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = newStatus
 			break
 		case err := <-m.errorChannel:
-			errorComponent, _ := components.NewErrorComponent(err.Error(), 0)
+			wrappedErrMessage := utils.WrapErrorMessage(err, int(float64(m.root.Size().Width)*0.8))
+			errorComponent, _ := components.NewErrorComponent(wrappedErrMessage, 0)
 			m.error = errorComponent
 			break
 		default:
