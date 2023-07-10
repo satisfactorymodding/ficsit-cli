@@ -79,6 +79,15 @@ Run `ficsit help` to see a list of available commands.
 * [Go 1.18](https://go.dev/doc/install)
 * IDE of Choice. Goland or VSCode suggested.
 
+### Code Generation
+
+If you update any of the GraphQL queries, run this to update generated code:
+
+```bash
+(echo "y") | npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql
+go generate -tags tools -x ./...
+```
+
 ## Building
 
 ```bash
