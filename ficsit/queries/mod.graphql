@@ -11,6 +11,16 @@ query GetMod ($modId: String!) {
                 username
             }
         }
+        compatibility {
+            EA {
+                note
+                state
+            }
+            EXP {
+                note
+                state
+            }
+        }
         full_description
         source_url
         created_at

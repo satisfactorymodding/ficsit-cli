@@ -26,37 +26,40 @@ import (
 var _ tea.Model = (*modVersionMenu)(nil)
 
 type modInfo struct {
-	root     components.RootModel
-	parent   tea.Model
-	modData  chan ficsit.GetModMod
-	modError chan string
-	error    *components.ErrorComponent
-	help     help.Model
-	keys     modInfoKeyMap
-	viewport viewport.Model
-	spinner  spinner.Model
-	ready    bool
+	root           components.RootModel
+	parent         tea.Model
+	modData        chan ficsit.GetModMod
+	modError       chan string
+	error          *components.ErrorComponent
+	help           help.Model
+	keys           modInfoKeyMap
+	viewport       viewport.Model
+	spinner        spinner.Model
+	ready          bool
+	compatViewMode bool
 }
 
 type modInfoKeyMap struct {
-	Up       key.Binding
-	UpHalf   key.Binding
-	UpPage   key.Binding
-	Down     key.Binding
-	DownHalf key.Binding
-	DownPage key.Binding
-	Help     key.Binding
-	Back     key.Binding
+	Up         key.Binding
+	UpHalf     key.Binding
+	UpPage     key.Binding
+	Down       key.Binding
+	DownHalf   key.Binding
+	DownPage   key.Binding
+	Help       key.Binding
+	Back       key.Binding
+	CompatInfo key.Binding
 }
 
 func (k modInfoKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Help, k.Back}
+	return []key.Binding{k.Help, k.Back, k.CompatInfo}
 }
 
 func (k modInfoKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.UpHalf, k.UpPage},
 		{k.Down, k.DownHalf, k.DownPage},
+		{k.CompatInfo},
 		{k.Help, k.Back},
 	}
 }
@@ -72,14 +75,15 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 		ready:    false,
 		help:     help.New(),
 		keys: modInfoKeyMap{
-			Up:       key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "move up")),
-			UpHalf:   key.NewBinding(key.WithKeys("u"), key.WithHelp("u", "up half page")),
-			UpPage:   key.NewBinding(key.WithKeys("pgup", "b"), key.WithHelp("pgup/b", "page up")),
-			Down:     key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "move down")),
-			DownHalf: key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "down half page")),
-			DownPage: key.NewBinding(key.WithKeys("pgdn", "f"), key.WithHelp("pgdn/f", "page down")),
-			Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "toggle help")),
-			Back:     key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "back")),
+			Up:         key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "move up")),
+			UpHalf:     key.NewBinding(key.WithKeys("u"), key.WithHelp("u", "up half page")),
+			UpPage:     key.NewBinding(key.WithKeys("pgup", "b"), key.WithHelp("pgup/b", "page up")),
+			Down:       key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "move down")),
+			DownHalf:   key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "down half page")),
+			DownPage:   key.NewBinding(key.WithKeys("pgdn", "f"), key.WithHelp("pgdn/f", "page down")),
+			Help:       key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "toggle help")),
+			Back:       key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "back")),
+			CompatInfo: key.NewBinding(key.WithKeys("i"), key.WithHelp("i", "toggle compatibility info view")),
 		},
 	}
 
@@ -98,6 +102,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 			return
 		}
 
+		log.Info().Msg("merging mod info")
 		model.modData <- fullMod.Mod
 	}()
 
@@ -146,6 +151,13 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help.ShowAll = !m.help.ShowAll
 			newModel, cmd := m.CalculateSizes(m.root.Size())
 			return newModel, cmd
+		case "i":
+			log.Info().Msg("TODO REMOVE ME keypress i")
+			m.compatViewMode = !m.compatViewMode
+
+			var cmd tea.Cmd
+			m.viewport, cmd = m.viewport.Update(msg)
+			return m, cmd
 		default:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
@@ -174,6 +186,9 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			sidebar += utils.LabelStyle.Render("Views: ") + strconv.Itoa(mod.Views) + "\n"
 			sidebar += utils.LabelStyle.Render("Downloads: ") + strconv.Itoa(mod.Downloads) + "\n"
 			sidebar += "\n"
+			sidebar += utils.LabelStyle.Render("EA  Compat: ") + renderCompatInfo(mod.Compatibility.EA.State) + "\n"
+			sidebar += utils.LabelStyle.Render("EXP Compat: ") + renderCompatInfo(mod.Compatibility.EXP.State) + "\n"
+			sidebar += "\n"
 			sidebar += utils.LabelStyle.Render("Authors:") + "\n"
 
 			for _, author := range mod.Authors {
@@ -190,16 +205,16 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				},
 			})
 
-			markdownDescription, err := converter.ConvertString(mod.Full_description)
-			if err != nil {
-				log.Error().Err(err).Msg("failed to convert html to markdown")
-				markdownDescription = mod.Full_description
-			}
-
-			description, err := glamour.Render(markdownDescription, "dark")
-			if err != nil {
-				log.Error().Err(err).Msg("failed to render markdown")
-				description = mod.Full_description
+			var description string
+			if m.compatViewMode {
+				description = "Learn more about what compatibility states mean on ficsit.app" + "\n\n"
+				description += utils.TitleStyle.Render("Early Access Branch Compatibility Note") + "\n"
+				description += renderDescriptionText(mod.Compatibility.EA.Note, converter)
+				description += "\n\n"
+				description += utils.TitleStyle.Render("Experimental Branch Compatibility Note") + "\n"
+				description += renderDescriptionText(mod.Compatibility.EXP.Note, converter)
+			} else {
+				description = renderDescriptionText(mod.Full_description, converter)
 			}
 
 			bottomPart := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, strings.TrimSpace(description))
@@ -219,6 +234,41 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func renderDescriptionText(text string, converter *md.Converter) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		text = "(No notes provided)"
+	}
+
+	markdownDescription, err := converter.ConvertString(text)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to convert html to markdown")
+		markdownDescription = text
+	}
+
+	description, err := glamour.Render(markdownDescription, "dark")
+	if err != nil {
+		log.Error().Err(err).Msg("failed to render markdown")
+		description = text
+	}
+
+	return description
+}
+
+func renderCompatInfo(state ficsit.CompatibilityState) string {
+	stateText := string(state)
+	switch state {
+	case ficsit.CompatibilityStateWorks:
+		return utils.CompatWorksStyle.Render(stateText)
+	case ficsit.CompatibilityStateDamaged:
+		return utils.CompatDamagedStyle.Render(stateText)
+	case ficsit.CompatibilityStateBroken:
+		return utils.CompatBrokenStyle.Render(stateText)
+	default:
+		return utils.CompatUntestedStyle.Render("Unknown")
+	}
 }
 
 func (m modInfo) View() string {

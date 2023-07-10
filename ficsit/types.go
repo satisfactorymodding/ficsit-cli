@@ -46,6 +46,14 @@ type CheckVersionUploadStateStateCreateVersionResponseVersion struct {
 // GetId returns CheckVersionUploadStateStateCreateVersionResponseVersion.Id, and is useful for accessing the field via an interface.
 func (v *CheckVersionUploadStateStateCreateVersionResponseVersion) GetId() string { return v.Id }
 
+type CompatibilityState string
+
+const (
+	CompatibilityStateWorks   CompatibilityState = "Works"
+	CompatibilityStateDamaged CompatibilityState = "Damaged"
+	CompatibilityStateBroken  CompatibilityState = "Broken"
+)
+
 // CreateVersionResponse is returned by CreateVersion on success.
 type CreateVersionResponse struct {
 	VersionID string `json:"versionID"`
@@ -64,15 +72,16 @@ func (v *FinalizeCreateVersionResponse) GetSuccess() bool { return v.Success }
 
 // GetModMod includes the requested fields of the GraphQL type Mod.
 type GetModMod struct {
-	Id               string                    `json:"id"`
-	Mod_reference    string                    `json:"mod_reference"`
-	Name             string                    `json:"name"`
-	Views            int                       `json:"views"`
-	Downloads        int                       `json:"downloads"`
-	Authors          []GetModModAuthorsUserMod `json:"authors"`
-	Full_description string                    `json:"full_description"`
-	Source_url       string                    `json:"source_url"`
-	Created_at       time.Time                 `json:"-"`
+	Id               string                                  `json:"id"`
+	Mod_reference    string                                  `json:"mod_reference"`
+	Name             string                                  `json:"name"`
+	Views            int                                     `json:"views"`
+	Downloads        int                                     `json:"downloads"`
+	Authors          []GetModModAuthorsUserMod               `json:"authors"`
+	Compatibility    GetModModCompatibilityCompatibilityInfo `json:"compatibility"`
+	Full_description string                                  `json:"full_description"`
+	Source_url       string                                  `json:"source_url"`
+	Created_at       time.Time                               `json:"-"`
 }
 
 // GetId returns GetModMod.Id, and is useful for accessing the field via an interface.
@@ -92,6 +101,11 @@ func (v *GetModMod) GetDownloads() int { return v.Downloads }
 
 // GetAuthors returns GetModMod.Authors, and is useful for accessing the field via an interface.
 func (v *GetModMod) GetAuthors() []GetModModAuthorsUserMod { return v.Authors }
+
+// GetCompatibility returns GetModMod.Compatibility, and is useful for accessing the field via an interface.
+func (v *GetModMod) GetCompatibility() GetModModCompatibilityCompatibilityInfo {
+	return v.Compatibility
+}
 
 // GetFull_description returns GetModMod.Full_description, and is useful for accessing the field via an interface.
 func (v *GetModMod) GetFull_description() string { return v.Full_description }
@@ -148,6 +162,8 @@ type __premarshalGetModMod struct {
 
 	Authors []GetModModAuthorsUserMod `json:"authors"`
 
+	Compatibility GetModModCompatibilityCompatibilityInfo `json:"compatibility"`
+
 	Full_description string `json:"full_description"`
 
 	Source_url string `json:"source_url"`
@@ -172,6 +188,7 @@ func (v *GetModMod) __premarshalJSON() (*__premarshalGetModMod, error) {
 	retval.Views = v.Views
 	retval.Downloads = v.Downloads
 	retval.Authors = v.Authors
+	retval.Compatibility = v.Compatibility
 	retval.Full_description = v.Full_description
 	retval.Source_url = v.Source_url
 	{
@@ -209,6 +226,50 @@ type GetModModAuthorsUserModUser struct {
 // GetUsername returns GetModModAuthorsUserModUser.Username, and is useful for accessing the field via an interface.
 func (v *GetModModAuthorsUserModUser) GetUsername() string { return v.Username }
 
+// GetModModCompatibilityCompatibilityInfo includes the requested fields of the GraphQL type CompatibilityInfo.
+type GetModModCompatibilityCompatibilityInfo struct {
+	EA  GetModModCompatibilityCompatibilityInfoEACompatibility  `json:"EA"`
+	EXP GetModModCompatibilityCompatibilityInfoEXPCompatibility `json:"EXP"`
+}
+
+// GetEA returns GetModModCompatibilityCompatibilityInfo.EA, and is useful for accessing the field via an interface.
+func (v *GetModModCompatibilityCompatibilityInfo) GetEA() GetModModCompatibilityCompatibilityInfoEACompatibility {
+	return v.EA
+}
+
+// GetEXP returns GetModModCompatibilityCompatibilityInfo.EXP, and is useful for accessing the field via an interface.
+func (v *GetModModCompatibilityCompatibilityInfo) GetEXP() GetModModCompatibilityCompatibilityInfoEXPCompatibility {
+	return v.EXP
+}
+
+// GetModModCompatibilityCompatibilityInfoEACompatibility includes the requested fields of the GraphQL type Compatibility.
+type GetModModCompatibilityCompatibilityInfoEACompatibility struct {
+	Note  string             `json:"note"`
+	State CompatibilityState `json:"state"`
+}
+
+// GetNote returns GetModModCompatibilityCompatibilityInfoEACompatibility.Note, and is useful for accessing the field via an interface.
+func (v *GetModModCompatibilityCompatibilityInfoEACompatibility) GetNote() string { return v.Note }
+
+// GetState returns GetModModCompatibilityCompatibilityInfoEACompatibility.State, and is useful for accessing the field via an interface.
+func (v *GetModModCompatibilityCompatibilityInfoEACompatibility) GetState() CompatibilityState {
+	return v.State
+}
+
+// GetModModCompatibilityCompatibilityInfoEXPCompatibility includes the requested fields of the GraphQL type Compatibility.
+type GetModModCompatibilityCompatibilityInfoEXPCompatibility struct {
+	Note  string             `json:"note"`
+	State CompatibilityState `json:"state"`
+}
+
+// GetNote returns GetModModCompatibilityCompatibilityInfoEXPCompatibility.Note, and is useful for accessing the field via an interface.
+func (v *GetModModCompatibilityCompatibilityInfoEXPCompatibility) GetNote() string { return v.Note }
+
+// GetState returns GetModModCompatibilityCompatibilityInfoEXPCompatibility.State, and is useful for accessing the field via an interface.
+func (v *GetModModCompatibilityCompatibilityInfoEXPCompatibility) GetState() CompatibilityState {
+	return v.State
+}
+
 // GetModResponse is returned by GetMod on success.
 type GetModResponse struct {
 	Mod GetModMod `json:"mod"`
@@ -221,33 +282,27 @@ type ModFields string
 
 const (
 	ModFieldsCreatedAt       ModFields = "created_at"
+	ModFieldsUpdatedAt       ModFields = "updated_at"
+	ModFieldsName            ModFields = "name"
+	ModFieldsViews           ModFields = "views"
 	ModFieldsDownloads       ModFields = "downloads"
 	ModFieldsHotness         ModFields = "hotness"
-	ModFieldsLastVersionDate ModFields = "last_version_date"
-	ModFieldsName            ModFields = "name"
 	ModFieldsPopularity      ModFields = "popularity"
+	ModFieldsLastVersionDate ModFields = "last_version_date"
 	ModFieldsSearch          ModFields = "search"
-	ModFieldsUpdatedAt       ModFields = "updated_at"
-	ModFieldsViews           ModFields = "views"
 )
 
 type ModFilter struct {
-	Hidden     bool      `json:"hidden,omitempty"`
-	Ids        []string  `json:"ids,omitempty"`
 	Limit      int       `json:"limit,omitempty"`
 	Offset     int       `json:"offset,omitempty"`
-	Order      Order     `json:"order,omitempty"`
 	Order_by   ModFields `json:"order_by,omitempty"`
-	References []string  `json:"references,omitempty"`
+	Order      Order     `json:"order,omitempty"`
 	Search     string    `json:"search,omitempty"`
+	Ids        []string  `json:"ids,omitempty"`
+	References []string  `json:"references,omitempty"`
+	Hidden     bool      `json:"hidden,omitempty"`
 	TagIDs     []string  `json:"tagIDs,omitempty"`
 }
-
-// GetHidden returns ModFilter.Hidden, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetHidden() bool { return v.Hidden }
-
-// GetIds returns ModFilter.Ids, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetIds() []string { return v.Ids }
 
 // GetLimit returns ModFilter.Limit, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetLimit() int { return v.Limit }
@@ -255,17 +310,23 @@ func (v *ModFilter) GetLimit() int { return v.Limit }
 // GetOffset returns ModFilter.Offset, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetOffset() int { return v.Offset }
 
+// GetOrder_by returns ModFilter.Order_by, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetOrder_by() ModFields { return v.Order_by }
+
 // GetOrder returns ModFilter.Order, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetOrder() Order { return v.Order }
 
-// GetOrder_by returns ModFilter.Order_by, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetOrder_by() ModFields { return v.Order_by }
+// GetSearch returns ModFilter.Search, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetSearch() string { return v.Search }
+
+// GetIds returns ModFilter.Ids, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetIds() []string { return v.Ids }
 
 // GetReferences returns ModFilter.References, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetReferences() []string { return v.References }
 
-// GetSearch returns ModFilter.Search, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetSearch() string { return v.Search }
+// GetHidden returns ModFilter.Hidden, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetHidden() bool { return v.Hidden }
 
 // GetTagIDs returns ModFilter.TagIDs, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetTagIDs() []string { return v.TagIDs }
@@ -627,21 +688,18 @@ type VersionFields string
 
 const (
 	VersionFieldsCreatedAt VersionFields = "created_at"
-	VersionFieldsDownloads VersionFields = "downloads"
 	VersionFieldsUpdatedAt VersionFields = "updated_at"
+	VersionFieldsDownloads VersionFields = "downloads"
 )
 
 type VersionFilter struct {
-	Ids      []string      `json:"ids,omitempty"`
 	Limit    int           `json:"limit,omitempty"`
 	Offset   int           `json:"offset,omitempty"`
-	Order    Order         `json:"order,omitempty"`
 	Order_by VersionFields `json:"order_by,omitempty"`
+	Order    Order         `json:"order,omitempty"`
 	Search   string        `json:"search,omitempty"`
+	Ids      []string      `json:"ids,omitempty"`
 }
-
-// GetIds returns VersionFilter.Ids, and is useful for accessing the field via an interface.
-func (v *VersionFilter) GetIds() []string { return v.Ids }
 
 // GetLimit returns VersionFilter.Limit, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetLimit() int { return v.Limit }
@@ -649,14 +707,17 @@ func (v *VersionFilter) GetLimit() int { return v.Limit }
 // GetOffset returns VersionFilter.Offset, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetOffset() int { return v.Offset }
 
-// GetOrder returns VersionFilter.Order, and is useful for accessing the field via an interface.
-func (v *VersionFilter) GetOrder() Order { return v.Order }
-
 // GetOrder_by returns VersionFilter.Order_by, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetOrder_by() VersionFields { return v.Order_by }
 
+// GetOrder returns VersionFilter.Order, and is useful for accessing the field via an interface.
+func (v *VersionFilter) GetOrder() Order { return v.Order }
+
 // GetSearch returns VersionFilter.Search, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetSearch() string { return v.Search }
+
+// GetIds returns VersionFilter.Ids, and is useful for accessing the field via an interface.
+func (v *VersionFilter) GetIds() []string { return v.Ids }
 
 type VersionStabilities string
 
@@ -858,6 +919,16 @@ query GetMod ($modId: String!) {
 			role
 			user {
 				username
+			}
+		}
+		compatibility {
+			EA {
+				note
+				state
+			}
+			EXP {
+				note
+				state
 			}
 		}
 		full_description

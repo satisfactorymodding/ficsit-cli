@@ -13,6 +13,13 @@ var (
 )
 
 var (
+	CompatWorksStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#00b12d"))
+	CompatDamagedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#e69000"))
+	CompatBrokenStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#e60000"))
+	CompatUntestedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#838383"))
+)
+
+var (
 	LogoForegroundStyles = []lipgloss.Style{
 		lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5f00")).Background(lipgloss.Color("#ff5f00")),
 		lipgloss.NewStyle().Foreground(lipgloss.Color("#e65400")).Background(lipgloss.Color("#e65400")),
