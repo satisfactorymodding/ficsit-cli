@@ -188,6 +188,7 @@ func renderContents(m modInfo, msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport = viewport.Model{Width: m.root.Size().Width - left - right, Height: m.root.Size().Height - top - bottom}
 
 		title := lipgloss.NewStyle().Padding(0, 2).Render(utils.TitleStyle.Render(mod.Name)) + "\n"
+		title += lipgloss.NewStyle().Padding(0, 3).Render("("+string(mod.Mod_reference)+")") + "\n"
 
 		sidebar := ""
 		sidebar += utils.LabelStyle.Render("Views: ") + strconv.Itoa(mod.Views) + "\n"
