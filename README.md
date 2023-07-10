@@ -57,10 +57,20 @@ Download the appropriate `.apk` for your CPU architecture.
 
 Download the "all" build [here](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_darwin_all).
 
+## Usage
+
+### Interactive CLI
+
+To launch the interactive CLI, run the executable without any arguments.
+
+### Command Line
+
+Run `ficsit help` to see a list of available commands.
+
 ## Troubleshooting
 
-* Config files are located in `%APPDATA%\ficsit\`
-* Cached downloads are located at `%LOCALAPPDATA%\ficsit\downloadCache`
+* Profile and installation records are located in `%APPDATA%\ficsit\`
+* Downloads are cached in `%LOCALAPPDATA%\ficsit\downloadCache\`
 
 ## Development
 

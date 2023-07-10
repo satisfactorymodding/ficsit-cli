@@ -16,7 +16,7 @@ var cliCmd = &cobra.Command{
 		log.Info().
 			Str("version", viper.GetString("version")).
 			Str("commit", viper.GetString("commit")).
-			Msg("initialized")
+			Msg("interactive cli initialized")
 
 		global, err := cli.InitCLI(false)
 		if err != nil {
