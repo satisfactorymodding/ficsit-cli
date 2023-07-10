@@ -72,14 +72,14 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 		ready:    false,
 		help:     help.New(),
 		keys: modInfoKeyMap{
-			Up:       key.NewBinding(key.WithHelp("↑/k", "move up")),
-			UpHalf:   key.NewBinding(key.WithHelp("u", "up half page")),
-			UpPage:   key.NewBinding(key.WithHelp("pgup/b", "page up")),
-			Down:     key.NewBinding(key.WithHelp("↓/j", "move down")),
-			DownHalf: key.NewBinding(key.WithHelp("d", "down half page")),
-			DownPage: key.NewBinding(key.WithHelp("pgdn/ /f", "page down")),
-			Help:     key.NewBinding(key.WithHelp("?", "toggle help")),
-			Back:     key.NewBinding(key.WithHelp("q", "back")),
+			Up:       key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "move up")),
+			UpHalf:   key.NewBinding(key.WithKeys("u"), key.WithHelp("u", "up half page")),
+			UpPage:   key.NewBinding(key.WithKeys("pgup", "b"), key.WithHelp("pgup/b", "page up")),
+			Down:     key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "move down")),
+			DownHalf: key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "down half page")),
+			DownPage: key.NewBinding(key.WithKeys("pgdn", "f"), key.WithHelp("pgdn/f", "page down")),
+			Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "toggle help")),
+			Back:     key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "back")),
 		},
 	}
 
