@@ -27,9 +27,9 @@ func WrapErrorMessage(err error, width int) string {
 				// if I am not the last one then add a slash
 				// the last one needs a space like everything else
 				if spi+1 != len(subParts) {
-					sp = sp + "/"
+					sp += "/"
 				} else {
-					sp = sp + " "
+					sp += " "
 				}
 
 				expandedParts = append(expandedParts, sp)
