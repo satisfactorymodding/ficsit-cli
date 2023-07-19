@@ -1,64 +1,57 @@
 package utils
 
-import "strings"
+import (
+	"strings"
+)
 
 func WrapErrorMessage(err error, width int) string {
 	parts := strings.Split(err.Error(), " ")
 
+	// make the expanded parts as long as parts at first, it might need to be bigger
+	// but it should never be smaller
+	expandedParts := make([]string, len(parts))
+
+	// loop parts and find extra-long phrases (particularly directory paths)
+	// then populate an array where it is all flattened out
+	for _, p := range parts {
+		// consistent file path separator
+		p = strings.ReplaceAll(p, "\\", "/")
+
+		isPath := strings.ContainsAny(p, "/")
+		notURL := !strings.Contains(p, "http")
+
+		if notURL && isPath {
+			subParts := strings.Split(p, "/")
+
+			for spi, sp := range subParts {
+				// if I am not the last one then add a slash
+				// the last one needs a space like everything else
+				if spi+1 != len(subParts) {
+					sp = sp + "/"
+				} else {
+					sp = sp + " "
+				}
+
+				expandedParts = append(expandedParts, sp)
+			}
+		} else {
+			// add the space for word separation
+			expandedParts = append(expandedParts, p+" ")
+		}
+	}
+
 	returnString := strings.Builder{}
 
 	rowWidth := 0
-	for _, s := range parts {
-		if rowWidth+len(s) <= width {
-			returnString.WriteString(s + " ")
-			rowWidth += len(s) + 1
-		} else if strings.ContainsAny(s, "/\\") {
-			// break on paths too
-			for _, pathPart := range strings.Split(strings.ReplaceAll(s, "\\", "/"), "/") {
-				if rowWidth+len(pathPart) <= width {
-					returnString.WriteString(pathPart + "/")
-				} else if len(pathPart) > width {
-					// if it is longer than the rest of the line, then write as much as we can
-					// before splitting to a new line
-					returnString.WriteString(pathPart[:width-rowWidth])
-					writeStringChunks(pathPart[width-rowWidth+1:], &returnString, width)
-				} else {
-					returnString.WriteString("\n" + pathPart)
-				}
-			}
-		} else if len(s) > width {
-			// if it is longer than the rest of the line, then write as much as we can
-			// before splitting to a new line
-			returnString.WriteString(s[:width-rowWidth])
-			writeStringChunks(s[width-rowWidth+1:], &returnString, width)
+	for _, p := range expandedParts {
+		if len(p)+rowWidth+1 <= width {
+			rowWidth += len(p) + 1
+			returnString.WriteString(p)
 		} else {
-			returnString.WriteString("\n" + s)
-			rowWidth = len(s)
+			returnString.WriteString(p + "\n")
+			rowWidth = 0
 		}
 	}
 
 	return returnString.String()
-}
-
-func writeStringChunks(s string, returnString *strings.Builder, width int) {
-	// chunk the string, its way too long
-	chunks := []strings.Builder{
-		// create the initial 0 position builder
-		{},
-	}
-
-	chunkPosition := 0
-	for _, ss := range s {
-		chunks[chunkPosition].WriteString(string(ss))
-		if chunks[chunkPosition].Len() >= width {
-			chunkPosition++
-			chunks = append(chunks, strings.Builder{})
-		}
-	}
-
-	for _, c := range chunks {
-		if c.Len() > 0 {
-			returnString.WriteString("\n" + c.String())
-		}
-	}
 }
