@@ -5,6 +5,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/muesli/reflow/wrap"
+
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
@@ -174,7 +176,7 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = newStatus
 			break
 		case err := <-m.errorChannel:
-			wrappedErrMessage := utils.WrapErrorMessage(err, int(float64(m.root.Size().Width)*0.8))
+			wrappedErrMessage := wrap.String(err.Error(), int(float64(m.root.Size().Width)*0.8))
 			errorComponent, _ := components.NewErrorComponent(wrappedErrMessage, 0)
 			m.error = errorComponent
 			break
