@@ -29,6 +29,7 @@ type modInfo struct {
 	root           components.RootModel
 	parent         tea.Model
 	modData        chan ficsit.GetModMod
+	modDataCache   ficsit.GetModMod
 	modError       chan string
 	error          *components.ErrorComponent
 	help           help.Model
@@ -154,7 +155,7 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "i":
 			log.Info().Msg("TODO REMOVE ME keypress i")
 			m.compatViewMode = !m.compatViewMode
-			m, cmd := renderContents(m, msg)
+			m, cmd := m.renderModInfo(msg)
 			return m, cmd
 		default:
 			var cmd tea.Cmd
@@ -168,72 +169,18 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
 	case utils.TickMsg:
-		m, cmd := renderContents(m, msg)
+		m, cmd := m.renderContents(msg)
 		return m, cmd
 	}
 
 	return m, nil
 }
 
-func renderContents(m modInfo, msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Info().Bool("m.compatViewMode", m.compatViewMode).Msg("TODO REMOVE ME renderContents")
+func (m modInfo) renderContents(msg tea.Msg) (tea.Model, tea.Cmd) {
 	select {
 	case mod := <-m.modData:
-		bottomPadding := 2
-		if m.help.ShowAll {
-			bottomPadding = 4
-		}
-
-		top, right, bottom, left := lipgloss.NewStyle().Margin(m.root.Height(), 3, bottomPadding).GetMargin()
-		m.viewport = viewport.Model{Width: m.root.Size().Width - left - right, Height: m.root.Size().Height - top - bottom}
-
-		title := lipgloss.NewStyle().Padding(0, 2).Render(utils.TitleStyle.Render(mod.Name)) + "\n"
-		title += lipgloss.NewStyle().Padding(0, 3).Render("("+string(mod.Mod_reference)+")") + "\n"
-
-		sidebar := ""
-		sidebar += utils.LabelStyle.Render("Views: ") + strconv.Itoa(mod.Views) + "\n"
-		sidebar += utils.LabelStyle.Render("Downloads: ") + strconv.Itoa(mod.Downloads) + "\n"
-		sidebar += "\n"
-		sidebar += utils.LabelStyle.Render("EA  Compat: ") + renderCompatInfo(mod.Compatibility.EA.State) + "\n"
-		sidebar += utils.LabelStyle.Render("EXP Compat: ") + renderCompatInfo(mod.Compatibility.EXP.State) + "\n"
-		sidebar += "\n"
-		sidebar += utils.LabelStyle.Render("Authors:") + "\n"
-
-		for _, author := range mod.Authors {
-			sidebar += "\n"
-			sidebar += utils.LabelStyle.Render(author.User.Username) + " - " + author.Role
-		}
-
-		converter := md.NewConverter("", true, nil)
-		converter.AddRules(md.Rule{
-			Filter: []string{"#text"},
-			Replacement: func(content string, selec *goquery.Selection, options *md.Options) *string {
-				text := selec.Text()
-				return &text
-			},
-		})
-
-		description := ""
-		if m.compatViewMode {
-			description += "Compatibility information is maintained by the community." + "\n"
-			description += "If you encounter issues with a mod, please report it on the Discord." + "\n"
-			description += "Learn more about what compatibility states mean on ficsit.app" + "\n\n"
-			description += utils.TitleStyle.Render("Early Access Branch Compatibility Note") + "\n"
-			description += renderDescriptionText(mod.Compatibility.EA.Note, converter)
-			description += "\n\n"
-			description += utils.TitleStyle.Render("Experimental Branch Compatibility Note") + "\n"
-			description += renderDescriptionText(mod.Compatibility.EXP.Note, converter)
-		} else {
-			description += renderDescriptionText(mod.Full_description, converter)
-		}
-
-		bottomPart := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, strings.TrimSpace(description))
-
-		m.viewport.SetContent(lipgloss.JoinVertical(lipgloss.Left, title, bottomPart))
-
-		var cmd tea.Cmd
-		m.viewport, cmd = m.viewport.Update(msg)
-		return m, cmd
+		m.modDataCache = mod
+		return m.renderModInfo(msg)
 	case err := <-m.modError:
 		errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
 		m.error = errorComponent
@@ -243,7 +190,70 @@ func renderContents(m modInfo, msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func renderDescriptionText(text string, converter *md.Converter) string {
+func (m modInfo) renderModInfo(msg tea.Msg) (tea.Model, tea.Cmd) {
+	mod := m.modDataCache
+	bottomPadding := 2
+	if m.help.ShowAll {
+		bottomPadding = 4
+	}
+
+	top, right, bottom, left := lipgloss.NewStyle().Margin(m.root.Height(), 3, bottomPadding).GetMargin()
+	m.viewport = viewport.Model{Width: m.root.Size().Width - left - right, Height: m.root.Size().Height - top - bottom}
+
+	title := lipgloss.NewStyle().Padding(0, 2).Render(utils.TitleStyle.Render(mod.Name)) + "\n"
+	title += lipgloss.NewStyle().Padding(0, 3).Render("("+string(mod.Mod_reference)+")") + "\n"
+
+	sidebar := ""
+	sidebar += utils.LabelStyle.Render("Views: ") + strconv.Itoa(mod.Views) + "\n"
+	sidebar += utils.LabelStyle.Render("Downloads: ") + strconv.Itoa(mod.Downloads) + "\n"
+	sidebar += "\n"
+	sidebar += utils.LabelStyle.Render("EA  Compat: ") + m.renderCompatInfo(mod.Compatibility.EA.State) + "\n"
+	sidebar += utils.LabelStyle.Render("EXP Compat: ") + m.renderCompatInfo(mod.Compatibility.EXP.State) + "\n"
+	sidebar += "\n"
+	sidebar += utils.LabelStyle.Render("Authors:") + "\n"
+
+	for _, author := range mod.Authors {
+		sidebar += "\n"
+		sidebar += utils.LabelStyle.Render(author.User.Username) + " - " + author.Role
+	}
+
+	converter := md.NewConverter("", true, nil)
+	converter.AddRules(md.Rule{
+		Filter: []string{"#text"},
+		Replacement: func(content string, selec *goquery.Selection, options *md.Options) *string {
+			text := selec.Text()
+			return &text
+		},
+	})
+
+	description := ""
+	if m.compatViewMode {
+		a := ""
+		a += "Compatibility information is maintained by the community." + "\n"
+		a += "If you encounter issues with a mod, please report it on the Discord." + "\n"
+		a += "Learn more about what compatibility states mean on ficsit.app" + "\n\n"
+
+		description = m.renderDescriptionText(a, converter)
+
+		description += "  " + utils.TitleStyle.Render("Early Access Branch Compatibility Note") + "\n"
+		description += m.renderDescriptionText(mod.Compatibility.EA.Note, converter)
+		description += "\n\n"
+		description += "  " + utils.TitleStyle.Render("Experimental Branch Compatibility Note") + "\n"
+		description += m.renderDescriptionText(mod.Compatibility.EXP.Note, converter)
+	} else {
+		description += m.renderDescriptionText(mod.Full_description, converter)
+	}
+
+	bottomPart := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, strings.TrimSpace(description))
+
+	m.viewport.SetContent(lipgloss.JoinVertical(lipgloss.Left, title, bottomPart))
+
+	var cmd tea.Cmd
+	m.viewport, cmd = m.viewport.Update(msg)
+	return m, cmd
+}
+
+func (m modInfo) renderDescriptionText(text string, converter *md.Converter) string {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		text = "(No notes provided)"
@@ -264,7 +274,7 @@ func renderDescriptionText(text string, converter *md.Converter) string {
 	return description
 }
 
-func renderCompatInfo(state ficsit.CompatibilityState) string {
+func (m modInfo) renderCompatInfo(state ficsit.CompatibilityState) string {
 	stateText := string(state)
 	switch state {
 	case ficsit.CompatibilityStateWorks:
