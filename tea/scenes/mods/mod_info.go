@@ -53,7 +53,7 @@ type modInfoKeyMap struct {
 }
 
 func (k modInfoKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Help, k.Back, k.CompatInfo}
+	return []key.Binding{k.Help, k.Back, k.Up, k.Down, k.CompatInfo}
 }
 
 func (k modInfoKeyMap) FullHelp() [][]key.Binding {
