@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
+
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
 

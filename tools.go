@@ -6,9 +6,11 @@ package main
 import (
 	"os"
 
-	_ "github.com/Khan/genqlient/generate"
-	"github.com/satisfactorymodding/ficsit-cli/cmd"
 	"github.com/spf13/cobra/doc"
+
+	"github.com/satisfactorymodding/ficsit-cli/cmd"
+
+	_ "github.com/Khan/genqlient/generate"
 )
 
 //go:generate go run github.com/Khan/genqlient

@@ -114,8 +114,14 @@ go install mvdan.cc/gofumpt@latest
 gofumpt -l -w .
 ```
 
-<!-- You need to run GCI. If you're on Windows, watch out, `gci` is also a powershell shortened command, so run this from Bash. Install via:
+You may also need to run GCI. If you're on Windows, watch out, `gci` is also a powershell shortened command, so run this from Bash. Install via:
 
 ```bash
 go install github.com/daixiang0/gci@latest
-``` -->
+```
+
+Example command to run based on the above error:
+
+```bash
+gci.exe write --skip-generated -s standard -s default -s 'prefix(github.com/satisfactorymodding/ficsit-cli)' -s blank -s dot .
+```
