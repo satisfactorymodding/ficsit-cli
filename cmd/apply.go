@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
-
 	"github.com/satisfactorymodding/ficsit-cli/cli"
+	"github.com/spf13/cobra"
 )
 
 var applyCmd = &cobra.Command{

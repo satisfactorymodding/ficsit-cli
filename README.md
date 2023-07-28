@@ -95,3 +95,27 @@ go build
 ```
 
 Will produce `ficsit-cli.exe` in the repo root directory.
+
+### Linting
+
+If the CI gives you an error like this:
+
+```bash
+Error: File is not `gci`-ed with --skip-generated -s standard,default,prefix(github.com/satisfactorymodding/ficsit-cli),blank,dot (gci)
+```
+
+Install and run `gofumpt`.
+
+```bash
+go install mvdan.cc/gofumpt@latest
+```
+
+```bash
+gofumpt -l -w .
+```
+
+<!-- You need to run GCI. If you're on Windows, watch out, `gci` is also a powershell shortened command, so run this from Bash. Install via:
+
+```bash
+go install github.com/daixiang0/gci@latest
+``` -->

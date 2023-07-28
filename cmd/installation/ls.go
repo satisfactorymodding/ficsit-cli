@@ -1,9 +1,8 @@
 package installation
 
 import (
-	"github.com/spf13/cobra"
-
 	"github.com/satisfactorymodding/ficsit-cli/cli"
+	"github.com/spf13/cobra"
 )
 
 func init() {

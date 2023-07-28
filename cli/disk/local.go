@@ -29,7 +29,7 @@ func (l localDisk) Read(path string) ([]byte, error) {
 }
 
 func (l localDisk) Write(path string, data []byte) error {
-	return os.WriteFile(path, data, 0777) //nolint
+	return os.WriteFile(path, data, 0o777) //nolint
 }
 
 func (l localDisk) Remove(path string) error {
@@ -37,7 +37,7 @@ func (l localDisk) Remove(path string) error {
 }
 
 func (l localDisk) MkDir(path string) error {
-	return os.MkdirAll(path, 0777) //nolint
+	return os.MkdirAll(path, 0o777) //nolint
 }
 
 func (l localDisk) ReadDir(path string) ([]Entry, error) {
@@ -65,5 +65,5 @@ func (l localDisk) IsExist(err error) bool {
 }
 
 func (l localDisk) Open(path string, flag int) (io.WriteCloser, error) {
-	return os.OpenFile(path, flag, 0777) //nolint
+	return os.OpenFile(path, flag, 0o777) //nolint
 }

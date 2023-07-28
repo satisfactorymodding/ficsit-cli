@@ -7,9 +7,8 @@ import (
 	"os"
 
 	_ "github.com/Khan/genqlient/generate"
-	"github.com/spf13/cobra/doc"
-
 	"github.com/satisfactorymodding/ficsit-cli/cmd"
+	"github.com/spf13/cobra/doc"
 )
 
 //go:generate go run github.com/Khan/genqlient
@@ -18,7 +17,7 @@ import (
 func main() {
 	_ = os.RemoveAll("./docs/")
 
-	if err := os.Mkdir("./docs/", 0777); err != nil {
+	if err := os.Mkdir("./docs/", 0o777); err != nil {
 		panic(err)
 	}
 
