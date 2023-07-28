@@ -1,6 +1,7 @@
 package mods
 
 // cspell:disable
+
 import (
 	"context"
 	"strconv"
@@ -156,7 +157,6 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			newModel, cmd := m.CalculateSizes(m.root.Size())
 			return newModel, cmd
 		case "i":
-			log.Info().Msg("TODO REMOVE ME keypress i")
 			m.compatViewMode = !m.compatViewMode
 			m, cmd := m.renderModInfo(msg)
 			return m, cmd

@@ -98,30 +98,11 @@ Will produce `ficsit-cli.exe` in the repo root directory.
 
 ### Linting
 
-If the CI gives you an error like this:
+Install `golangci-lint` via the directions [here](https://golangci-lint.run/usage/install/#local-installation),
+but make sure to install the version specified in `.github/workflows/push.yaml` instead of whatever it suggests.
+
+Then, to run it, use:
 
 ```bash
-Error: File is not `gci`-ed with --skip-generated -s standard,default,prefix(github.com/satisfactorymodding/ficsit-cli),blank,dot (gci)
-```
-
-Install and run `gofumpt`.
-
-```bash
-go install mvdan.cc/gofumpt@latest
-```
-
-```bash
-gofumpt -l -w .
-```
-
-You may also need to run GCI. If you're on Windows, watch out, `gci` is also a powershell shortened command, so run this from Bash. Install via:
-
-```bash
-go install github.com/daixiang0/gci@latest
-```
-
-Example command to run based on the above error:
-
-```bash
-gci.exe write --skip-generated -s standard -s default -s 'prefix(github.com/satisfactorymodding/ficsit-cli)' -s blank -s dot .
+golangci-lint run --fix
 ```
