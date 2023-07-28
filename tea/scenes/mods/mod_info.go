@@ -1,5 +1,6 @@
 package mods
 
+// cspell:disable
 import (
 	"context"
 	"strconv"
@@ -22,6 +23,8 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
+
+// cspell:enable
 
 var _ tea.Model = (*modVersionMenu)(nil)
 
@@ -220,8 +223,8 @@ func (m modInfo) renderModInfo(msg tea.Msg) (tea.Model, tea.Cmd) {
 	converter := md.NewConverter("", true, nil)
 	converter.AddRules(md.Rule{
 		Filter: []string{"#text"},
-		Replacement: func(content string, selec *goquery.Selection, options *md.Options) *string {
-			text := selec.Text()
+		Replacement: func(content string, selection *goquery.Selection, options *md.Options) *string {
+			text := selection.Text()
 			return &text
 		},
 	})
