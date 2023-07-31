@@ -17,16 +17,21 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
-var _ tea.Model = (*installedModsList)(nil)
+var _ tea.Model = (*modsList)(nil)
 
 type installedModsList struct {
-	root   components.RootModel
-	list   list.Model
-	parent tea.Model
-	items  chan listUpdate
-
-	err   chan string
-	error *components.ErrorComponent
+	list              list.Model
+	sortFieldList     list.Model
+	sortOrderList     list.Model
+	root              components.RootModel
+	parent            tea.Model
+	items             chan listUpdate
+	err               chan string
+	error             *components.ErrorComponent
+	sortingField      sortField
+	sortingOrder      sortOrder
+	showSortFieldList bool
+	showSortOrderList bool
 }
 
 func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
@@ -46,17 +51,25 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 	l.KeyMap.Quit.SetHelp("q", "back")
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
+			key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "sort")),
+			key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "order")),
 			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 		}
 	}
+	l.AdditionalFullHelpKeys = l.AdditionalShortHelpKeys
 
 	m := &installedModsList{
-		root:   root,
-		list:   l,
-		parent: parent,
-		items:  make(chan listUpdate),
-		err:    make(chan string),
+		root:         root,
+		list:         l,
+		parent:       parent,
+		items:        make(chan listUpdate),
+		sortingField: DefaultModSortingField,
+		sortingOrder: DefaultModSortingOrder,
+		err:          make(chan string),
 	}
+
+	m.sortFieldList = *m.newSortFieldsList(root)
+	m.sortOrderList = *m.newSortOrderList(root)
 
 	return m
 }
@@ -76,23 +89,22 @@ func (m installedModsList) LoadModData() {
 	i := 0
 	for reference := range currentProfile.Mods {
 		r := reference
-		items[i] = utils.SimpleItem[installedModsList]{
-			ItemTitle: reference,
-			Activate: func(msg tea.Msg, currentModel installedModsList) (tea.Model, tea.Cmd) {
-				return NewModMenu(m.root, currentModel, utils.Mod{
-					Name:      r,
-					Reference: r,
-				}), nil
+		items[i] = utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[installedModsList]{
+				ItemTitle: reference,
+				Activate: func(msg tea.Msg, currentModel installedModsList) (tea.Model, tea.Cmd) {
+					return NewModMenu(m.root, currentModel, utils.Mod{
+						Name:      r,
+						Reference: r,
+					}), nil
+				},
 			},
+			Extra: currentProfile.Mods[i],
 		}
 		i++
 	}
 
-	sort.Slice(items, func(i, j int) bool {
-		a := items[i].(utils.SimpleItem[installedModsList])
-		b := items[j].(utils.SimpleItem[installedModsList])
-		return ascDesc(sortOrderDesc, a.ItemTitle < b.ItemTitle)
-	})
+	items = m.sortItems(items, m.sortingField, m.sortingOrder)
 
 	go func() {
 		if len(currentProfile.Mods) == 0 {
@@ -141,11 +153,7 @@ func (m installedModsList) LoadModData() {
 			}
 		}
 
-		sort.Slice(items, func(i, j int) bool {
-			a := items[i].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
-			b := items[j].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
-			return ascDesc(sortOrderDesc, a.Extra.Mod_reference < b.Extra.Mod_reference)
-		})
+		items = m.sortItems(items, m.sortingField, m.sortingOrder)
 
 		m.items <- listUpdate{
 			Items: items,
@@ -171,19 +179,54 @@ func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch keypress := msg.String(); keypress {
+		case "s":
+			m.showSortFieldList = !m.showSortFieldList
+			return m, nil
+		case "o":
+			m.showSortOrderList = !m.showSortOrderList
+			return m, nil
 		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
+			if m.showSortFieldList {
+				m.showSortFieldList = false
+				return m, nil
+			}
+
+			if m.showSortOrderList {
+				m.showSortOrderList = false
+				return m, nil
+			}
+
 			if m.parent != nil {
 				m.parent.Update(m.root.Size())
 				return m.parent, nil
 			}
 			return m, tea.Quit
 		case keys.KeyEnter:
+			if m.showSortFieldList {
+				m.showSortFieldList = false
+				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItem[installedModsList])
+				if ok {
+					return m.processActivation(i, msg)
+				}
+				return m, nil
+			}
+
+			if m.showSortOrderList {
+				m.showSortOrderList = false
+				i, ok := m.sortOrderList.SelectedItem().(utils.SimpleItem[installedModsList])
+				if ok {
+					return m.processActivation(i, msg)
+				}
+				return m, nil
+			}
+
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[installedModsList])
 			if ok {
 				return m.processActivation(i, msg)
 			}
+
 			i2, ok := m.list.SelectedItem().(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
 			if ok {
 				return m.processActivation(i2.SimpleItem, msg)
@@ -213,14 +256,33 @@ func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if m.showSortFieldList {
+		var cmd tea.Cmd
+		m.sortFieldList, cmd = m.sortFieldList.Update(msg)
+		return m, cmd
+	} else if m.showSortOrderList {
+		var cmd tea.Cmd
+		m.sortOrderList, cmd = m.sortOrderList.Update(msg)
+		return m, cmd
+	}
+
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
 }
 
 func (m installedModsList) View() string {
-	m.list.SetSize(m.list.Width(), m.root.Size().Height-m.root.Height())
-	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.list.View())
+	var bottomList list.Model
+	if m.showSortFieldList {
+		bottomList = m.sortFieldList
+	} else if m.showSortOrderList {
+		bottomList = m.sortOrderList
+	} else {
+		bottomList = m.list
+	}
+
+	bottomList.SetSize(bottomList.Width(), m.root.Size().Height-m.root.Height())
+	return lipgloss.JoinVertical(lipgloss.Left, m.root.View(), bottomList.View())
 }
 
 func (m installedModsList) processActivation(item utils.SimpleItem[installedModsList], msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -235,4 +297,191 @@ func (m installedModsList) processActivation(item utils.SimpleItem[installedMods
 		return m, nil
 	}
 	return m, nil
+}
+
+func (m installedModsList) sortItems(items []list.Item, field sortField, direction sortOrder) []list.Item {
+	sortedItems := make([]list.Item, len(items))
+	copy(sortedItems, items)
+
+	switch field {
+	case sortFieldLastVersionDate:
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Last_version_date.Before(b.Extra.Last_version_date))
+		})
+	case sortFieldCreatedAt:
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Created_at.Before(b.Extra.Created_at))
+		})
+	case sortFieldName:
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Name < b.Extra.Name)
+		})
+	case sortFieldDownloads:
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Downloads < b.Extra.Downloads)
+		})
+	case sortFieldViews:
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Views < b.Extra.Views)
+		})
+	case sortFieldPopularity:
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Popularity < b.Extra.Popularity)
+		})
+	case sortFieldHotness:
+		sort.Slice(sortedItems, func(i, j int) bool {
+			a := sortedItems[i].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			b := sortedItems[j].(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod])
+			return ascDesc(direction, a.Extra.Hotness < b.Extra.Hotness)
+		})
+	}
+
+	return sortedItems
+}
+
+func (m installedModsList) newSortFieldsList(root components.RootModel) *list.Model {
+	sortFieldList := list.New([]list.Item{
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Name",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = "name"
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Last Version Date",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = sortFieldLastVersionDate
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Creation Date",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = sortFieldCreatedAt
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Downloads",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = sortFieldDownloads
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Views",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = sortFieldViews
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Popularity (recent downloads)",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = sortFieldPopularity
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Hotness (recent views)",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingField = sortFieldHotness
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+	}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	sortFieldList.SetShowStatusBar(true)
+	sortFieldList.SetShowFilter(false)
+	sortFieldList.SetFilteringEnabled(false)
+	sortFieldList.Title = m.list.Title
+	sortFieldList.Styles = utils.ListStyles
+	sortFieldList.SetSize(m.list.Width(), m.list.Height())
+	sortFieldList.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
+
+	return &sortFieldList
+}
+
+func (m installedModsList) newSortOrderList(root components.RootModel) *list.Model {
+	sortOrderList := list.New([]list.Item{
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Ascending",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingOrder = sortOrderAsc
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
+			SimpleItem: utils.SimpleItem[modsList]{
+				ItemTitle: "Descending",
+				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
+					m.sortingOrder = sortOrderDesc
+					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
+					m.list.ResetSelected()
+					return m, cmd
+				},
+			},
+		},
+	}, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
+	sortOrderList.SetShowStatusBar(true)
+	sortOrderList.SetShowFilter(false)
+	sortOrderList.SetFilteringEnabled(false)
+	sortOrderList.Title = m.list.Title
+	sortOrderList.Styles = utils.ListStyles
+	sortOrderList.SetSize(m.list.Width(), m.list.Height())
+	sortOrderList.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
+
+	return &sortOrderList
 }
