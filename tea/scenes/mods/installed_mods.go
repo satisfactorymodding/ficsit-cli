@@ -149,6 +149,17 @@ func (m installedModsList) LoadModData() {
 						}), nil
 					},
 				},
+				Extra: ficsit.ModsModsGetModsModsMod{
+					Id:                reference,
+					Name:              reference,
+					Mod_reference:     reference,
+					Views:             0,
+					Downloads:         0,
+					Popularity:        0,
+					Hotness:           0,
+					Created_at:        time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+					Last_version_date: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
 			})
 		}
 
