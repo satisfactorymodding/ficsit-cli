@@ -252,9 +252,9 @@ func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItem[installedModsList])
 				if ok {
 					return m.processActivation(i, msg)
-				} else {
-					log.Warn().Str("which", "field").Msg("could not cast selected item to simple item")
 				}
+
+				log.Warn().Str("which", "field").Msg("could not cast selected item to simple item")
 				return m, nil
 			}
 
@@ -263,9 +263,9 @@ func (m installedModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				i, ok := m.sortOrderList.SelectedItem().(utils.SimpleItem[installedModsList])
 				if ok {
 					return m.processActivation(i, msg)
-				} else {
-					log.Warn().Str("which", "order").Msg("could not cast selected item to simple item")
 				}
+
+				log.Warn().Str("which", "order").Msg("could not cast selected item to simple item")
 				return m, nil
 			}
 
