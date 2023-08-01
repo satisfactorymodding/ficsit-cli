@@ -134,15 +134,36 @@ func (m installedModsList) LoadModData() {
 			return
 		}
 
-		if len(mods.Mods.Mods) == 0 {
-			return
+		items := make([]list.Item, 0)
+
+		// create a pre-defined list of the mods in the profile, to then update
+		// with modsmodsmodsmods info after
+		for reference := range currentProfile.Mods {
+			items = append(items, utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod]{
+				SimpleItem: utils.SimpleItem[installedModsList]{
+					ItemTitle: reference,
+					Activate: func(msg tea.Msg, currentModel installedModsList) (tea.Model, tea.Cmd) {
+						return NewModMenu(m.root, currentModel, utils.Mod{
+							Name:      reference,
+							Reference: reference,
+						}), nil
+					},
+				},
+			})
 		}
 
-		items := make([]list.Item, len(mods.Mods.Mods))
 		for i, mod := range mods.Mods.Mods {
+			var index *int
+			for exIndex, exItem := range items {
+				if exItem.(utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod]).SimpleItem.ItemTitle == mod.Mod_reference {
+					index = &exIndex
+					break
+				}
+			}
+
 			// Re-reference struct
 			mod := mod
-			items[i] = utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod]{
+			item := utils.SimpleItemExtra[installedModsList, ficsit.ModsModsGetModsModsMod]{
 				SimpleItem: utils.SimpleItem[installedModsList]{
 					ItemTitle: mods.Mods.Mods[i].Name,
 					Activate: func(msg tea.Msg, currentModel installedModsList) (tea.Model, tea.Cmd) {
@@ -153,6 +174,14 @@ func (m installedModsList) LoadModData() {
 					},
 				},
 				Extra: mod,
+			}
+
+			// if it already exists then replace it with the proper mod,
+			// otherwise we will add it to the end
+			if index != nil {
+				items[*index] = item
+			} else {
+				items = append(items, item)
 			}
 		}
 
