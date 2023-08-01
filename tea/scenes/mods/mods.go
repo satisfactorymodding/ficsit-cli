@@ -23,8 +23,10 @@ import (
 
 var _ tea.Model = (*modsList)(nil)
 
-type sortOrder string
-type sortField string
+type (
+	sortOrder string
+	sortField string
+)
 
 const (
 	sortOrderAsc  sortOrder = "asc"
@@ -50,8 +52,6 @@ type listUpdate struct {
 }
 
 // type keys
-type modsListInterface interface {
-}
 
 type modsList struct {
 	list              list.Model
