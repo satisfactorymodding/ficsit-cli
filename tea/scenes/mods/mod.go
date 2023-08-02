@@ -1,6 +1,7 @@
 package mods
 
 import (
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -29,6 +30,10 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 		parent: parent,
 	}
 
+	// installed mods not found in GQL will have both the name and reference
+	// matching, in general we expect the reference to be like Mod0003
+	fakeMod := strings.HasPrefix(mod.Name, "[local]")
+
 	var items []list.Item
 	if root.GetCurrentProfile().HasMod(mod.Reference) {
 		items = []list.Item{
@@ -39,13 +44,16 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 					return currentModel.parent, currentModel.parent.Init()
 				},
 			},
-			utils.SimpleItem[modMenu]{
+		}
+
+		if !fakeMod {
+			items = append(items, utils.SimpleItem[modMenu]{
 				ItemTitle: "Change Version",
 				Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
 					newModel := NewModVersion(root, currentModel.parent, mod)
 					return newModel, newModel.Init()
 				},
-			},
+			})
 		}
 
 		if root.GetCurrentProfile().IsModEnabled(mod.Reference) {
@@ -89,13 +97,16 @@ func NewModMenu(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 		}
 	}
 
-	items = append(items, utils.SimpleItem[modMenu]{
-		ItemTitle: "View Mod info",
-		Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
-			newModel := NewModInfo(root, currentModel, mod)
-			return newModel, newModel.Init()
-		},
-	})
+	// a fake mod would not have readme info to display
+	if !fakeMod {
+		items = append(items, utils.SimpleItem[modMenu]{
+			ItemTitle: "View Mod info",
+			Activate: func(msg tea.Msg, currentModel modMenu) (tea.Model, tea.Cmd) {
+				newModel := NewModInfo(root, currentModel, mod)
+				return newModel, newModel.Init()
+			},
+		})
+	}
 
 	model.list = list.New(items, utils.NewItemDelegate(), root.Size().Width, root.Size().Height-root.Height())
 	model.list.SetShowStatusBar(false)

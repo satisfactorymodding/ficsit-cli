@@ -144,14 +144,14 @@ func (m installedModsList) LoadModData() {
 					ItemTitle: reference,
 					Activate: func(msg tea.Msg, currentModel installedModsList) (tea.Model, tea.Cmd) {
 						return NewModMenu(m.root, currentModel, utils.Mod{
-							Name:      reference,
+							Name:      "[local] " + reference,
 							Reference: reference,
 						}), nil
 					},
 				},
 				Extra: ficsit.ModsModsGetModsModsMod{
 					Id:                reference,
-					Name:              reference,
+					Name:              "[local] " + reference,
 					Mod_reference:     reference,
 					Views:             0,
 					Downloads:         0,
