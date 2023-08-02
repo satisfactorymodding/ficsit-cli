@@ -475,7 +475,7 @@ func (m modsList) newSortFieldsList(root components.RootModel) list.Model {
 			SimpleItem: utils.SimpleItem[modsList]{
 				ItemTitle: "Name",
 				Activate: func(msg tea.Msg, m modsList) (tea.Model, tea.Cmd) {
-					m.sortingField = "name"
+					m.sortingField = sortFieldName
 					cmd := m.list.SetItems(m.sortItems(m.list.Items(), m.sortingField, m.sortingOrder))
 					m.list.ResetSelected()
 					return m, cmd
