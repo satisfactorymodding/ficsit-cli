@@ -100,8 +100,8 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 		err:          make(chan string),
 	}
 
-	m.sortFieldList = *m.newSortFieldsList(root)
-	m.sortOrderList = *m.newSortOrderList(root)
+	m.sortFieldList = m.newSortFieldsList(root)
+	m.sortOrderList = m.newSortOrderList(root)
 
 	go func() {
 		items := make([]list.Item, 0)
@@ -469,7 +469,7 @@ func (c ListDelegate) Render(w io.Writer, m list.Model, index int, item list.Ite
 	fmt.Fprintf(w, "%s", title)
 }
 
-func (m modsList) newSortFieldsList(root components.RootModel) *list.Model {
+func (m modsList) newSortFieldsList(root components.RootModel) list.Model {
 	sortFieldList := list.New([]list.Item{
 		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
 			SimpleItem: utils.SimpleItem[modsList]{
@@ -561,10 +561,10 @@ func (m modsList) newSortFieldsList(root components.RootModel) *list.Model {
 		}
 	}
 
-	return &sortFieldList
+	return sortFieldList
 }
 
-func (m modsList) newSortOrderList(root components.RootModel) *list.Model {
+func (m modsList) newSortOrderList(root components.RootModel) list.Model {
 	sortOrderList := list.New([]list.Item{
 		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
 			SimpleItem: utils.SimpleItem[modsList]{
@@ -601,5 +601,5 @@ func (m modsList) newSortOrderList(root components.RootModel) *list.Model {
 		}
 	}
 
-	return &sortOrderList
+	return sortOrderList
 }

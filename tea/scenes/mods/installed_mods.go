@@ -69,8 +69,8 @@ func NewInstalledMods(root components.RootModel, parent tea.Model) tea.Model {
 		err:          make(chan string),
 	}
 
-	m.sortFieldList = *m.newSortFieldsList(root)
-	m.sortOrderList = *m.newSortOrderList(root)
+	m.sortFieldList = m.newSortFieldsList(root)
+	m.sortOrderList = m.newSortOrderList(root)
 
 	return m
 }
@@ -398,7 +398,7 @@ func (m installedModsList) sortItems(items []list.Item, field sortField, directi
 	return sortedItems
 }
 
-func (m installedModsList) newSortFieldsList(root components.RootModel) *list.Model {
+func (m installedModsList) newSortFieldsList(root components.RootModel) list.Model {
 	sortFieldList := list.New([]list.Item{
 		utils.SimpleItem[installedModsList]{
 			ItemTitle: "Name",
@@ -476,10 +476,10 @@ func (m installedModsList) newSortFieldsList(root components.RootModel) *list.Mo
 		}
 	}
 
-	return &sortFieldList
+	return sortFieldList
 }
 
-func (m installedModsList) newSortOrderList(root components.RootModel) *list.Model {
+func (m installedModsList) newSortOrderList(root components.RootModel) list.Model {
 	sortOrderList := list.New([]list.Item{
 		utils.SimpleItem[installedModsList]{
 			ItemTitle: "Ascending",
@@ -512,5 +512,5 @@ func (m installedModsList) newSortOrderList(root components.RootModel) *list.Mod
 		}
 	}
 
-	return &sortOrderList
+	return sortOrderList
 }
