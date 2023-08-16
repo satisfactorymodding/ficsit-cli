@@ -106,3 +106,12 @@ Then, to run it, use:
 ```bash
 golangci-lint run --fix
 ```
+
+### Updating generated docs
+
+The files within `./docs` are generated using cobra, use the following to update
+them.
+
+```
+go run tools.go
+```

@@ -123,7 +123,7 @@ func init() {
 	}
 
 	RootCmd.PersistentFlags().String("log", "info", "The log level to output")
-	RootCmd.PersistentFlags().String("log-file", "ficsit-cli.log", "File to output logs to")
+	RootCmd.PersistentFlags().String("log-file", "", "File to output logs to")
 	RootCmd.PersistentFlags().Bool("quiet", false, "Do not log anything to console")
 	RootCmd.PersistentFlags().Bool("pretty", true, "Whether to render pretty terminal output")
 

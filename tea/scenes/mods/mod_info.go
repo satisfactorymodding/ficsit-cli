@@ -107,7 +107,6 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 			return
 		}
 
-		log.Info().Msg("merging mod info")
 		model.modData <- fullMod.Mod
 	}()
 
@@ -154,17 +153,19 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "?":
 			m.help.ShowAll = !m.help.ShowAll
-			newModel, cmd := m.CalculateSizes(m.root.Size())
-			return newModel, cmd
+			return m.CalculateSizes(m.root.Size())
 		case "i":
 			m.compatViewMode = !m.compatViewMode
-			m, cmd := m.renderModInfo(msg)
-			return m, cmd
+			m.viewport = m.newViewport()
+			m.viewport.SetContent(m.renderModInfo())
+			return m.CalculateSizes(m.root.Size())
 		default:
-			var cmd tea.Cmd
-			m.viewport, cmd = m.viewport.Update(msg)
-			return m, cmd
+			break
 		}
+
+		var cmd tea.Cmd
+		m.viewport, cmd = m.viewport.Update(msg)
+		return m, cmd
 	case tea.WindowSizeMsg:
 		return m.CalculateSizes(msg)
 	case spinner.TickMsg:
@@ -172,36 +173,38 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
 	case utils.TickMsg:
-		m, cmd := m.renderContents(msg)
-		return m, cmd
+		select {
+		case mod := <-m.modData:
+			m.modDataCache = mod
+			m.viewport = m.newViewport()
+			m.viewport.SetContent(m.renderModInfo())
+			break
+		case err := <-m.modError:
+			errorComponent, _ := components.NewErrorComponent(err, time.Second*5)
+			m.error = errorComponent
+			break
+		default:
+			// skip
+			break
+		}
+		return m, utils.Ticker()
 	}
 
 	return m, nil
 }
 
-func (m modInfo) renderContents(msg tea.Msg) (tea.Model, tea.Cmd) {
-	select {
-	case mod := <-m.modData:
-		m.modDataCache = mod
-		return m.renderModInfo(msg)
-	case err := <-m.modError:
-		errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
-		m.error = errorComponent
-		return m, cmd
-	default:
-		return m, utils.Ticker()
-	}
-}
-
-func (m modInfo) renderModInfo(msg tea.Msg) (tea.Model, tea.Cmd) {
-	mod := m.modDataCache
+func (m modInfo) newViewport() viewport.Model {
 	bottomPadding := 2
 	if m.help.ShowAll {
 		bottomPadding = 4
 	}
 
 	top, right, bottom, left := lipgloss.NewStyle().Margin(m.root.Height(), 3, bottomPadding).GetMargin()
-	m.viewport = viewport.Model{Width: m.root.Size().Width - left - right, Height: m.root.Size().Height - top - bottom}
+	return viewport.Model{Width: m.root.Size().Width - left - right, Height: m.root.Size().Height - top - bottom}
+}
+
+func (m modInfo) renderModInfo() string {
+	mod := m.modDataCache
 
 	title := lipgloss.NewStyle().Padding(0, 2).Render(utils.TitleStyle.Render(mod.Name)) + "\n"
 	title += lipgloss.NewStyle().Padding(0, 3).Render("("+string(mod.Mod_reference)+")") + "\n"
@@ -249,11 +252,7 @@ func (m modInfo) renderModInfo(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	bottomPart := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, strings.TrimSpace(description))
 
-	m.viewport.SetContent(lipgloss.JoinVertical(lipgloss.Left, title, bottomPart))
-
-	var cmd tea.Cmd
-	m.viewport, cmd = m.viewport.Update(msg)
-	return m, cmd
+	return lipgloss.JoinVertical(lipgloss.Left, title, bottomPart)
 }
 
 func (m modInfo) renderDescriptionText(text string, converter *md.Converter) string {
