@@ -5,6 +5,7 @@ package main
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -54,6 +55,11 @@ func main() {
 		panic(err)
 	}
 
+	user, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
 	for _, f := range docFiles {
 		fPath := "./docs/" + f.Name()
 		oldContents, err := os.ReadFile(fPath)
@@ -61,8 +67,17 @@ func main() {
 			panic(err)
 		}
 
-		newContents := strings.ReplaceAll(string(oldContents), baseCacheDir, "<UserCacheDir>")
-		newContents = strings.ReplaceAll(newContents, baseLocalDir, "<UserLocalDir>")
+		newContents := strings.ReplaceAll(
+			string(oldContents),
+			baseCacheDir,
+			strings.ReplaceAll(baseCacheDir, user.Username, "{{Username}}"),
+		)
+
+		newContents = strings.ReplaceAll(
+			newContents,
+			baseLocalDir,
+			strings.ReplaceAll(baseLocalDir, user.Username, "{{Username}}"),
+		)
 
 		os.WriteFile(fPath, []byte(newContents), 0o777)
 	}

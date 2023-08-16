@@ -17,11 +17,11 @@ ficsit installation add <path> [profile] [flags]
 ```
       --api-base string             URL for API (default "https://api.ficsit.app")
       --api-key string              API key to use when sending requests
-      --cache-dir string            The cache directory (default "<UserCacheDir>/ficsit")
+      --cache-dir string            The cache directory (default "/home/{{Username}}/.cache/ficsit")
       --dry-run                     Dry-run. Do not save any changes
       --graphql-api string          Path for GraphQL API (default "/v2/query")
       --installations-file string   The installations file (default "installations.json")
-      --local-dir string            The local directory (default "<UserLocalDir>/ficsit")
+      --local-dir string            The local directory (default "/home/{{Username}}/.local/share/ficsit")
       --log string                  The log level to output (default "info")
       --log-file string             File to output logs to
       --pretty                      Whether to render pretty terminal output (default true)
