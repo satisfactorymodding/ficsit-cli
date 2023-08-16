@@ -107,7 +107,6 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 			return
 		}
 
-		log.Info().Msg("merging mod info")
 		model.modData <- fullMod.Mod
 	}()
 
