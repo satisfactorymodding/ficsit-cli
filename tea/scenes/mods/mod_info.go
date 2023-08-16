@@ -157,8 +157,10 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			newModel, cmd := m.CalculateSizes(m.root.Size())
 			return newModel, cmd
 		case "i":
+			var cmd tea.Cmd
 			m.compatViewMode = !m.compatViewMode
-			m, cmd := m.renderModInfo(msg)
+			m.viewport.SetContent(m.renderModInfo())
+			m.viewport, cmd = m.viewport.Update(msg)
 			return m, cmd
 		default:
 			var cmd tea.Cmd
@@ -172,28 +174,26 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
 	case utils.TickMsg:
-		m, cmd := m.renderContents(msg)
-		return m, cmd
+		select {
+		case mod := <-m.modData:
+			var cmd tea.Cmd
+			m.modDataCache = mod
+			m.viewport.SetContent(m.renderModInfo())
+			m.viewport, cmd = m.viewport.Update(msg)
+			return m, cmd
+		case err := <-m.modError:
+			errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
+			m.error = errorComponent
+			return m, cmd
+		default:
+			return m, utils.Ticker()
+		}
 	}
 
 	return m, nil
 }
 
-func (m modInfo) renderContents(msg tea.Msg) (tea.Model, tea.Cmd) {
-	select {
-	case mod := <-m.modData:
-		m.modDataCache = mod
-		return m.renderModInfo(msg)
-	case err := <-m.modError:
-		errorComponent, cmd := components.NewErrorComponent(err, time.Second*5)
-		m.error = errorComponent
-		return m, cmd
-	default:
-		return m, utils.Ticker()
-	}
-}
-
-func (m modInfo) renderModInfo(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m modInfo) renderModInfo() string {
 	mod := m.modDataCache
 	bottomPadding := 2
 	if m.help.ShowAll {
@@ -249,11 +249,7 @@ func (m modInfo) renderModInfo(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	bottomPart := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, strings.TrimSpace(description))
 
-	m.viewport.SetContent(lipgloss.JoinVertical(lipgloss.Left, title, bottomPart))
-
-	var cmd tea.Cmd
-	m.viewport, cmd = m.viewport.Update(msg)
-	return m, cmd
+	return lipgloss.JoinVertical(lipgloss.Left, title, bottomPart)
 }
 
 func (m modInfo) renderDescriptionText(text string, converter *md.Converter) string {
