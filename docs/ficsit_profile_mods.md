@@ -17,7 +17,7 @@ ficsit profile mods <profile> [flags]
 ```
       --api-base string             URL for API (default "https://api.ficsit.app")
       --api-key string              API key to use when sending requests
-      --cache-dir string            The cache directory (default "/home/jackstupple/.cache/ficsit")
+      --cache-dir string            The cache directory (default "<UserCacheDir>/ficsit")
       --dry-run                     Dry-run. Do not save any changes
       --graphql-api string          Path for GraphQL API (default "/v2/query")
       --installations-file string   The installations file (default "installations.json")
