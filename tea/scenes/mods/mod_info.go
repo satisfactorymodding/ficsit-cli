@@ -176,13 +176,10 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case utils.TickMsg:
 		select {
 		case mod := <-m.modData:
-			var cmd tea.Cmd
 			m.modDataCache = mod
-
 			m.viewport = m.newViewport()
 			m.viewport.SetContent(m.renderModInfo())
-			m.viewport, cmd = m.viewport.Update(msg)
-			return m, cmd
+			break
 		case err := <-m.modError:
 			errorComponent, _ := components.NewErrorComponent(err, time.Second*5)
 			m.error = errorComponent
