@@ -118,7 +118,7 @@ func (m modInfo) Init() tea.Cmd {
 	return tea.Batch(utils.Ticker(), spinner.Tick)
 }
 
-func (m modInfo) RecalculateSizes(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+func (m modInfo) CalculateSizes(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	if m.viewport.Width == 0 {
 		return m, nil
 	}
@@ -156,12 +156,12 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.help.ShowAll = !m.help.ShowAll
 			m.viewport = m.newViewport()
 			m.viewport.SetContent(m.renderModInfo())
-			return m.RecalculateSizes(m.root.Size())
+			return m.CalculateSizes(m.root.Size())
 		case "i":
 			m.compatViewMode = !m.compatViewMode
 			m.viewport = m.newViewport()
 			m.viewport.SetContent(m.renderModInfo())
-			return m.RecalculateSizes(m.root.Size())
+			return m.CalculateSizes(m.root.Size())
 		default:
 			break
 		}
@@ -170,7 +170,7 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport, cmd = m.viewport.Update(msg)
 		return m, cmd
 	case tea.WindowSizeMsg:
-		return m.RecalculateSizes(msg)
+		return m.CalculateSizes(msg)
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
