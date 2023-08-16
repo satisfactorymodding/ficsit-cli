@@ -5,6 +5,8 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra/doc"
@@ -36,6 +38,17 @@ func main() {
 		panic(err)
 	}
 
+	var baseLocalDir string
+
+	switch runtime.GOOS {
+	case "windows":
+		baseLocalDir = os.Getenv("APPDATA")
+	case "linux":
+		baseLocalDir = filepath.Join(os.Getenv("HOME"), ".local", "share")
+	default:
+		panic("unsupported platform: " + runtime.GOOS)
+	}
+
 	docFiles, err := os.ReadDir("./docs/")
 	if err != nil {
 		panic(err)
@@ -48,6 +61,9 @@ func main() {
 			panic(err)
 		}
 
-		os.WriteFile(fPath, []byte(strings.ReplaceAll(string(oldContents), baseCacheDir, "<UserCacheDir>")), 0o777)
+		newContents := strings.ReplaceAll(string(oldContents), baseCacheDir, "<UserCacheDir>")
+		newContents = strings.ReplaceAll(newContents, baseLocalDir, "<UserLocalDir>")
+
+		os.WriteFile(fPath, []byte(newContents), 0o777)
 	}
 }

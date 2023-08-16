@@ -12,7 +12,7 @@ cli mod manager for satisfactory
       --graphql-api string          Path for GraphQL API (default "/v2/query")
   -h, --help                        help for ficsit
       --installations-file string   The installations file (default "installations.json")
-      --local-dir string            The local directory (default "/home/jackstupple/.local/share/ficsit")
+      --local-dir string            The local directory (default "<UserLocalDir>/ficsit")
       --log string                  The log level to output (default "info")
       --log-file string             File to output logs to
       --pretty                      Whether to render pretty terminal output (default true)
