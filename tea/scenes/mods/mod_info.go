@@ -154,8 +154,6 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "?":
 			m.help.ShowAll = !m.help.ShowAll
-			m.viewport = m.newViewport()
-			m.viewport.SetContent(m.renderModInfo())
 			return m.CalculateSizes(m.root.Size())
 		case "i":
 			m.compatViewMode = !m.compatViewMode
