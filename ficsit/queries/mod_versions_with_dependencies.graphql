@@ -1,0 +1,17 @@
+# @genqlient(omitempty: true)
+query ModVersionsWithDependencies (
+    $modId: String!,
+) {
+    mod: getModByIdOrReference(modIdOrReference: $modId) {
+        id
+        versions (filter: { limit: 100 }) {
+            id
+            version
+            dependencies {
+                mod_id
+                condition
+                optional
+            }
+        }
+    }
+}
