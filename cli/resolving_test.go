@@ -51,7 +51,7 @@ func TestProfileRequiredOlderVersion(t *testing.T) {
 		},
 	}).Resolve(resolver, nil, math.MaxInt)
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed resolving dependencies. requires different versions of RefinedRDLib", err.Error())
+	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: Because installing Refined Power (RefinedPower) \"3.0.9\" and Refined Power (RefinedPower) \">=3.0.9 <3.1.0\" depends on RefinedRDLib \"^1.0.7\", installing RefinedRDLib \"^1.0.7\".\nSo, because installing RefinedRDLib \"1.0.6\", version solving failed.", err.Error())
 }
 
 func TestResolutionNonExistentMod(t *testing.T) {
@@ -67,5 +67,5 @@ func TestResolutionNonExistentMod(t *testing.T) {
 		},
 	}).Resolve(resolver, nil, math.MaxInt)
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed resolving dependency: ThisModDoesNotExist$$$", err.Error())
+	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: failed to make decision: failed to get package versions: mod ThisModDoesNotExist$$$ not found", err.Error())
 }

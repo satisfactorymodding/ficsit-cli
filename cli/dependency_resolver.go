@@ -143,7 +143,12 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 
 	result, err := pubgrub.Solve(source, rootPkg)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to solve dependencies")
+		finalError := err
+		var solverErr pubgrub.SolvingError
+		if errors.As(err, &solverErr) {
+			finalError = DependencyResolverError{SolvingError: solverErr, apiClient: d.apiClient}
+		}
+		return nil, errors.Wrap(finalError, "failed to solve dependencies")
 	}
 	delete(result, rootPkg)
 	delete(result, "FactoryGame")

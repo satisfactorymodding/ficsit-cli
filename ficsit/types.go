@@ -209,6 +209,30 @@ type GetModModAuthorsUserModUser struct {
 // GetUsername returns GetModModAuthorsUserModUser.Username, and is useful for accessing the field via an interface.
 func (v *GetModModAuthorsUserModUser) GetUsername() string { return v.Username }
 
+// GetModNameMod includes the requested fields of the GraphQL type Mod.
+type GetModNameMod struct {
+	Id            string `json:"id"`
+	Mod_reference string `json:"mod_reference"`
+	Name          string `json:"name"`
+}
+
+// GetId returns GetModNameMod.Id, and is useful for accessing the field via an interface.
+func (v *GetModNameMod) GetId() string { return v.Id }
+
+// GetMod_reference returns GetModNameMod.Mod_reference, and is useful for accessing the field via an interface.
+func (v *GetModNameMod) GetMod_reference() string { return v.Mod_reference }
+
+// GetName returns GetModNameMod.Name, and is useful for accessing the field via an interface.
+func (v *GetModNameMod) GetName() string { return v.Name }
+
+// GetModNameResponse is returned by GetModName on success.
+type GetModNameResponse struct {
+	Mod GetModNameMod `json:"mod"`
+}
+
+// GetMod returns GetModNameResponse.Mod, and is useful for accessing the field via an interface.
+func (v *GetModNameResponse) GetMod() GetModNameMod { return v.Mod }
+
 // GetModResponse is returned by GetMod on success.
 type GetModResponse struct {
 	Mod GetModMod `json:"mod"`
@@ -812,6 +836,14 @@ type __GetModInput struct {
 // GetModId returns __GetModInput.ModId, and is useful for accessing the field via an interface.
 func (v *__GetModInput) GetModId() string { return v.ModId }
 
+// __GetModNameInput is used internally by genqlient
+type __GetModNameInput struct {
+	ModId string `json:"modId"`
+}
+
+// GetModId returns __GetModNameInput.ModId, and is useful for accessing the field via an interface.
+func (v *__GetModNameInput) GetModId() string { return v.ModId }
+
 // __ModVersionsInput is used internally by genqlient
 type __ModVersionsInput struct {
 	ModId  string        `json:"modId,omitempty"`
@@ -995,6 +1027,40 @@ query GetMod ($modId: String!) {
 	var err error
 
 	var data GetModResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
+func GetModName(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+) (*GetModNameResponse, error) {
+	req := &graphql.Request{
+		OpName: "GetModName",
+		Query: `
+query GetModName ($modId: String!) {
+	mod: getModByIdOrReference(modIdOrReference: $modId) {
+		id
+		mod_reference
+		name
+	}
+}
+`,
+		Variables: &__GetModNameInput{
+			ModId: modId,
+		},
+	}
+	var err error
+
+	var data GetModNameResponse
 	resp := &graphql.Response{Data: &data}
 
 	err = client.MakeRequest(
