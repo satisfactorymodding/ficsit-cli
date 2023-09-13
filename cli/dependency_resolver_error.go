@@ -54,6 +54,27 @@ func (w *DependencyResolverErrorStringer) Term(t pubgrub.Term, includeVersion bo
 		if t.Constraint().IsAny() {
 			return fmt.Sprintf("every version of %s", fullName)
 		}
+		res, err := ficsit.ModVersions(context.Background(), w.apiClient, t.Dependency(), ficsit.VersionFilter{
+			Limit: 100,
+		})
+		if err != nil {
+			return fmt.Sprintf("%s \"%s\"", fullName, t.Constraint())
+		}
+		var matched []semver.Version
+		for _, v := range res.Mod.Versions {
+			ver, err := semver.NewVersion(v.Version)
+			if err != nil {
+				// Assume it is contained in the constraint
+				matched = append(matched, semver.Version{})
+				continue
+			}
+			if t.Constraint().Contains(ver) {
+				matched = append(matched, ver)
+			}
+		}
+		if len(matched) == 1 {
+			return fmt.Sprintf("%s \"%s\"", fullName, matched[0])
+		}
 		return fmt.Sprintf("%s \"%s\"", fullName, t.Constraint())
 	}
 	return fullName
