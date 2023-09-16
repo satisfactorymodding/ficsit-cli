@@ -146,7 +146,7 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		finalError := err
 		var solverErr pubgrub.SolvingError
 		if errors.As(err, &solverErr) {
-			finalError = DependencyResolverError{SolvingError: solverErr, apiClient: d.apiClient}
+			finalError = DependencyResolverError{SolvingError: solverErr, apiClient: d.apiClient, smlVersions: smlVersionsDB.SmlVersions.Sml_versions, gameVersion: gameVersion}
 		}
 		return nil, errors.Wrap(finalError, "failed to solve dependencies")
 	}
