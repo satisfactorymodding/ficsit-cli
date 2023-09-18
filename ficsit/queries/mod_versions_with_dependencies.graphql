@@ -7,6 +7,8 @@ query ModVersionsWithDependencies (
         versions (filter: { limit: 100 }) {
             id
             version
+            link
+            hash
             dependencies {
                 mod_id
                 condition

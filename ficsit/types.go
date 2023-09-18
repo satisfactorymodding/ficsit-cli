@@ -355,6 +355,8 @@ func (v *ModVersionsWithDependenciesMod) GetVersions() []ModVersionsWithDependen
 type ModVersionsWithDependenciesModVersionsVersion struct {
 	Id           string                                                                       `json:"id"`
 	Version      string                                                                       `json:"version"`
+	Link         string                                                                       `json:"link"`
+	Hash         string                                                                       `json:"hash"`
 	Dependencies []ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency `json:"dependencies"`
 }
 
@@ -363,6 +365,12 @@ func (v *ModVersionsWithDependenciesModVersionsVersion) GetId() string { return 
 
 // GetVersion returns ModVersionsWithDependenciesModVersionsVersion.Version, and is useful for accessing the field via an interface.
 func (v *ModVersionsWithDependenciesModVersionsVersion) GetVersion() string { return v.Version }
+
+// GetLink returns ModVersionsWithDependenciesModVersionsVersion.Link, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersion) GetLink() string { return v.Link }
+
+// GetHash returns ModVersionsWithDependenciesModVersionsVersion.Hash, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersion) GetHash() string { return v.Hash }
 
 // GetDependencies returns ModVersionsWithDependenciesModVersionsVersion.Dependencies, and is useful for accessing the field via an interface.
 func (v *ModVersionsWithDependenciesModVersionsVersion) GetDependencies() []ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency {
@@ -1124,6 +1132,8 @@ query ModVersionsWithDependencies ($modId: String!) {
 		versions(filter: {limit:100}) {
 			id
 			version
+			link
+			hash
 			dependencies {
 				mod_id
 				condition

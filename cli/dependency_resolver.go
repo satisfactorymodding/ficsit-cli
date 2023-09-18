@@ -28,14 +28,15 @@ func NewDependencyResolver(apiClient graphql.Client) DependencyResolver {
 var rootPkg = "$$root$$"
 
 type ficsitApiSource struct {
-	apiClient   graphql.Client
-	smlVersions []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
-	gameVersion semver.Version
-	lockfile    *LockFile
-	toInstall   map[string]semver.Constraint
+	apiClient      graphql.Client
+	smlVersions    []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
+	gameVersion    semver.Version
+	lockfile       *LockFile
+	toInstall      map[string]semver.Constraint
+	modVersionInfo map[string]ficsit.ModVersionsWithDependenciesResponse
 }
 
-func (f ficsitApiSource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersion, error) {
+func (f *ficsitApiSource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersion, error) {
 	if pkg == rootPkg {
 		return []pubgrub.PackageVersion{{Version: semver.Version{}, Dependencies: f.toInstall}}, nil
 	}
@@ -69,6 +70,7 @@ func (f ficsitApiSource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersio
 	if response.Mod.Id == "" {
 		return nil, errors.Errorf("mod %s not found", pkg)
 	}
+	f.modVersionInfo[pkg] = *response
 	versions := make([]pubgrub.PackageVersion, len(response.Mod.Versions))
 	for i, modVersion := range response.Mod.Versions {
 		v, err := semver.NewVersion(modVersion.Version)
@@ -97,7 +99,7 @@ func (f ficsitApiSource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersio
 	return versions, nil
 }
 
-func (f ficsitApiSource) PickVersion(pkg string, versions []semver.Version) semver.Version {
+func (f *ficsitApiSource) PickVersion(pkg string, versions []semver.Version) semver.Version {
 	if f.lockfile != nil {
 		if existing, ok := (*f.lockfile)[pkg]; ok {
 			v, err := semver.NewVersion(existing.Version)
@@ -133,15 +135,16 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		toInstall[k] = c
 	}
 
-	source := helpers.NewCachingSource(ficsitApiSource{
-		apiClient:   d.apiClient,
-		smlVersions: smlVersionsDB.SmlVersions.Sml_versions,
-		gameVersion: gameVersionSemver,
-		lockfile:    lockFile,
-		toInstall:   toInstall,
-	})
+	ficsitSource := &ficsitApiSource{
+		apiClient:      d.apiClient,
+		smlVersions:    smlVersionsDB.SmlVersions.Sml_versions,
+		gameVersion:    gameVersionSemver,
+		lockfile:       lockFile,
+		toInstall:      toInstall,
+		modVersionInfo: make(map[string]ficsit.ModVersionsWithDependenciesResponse),
+	}
 
-	result, err := pubgrub.Solve(source, rootPkg)
+	result, err := pubgrub.Solve(helpers.NewCachingSource(ficsitSource), rootPkg)
 	if err != nil {
 		finalError := err
 		var solverErr pubgrub.SolvingError
@@ -163,15 +166,16 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 			}
 			continue
 		}
-		versionResponse, err := ficsit.Version(context.TODO(), d.apiClient, k, v.String())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch version")
-		}
-
-		outputLock[k] = LockedMod{
-			Version: v.String(),
-			Hash:    versionResponse.Mod.Version.Hash,
-			Link:    viper.GetString("api-base") + versionResponse.Mod.Version.Link,
+		versions := ficsitSource.modVersionInfo[k].Mod.Versions
+		for _, ver := range versions {
+			if ver.Version == v.RawString() {
+				outputLock[k] = LockedMod{
+					Version: v.String(),
+					Hash:    ver.Hash,
+					Link:    viper.GetString("api-base") + ver.Link,
+				}
+				break
+			}
 		}
 	}
 
