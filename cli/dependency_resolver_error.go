@@ -21,11 +21,10 @@ type DependencyResolverError struct {
 
 func (e DependencyResolverError) Error() string {
 	rootPkg := e.Cause().Terms()[0].Dependency()
-	writer :=
-		pubgrub.NewStandardErrorWriter(rootPkg).
-			WithIncompatibilityStringer(
-				MakeDependencyResolverErrorStringer(e.apiClient, e.smlVersions, e.gameVersion),
-			)
+	writer := pubgrub.NewStandardErrorWriter(rootPkg).
+		WithIncompatibilityStringer(
+			MakeDependencyResolverErrorStringer(e.apiClient, e.smlVersions, e.gameVersion),
+		)
 	e.WriteTo(writer)
 	return writer.String()
 }
@@ -33,9 +32,9 @@ func (e DependencyResolverError) Error() string {
 type DependencyResolverErrorStringer struct {
 	pubgrub.StandardIncompatibilityStringer
 	apiClient    graphql.Client
+	packageNames map[string]string
 	smlVersions  []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
 	gameVersion  int
-	packageNames map[string]string
 }
 
 func MakeDependencyResolverErrorStringer(apiClient graphql.Client, smlVersions []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion, gameVersion int) *DependencyResolverErrorStringer {
@@ -50,10 +49,10 @@ func MakeDependencyResolverErrorStringer(apiClient graphql.Client, smlVersions [
 }
 
 func (w *DependencyResolverErrorStringer) getPackageName(pkg string) string {
-	if pkg == "SML" {
+	if pkg == smlPkg {
 		return "SML"
 	}
-	if pkg == "FactoryGame" {
+	if pkg == factoryGamePkg {
 		return "Satisfactory"
 	}
 	if name, ok := w.packageNames[pkg]; ok {
@@ -78,10 +77,10 @@ func (w *DependencyResolverErrorStringer) Term(t pubgrub.Term, includeVersion bo
 			return fmt.Sprintf("every version of %s", fullName)
 		}
 		switch t.Dependency() {
-		case "FactoryGame":
+		case factoryGamePkg:
 			// Remove ".0.0" from the versions mentioned, since only the major is ever used
 			return fmt.Sprintf("%s \"%s\"", fullName, strings.ReplaceAll(t.Constraint().String(), ".0.0", ""))
-		case "SML":
+		case smlPkg:
 			var matched []semver.Version
 			for _, v := range w.smlVersions {
 				ver, err := semver.NewVersion(v.Version)
@@ -128,7 +127,7 @@ func (w *DependencyResolverErrorStringer) Term(t pubgrub.Term, includeVersion bo
 
 func (w *DependencyResolverErrorStringer) IncompatibilityString(incompatibility *pubgrub.Incompatibility, rootPkg string) string {
 	terms := incompatibility.Terms()
-	if len(terms) == 1 && terms[0].Dependency() == "FactoryGame" {
+	if len(terms) == 1 && terms[0].Dependency() == factoryGamePkg {
 		return fmt.Sprintf("Satisfactory CL%d is installed", w.gameVersion)
 	}
 	return w.StandardIncompatibilityStringer.IncompatibilityString(incompatibility, rootPkg)

@@ -25,25 +25,29 @@ func NewDependencyResolver(apiClient graphql.Client) DependencyResolver {
 	return DependencyResolver{apiClient: apiClient}
 }
 
-var rootPkg = "$$root$$"
+var (
+	rootPkg        = "$$root$$"
+	smlPkg         = "SML"
+	factoryGamePkg = "FactoryGame"
+)
 
-type ficsitApiSource struct {
+type ficsitAPISource struct {
 	apiClient      graphql.Client
-	smlVersions    []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
-	gameVersion    semver.Version
 	lockfile       *LockFile
 	toInstall      map[string]semver.Constraint
 	modVersionInfo map[string]ficsit.ModVersionsWithDependenciesResponse
+	gameVersion    semver.Version
+	smlVersions    []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
 }
 
-func (f *ficsitApiSource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersion, error) {
+func (f *ficsitAPISource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersion, error) {
 	if pkg == rootPkg {
 		return []pubgrub.PackageVersion{{Version: semver.Version{}, Dependencies: f.toInstall}}, nil
 	}
-	if pkg == "FactoryGame" {
+	if pkg == factoryGamePkg {
 		return []pubgrub.PackageVersion{{Version: f.gameVersion}}, nil
 	}
-	if pkg == "SML" {
+	if pkg == smlPkg {
 		versions := make([]pubgrub.PackageVersion, len(f.smlVersions))
 		for i, smlVersion := range f.smlVersions {
 			v, err := semver.NewVersion(smlVersion.Version)
@@ -57,7 +61,7 @@ func (f *ficsitApiSource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersi
 			versions[i] = pubgrub.PackageVersion{
 				Version: v,
 				Dependencies: map[string]semver.Constraint{
-					"FactoryGame": gameConstraint,
+					factoryGamePkg: gameConstraint,
 				},
 			}
 		}
@@ -99,7 +103,7 @@ func (f *ficsitApiSource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersi
 	return versions, nil
 }
 
-func (f *ficsitApiSource) PickVersion(pkg string, versions []semver.Version) semver.Version {
+func (f *ficsitAPISource) PickVersion(pkg string, versions []semver.Version) semver.Version {
 	if f.lockfile != nil {
 		if existing, ok := (*f.lockfile)[pkg]; ok {
 			v, err := semver.NewVersion(existing.Version)
@@ -135,7 +139,7 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		toInstall[k] = c
 	}
 
-	ficsitSource := &ficsitApiSource{
+	ficsitSource := &ficsitAPISource{
 		apiClient:      d.apiClient,
 		smlVersions:    smlVersionsDB.SmlVersions.Sml_versions,
 		gameVersion:    gameVersionSemver,
@@ -154,11 +158,11 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		return nil, errors.Wrap(finalError, "failed to solve dependencies")
 	}
 	delete(result, rootPkg)
-	delete(result, "FactoryGame")
+	delete(result, factoryGamePkg)
 
 	outputLock := make(LockFile, len(result))
 	for k, v := range result {
-		if k == "SML" {
+		if k == smlPkg {
 			outputLock[k] = LockedMod{
 				Version: v.String(),
 				Hash:    "",
