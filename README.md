@@ -33,7 +33,6 @@ Download the appropriate `.deb` for your CPU architecture.
 * [ARMv7 (32-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_armv7.deb)
 * [PowerPC64](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_ppc64le.deb)
 
-
 #### Fedora
 
 Download the appropriate `.rpm` for your CPU architecture.
@@ -57,3 +56,33 @@ Download the appropriate `.apk` for your CPU architecture.
 ### macOS
 
 Download the "all" build [here](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_darwin_all).
+
+## Usage
+
+### Interactive CLI
+
+To launch the interactive CLI, run the executable without any arguments.
+
+### Command Line
+
+Run `ficsit help` to see a list of available commands.
+
+## Troubleshooting
+
+* Profile and installation records are located in `%APPDATA%\ficsit\`
+* Downloads are cached in `%LOCALAPPDATA%\ficsit\downloadCache\`
+
+## Development
+
+### Dependencies
+
+* [Go 1.21](https://go.dev/doc/install)
+* IDE of Choice. Goland or VSCode suggested.
+
+## Building
+
+```bash
+go build
+```
+
+Will produce `ficsit-cli.exe` in the repo root directory.

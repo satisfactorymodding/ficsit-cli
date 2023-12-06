@@ -543,9 +543,8 @@ func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 		if err != nil {
 			if d.IsNotExist(err) {
 				continue
-			} else {
-				return nil, errors.Wrap(err, "failed detecting version file")
 			}
+			return nil, errors.Wrap(err, "failed detecting version file")
 		}
 		return &platform, nil
 	}

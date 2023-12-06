@@ -4,9 +4,11 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wrap"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -149,13 +151,13 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
-		case KeyEscape:
+		case keys.KeyEscape:
 			m.cancelled = true
 			m.cancelChannel <- true
 			return m, nil
-		case KeyEnter:
+		case keys.KeyEnter:
 			if m.status.done {
 				if m.parent != nil {
 					return m.parent, m.parent.Init()
@@ -173,7 +175,8 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = newStatus
 			break
 		case err := <-m.errorChannel:
-			errorComponent, _ := components.NewErrorComponent(err.Error(), 0)
+			wrappedErrMessage := wrap.String(err.Error(), int(float64(m.root.Size().Width)*0.8))
+			errorComponent, _ := components.NewErrorComponent(wrappedErrMessage, 0)
 			m.error = errorComponent
 			break
 		default:

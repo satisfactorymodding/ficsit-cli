@@ -25,7 +25,7 @@ func (h headerComponent) Init() tea.Cmd {
 	return nil
 }
 
-func (h headerComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (h headerComponent) Update(_ tea.Msg) (tea.Model, tea.Cmd) {
 	return h, nil
 }
 

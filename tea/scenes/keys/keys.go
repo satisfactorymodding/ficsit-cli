@@ -1,4 +1,4 @@
-package scenes
+package keys
 
 const (
 	KeyControlC = "ctrl+c"

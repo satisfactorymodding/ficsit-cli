@@ -1,0 +1,15 @@
+# @genqlient(omitempty: true)
+query Version (
+    $modId: String!,
+    $version: String!
+) {
+    mod: getModByIdOrReference(modIdOrReference: $modId) {
+        id
+        version(version: $version) {
+            id
+            version
+            link
+            hash
+        }
+    }
+}
