@@ -1,12 +1,12 @@
 package cli
 
 import (
-	"github.com/rs/zerolog/log"
 	"math"
 	"os"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
+	"github.com/rs/zerolog/log"
 )
 
 func profilesGetResolver() DependencyResolver {
