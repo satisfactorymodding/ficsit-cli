@@ -56,7 +56,7 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 		allVersions := make([]ficsit.ModVersionsModVersionsVersion, 0)
 		offset := 0
 		for {
-			versions, err := ficsit.ModVersions(context.TODO(), root.GetAPIClient(), mod.Reference, ficsit.VersionFilter{
+			versions, err := root.GetProvider().ModVersions(context.TODO(), mod.Reference, ficsit.VersionFilter{
 				Limit:    100,
 				Offset:   offset,
 				Order:    ficsit.OrderDesc,

@@ -2,16 +2,23 @@ package cli
 
 import (
 	"math"
+	"os"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
 )
 
-func TestProfileResolution(t *testing.T) {
+func profilesGetResolver() DependencyResolver {
 	ctx, err := InitCLI(false)
-	testza.AssertNoError(t, err)
+	if err != nil {
+		panic(err)
+	}
 
-	resolver := NewDependencyResolver(ctx.APIClient)
+	return NewDependencyResolver(ctx.Provider)
+}
+
+func TestProfileResolution(t *testing.T) {
+	resolver := profilesGetResolver()
 
 	resolved, err := (&Profile{
 		Name: DefaultProfileName,
@@ -26,8 +33,12 @@ func TestProfileResolution(t *testing.T) {
 	testza.AssertNoError(t, err)
 	testza.AssertNotNil(t, resolved)
 	testza.AssertLen(t, resolved, 4)
+}
 
-	_, err = (&Profile{
+func TestProfileRequiredOlderVersion(t *testing.T) {
+	resolver := profilesGetResolver()
+
+	_, err := (&Profile{
 		Name: DefaultProfileName,
 		Mods: map[string]ProfileMod{
 			"RefinedPower": {
@@ -41,9 +52,13 @@ func TestProfileResolution(t *testing.T) {
 		},
 	}).Resolve(resolver, nil, math.MaxInt)
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed resolving dependencies. requires different versions of RefinedRDLib", err.Error())
+	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: Because installing Refined Power (RefinedPower) \"3.0.9\" and Refined Power (RefinedPower) \"3.0.9\" depends on RefinedRDLib \"^1.0.7\", installing RefinedRDLib \"^1.0.7\".\nSo, because installing RefinedRDLib \"1.0.6\", version solving failed.", err.Error())
+}
 
-	_, err = (&Profile{
+func TestResolutionNonExistentMod(t *testing.T) {
+	resolver := profilesGetResolver()
+
+	_, err := (&Profile{
 		Name: DefaultProfileName,
 		Mods: map[string]ProfileMod{
 			"ThisModDoesNotExist$$$": {
@@ -53,5 +68,65 @@ func TestProfileResolution(t *testing.T) {
 		},
 	}).Resolve(resolver, nil, math.MaxInt)
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed resolving dependency: ThisModDoesNotExist$$$", err.Error())
+	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: failed to make decision: failed to get package versions: mod ThisModDoesNotExist$$$ not found", err.Error())
+}
+
+func TestUpdateMods(t *testing.T) {
+	ctx, err := InitCLI(false)
+	testza.AssertNoError(t, err)
+
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
+
+	resolver := NewDependencyResolver(ctx.Provider)
+
+	oldLockfile, err := (&Profile{
+		Name: DefaultProfileName,
+		Mods: map[string]ProfileMod{
+			"AreaActions": {
+				Version: "1.6.5",
+				Enabled: true,
+			},
+		},
+	}).Resolve(resolver, nil, math.MaxInt)
+
+	testza.AssertNoError(t, err)
+	testza.AssertNotNil(t, oldLockfile)
+	testza.AssertLen(t, oldLockfile, 2)
+
+	profileName := "UpdateTest"
+	profile, err := ctx.Profiles.AddProfile(profileName)
+	testza.AssertNoError(t, err)
+	testza.AssertNoError(t, profile.AddMod("AreaActions", "<=1.6.6"))
+
+	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
+	if serverLocation != "" {
+		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
+		testza.AssertNoError(t, err)
+		testza.AssertNotNil(t, installation)
+
+		err = installation.WriteLockFile(ctx, oldLockfile)
+		testza.AssertNoError(t, err)
+
+		err = installation.Install(ctx, nil)
+		testza.AssertNoError(t, err)
+
+		lockFile, err := installation.LockFile(ctx)
+		testza.AssertNoError(t, err)
+
+		testza.AssertEqual(t, 2, len(*lockFile))
+		testza.AssertEqual(t, "1.6.5", (*lockFile)["AreaActions"].Version)
+
+		err = installation.UpdateMods(ctx, []string{"AreaActions"})
+		testza.AssertNoError(t, err)
+
+		lockFile, err = installation.LockFile(ctx)
+		testza.AssertNoError(t, err)
+
+		testza.AssertEqual(t, 2, len(*lockFile))
+		testza.AssertEqual(t, "1.6.6", (*lockFile)["AreaActions"].Version)
+
+		err = installation.Install(ctx, nil)
+		testza.AssertNoError(t, err)
+	}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
@@ -38,6 +39,7 @@ type Installation struct {
 	DiskInstance disk.Disk `json:"-"`
 	Path         string    `json:"path"`
 	Profile      string    `json:"profile"`
+	Vanilla      bool      `json:"vanilla"`
 }
 
 func InitInstallations() (*Installations, error) {
@@ -128,6 +130,7 @@ func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, 
 	installation := &Installation{
 		Path:    absolutePath,
 		Profile: profile,
+		Vanilla: false,
 	}
 
 	if err := installation.Validate(ctx); err != nil {
@@ -286,14 +289,21 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) erro
 		return err
 	}
 
-	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize lockfile json")
-	}
-
 	d, err := i.GetDisk()
 	if err != nil {
 		return err
+	}
+
+	lockfileDir := filepath.Dir(lockfilePath)
+	if err := d.Exists(lockfileDir); d.IsNotExist(err) {
+		if err := d.MkDir(lockfileDir); err != nil {
+			return errors.Wrap(err, "failed creating lockfile directory")
+		}
+	}
+
+	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
+	if err != nil {
+		return errors.Wrap(err, "failed to serialize lockfile json")
 	}
 
 	if err := d.Write(lockfilePath, marshaledLockfile); err != nil {
@@ -301,6 +311,45 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) erro
 	}
 
 	return nil
+}
+
+func (i *Installation) Wipe() error {
+	d, err := i.GetDisk()
+	if err != nil {
+		return err
+	}
+
+	modsDirectory := filepath.Join(i.BasePath(), "FactoryGame", "Mods")
+	if err := d.Remove(modsDirectory); err != nil {
+		return errors.Wrap(err, "failed removing Mods directory")
+	}
+
+	return nil
+}
+
+func (i *Installation) ResolveProfile(ctx *GlobalContext) (LockFile, error) {
+	lockFile, err := i.LockFile(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resolver := NewDependencyResolver(ctx.Provider)
+
+	gameVersion, err := i.GetGameVersion(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to detect game version")
+	}
+
+	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(resolver, lockFile, gameVersion)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not resolve mods")
+	}
+
+	if err := i.WriteLockFile(ctx, lockfile); err != nil {
+		return nil, errors.Wrap(err, "failed to write lockfile")
+	}
+
+	return lockfile, nil
 }
 
 type InstallUpdateType string
@@ -328,21 +377,14 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		return errors.Wrap(err, "failed to validate installation")
 	}
 
-	lockFile, err := i.LockFile(ctx)
-	if err != nil {
-		return err
-	}
+	lockfile := make(LockFile)
 
-	resolver := NewDependencyResolver(ctx.APIClient)
-
-	gameVersion, err := i.GetGameVersion(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to detect game version")
-	}
-
-	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(resolver, lockFile, gameVersion)
-	if err != nil {
-		return errors.Wrap(err, "could not resolve mods")
+	if !i.Vanilla {
+		var err error
+		lockfile, err = i.ResolveProfile(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to resolve lockfile")
+		}
 	}
 
 	d, err := i.GetDisk()
@@ -434,8 +476,42 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		return errors.Wrap(err, "failed to install mods")
 	}
 
-	if err := i.WriteLockFile(ctx, lockfile); err != nil {
-		return err
+	return nil
+}
+
+func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
+	if err := i.Validate(ctx); err != nil {
+		return errors.Wrap(err, "failed to validate installation")
+	}
+
+	lockFile, err := i.LockFile(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to read lock file")
+	}
+
+	resolver := NewDependencyResolver(ctx.Provider)
+
+	gameVersion, err := i.GetGameVersion(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to detect game version")
+	}
+
+	profile := ctx.Profiles.GetProfile(i.Profile)
+	if profile == nil {
+		return errors.New("could not find profile " + i.Profile)
+	}
+
+	for _, modReference := range mods {
+		lockFile = lockFile.Remove(modReference)
+	}
+
+	newLockFile, err := profile.Resolve(resolver, lockFile, gameVersion)
+	if err != nil {
+		return errors.Wrap(err, "failed to resolve dependencies")
+	}
+
+	if err := i.WriteLockFile(ctx, newLockFile); err != nil {
+		return errors.Wrap(err, "failed to write lock file")
 	}
 
 	return nil
@@ -463,7 +539,7 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 	}
 
 	log.Info().Str("mod_reference", modReference).Str("version", version).Str("link", link).Msg("downloading mod")
-	reader, size, err := utils.DownloadOrCache(modReference+"_"+version+".zip", hash, link, downloadUpdates, downloadSemaphore)
+	reader, size, err := cache.DownloadOrCache(modReference+"_"+version+".zip", hash, link, downloadUpdates, downloadSemaphore)
 	if err != nil {
 		return errors.Wrap(err, "failed to download "+modReference+" from: "+link)
 	}
@@ -584,9 +660,8 @@ func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 		if err != nil {
 			if d.IsNotExist(err) {
 				continue
-			} else {
-				return nil, errors.Wrap(err, "failed detecting version file")
 			}
+			return nil, errors.Wrap(err, "failed detecting version file")
 		}
 		return &platform, nil
 	}

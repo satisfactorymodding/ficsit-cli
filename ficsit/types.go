@@ -209,6 +209,30 @@ type GetModModAuthorsUserModUser struct {
 // GetUsername returns GetModModAuthorsUserModUser.Username, and is useful for accessing the field via an interface.
 func (v *GetModModAuthorsUserModUser) GetUsername() string { return v.Username }
 
+// GetModNameMod includes the requested fields of the GraphQL type Mod.
+type GetModNameMod struct {
+	Id            string `json:"id"`
+	Mod_reference string `json:"mod_reference"`
+	Name          string `json:"name"`
+}
+
+// GetId returns GetModNameMod.Id, and is useful for accessing the field via an interface.
+func (v *GetModNameMod) GetId() string { return v.Id }
+
+// GetMod_reference returns GetModNameMod.Mod_reference, and is useful for accessing the field via an interface.
+func (v *GetModNameMod) GetMod_reference() string { return v.Mod_reference }
+
+// GetName returns GetModNameMod.Name, and is useful for accessing the field via an interface.
+func (v *GetModNameMod) GetName() string { return v.Name }
+
+// GetModNameResponse is returned by GetModName on success.
+type GetModNameResponse struct {
+	Mod GetModNameMod `json:"mod"`
+}
+
+// GetMod returns GetModNameResponse.Mod, and is useful for accessing the field via an interface.
+func (v *GetModNameResponse) GetMod() GetModNameMod { return v.Mod }
+
 // GetModResponse is returned by GetMod on success.
 type GetModResponse struct {
 	Mod GetModMod `json:"mod"`
@@ -221,33 +245,27 @@ type ModFields string
 
 const (
 	ModFieldsCreatedAt       ModFields = "created_at"
+	ModFieldsUpdatedAt       ModFields = "updated_at"
+	ModFieldsName            ModFields = "name"
+	ModFieldsViews           ModFields = "views"
 	ModFieldsDownloads       ModFields = "downloads"
 	ModFieldsHotness         ModFields = "hotness"
-	ModFieldsLastVersionDate ModFields = "last_version_date"
-	ModFieldsName            ModFields = "name"
 	ModFieldsPopularity      ModFields = "popularity"
+	ModFieldsLastVersionDate ModFields = "last_version_date"
 	ModFieldsSearch          ModFields = "search"
-	ModFieldsUpdatedAt       ModFields = "updated_at"
-	ModFieldsViews           ModFields = "views"
 )
 
 type ModFilter struct {
-	Hidden     bool      `json:"hidden,omitempty"`
-	Ids        []string  `json:"ids,omitempty"`
 	Limit      int       `json:"limit,omitempty"`
 	Offset     int       `json:"offset,omitempty"`
-	Order      Order     `json:"order,omitempty"`
 	Order_by   ModFields `json:"order_by,omitempty"`
-	References []string  `json:"references,omitempty"`
+	Order      Order     `json:"order,omitempty"`
 	Search     string    `json:"search,omitempty"`
+	Ids        []string  `json:"ids,omitempty"`
+	References []string  `json:"references,omitempty"`
+	Hidden     bool      `json:"hidden,omitempty"`
 	TagIDs     []string  `json:"tagIDs,omitempty"`
 }
-
-// GetHidden returns ModFilter.Hidden, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetHidden() bool { return v.Hidden }
-
-// GetIds returns ModFilter.Ids, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetIds() []string { return v.Ids }
 
 // GetLimit returns ModFilter.Limit, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetLimit() int { return v.Limit }
@@ -255,17 +273,23 @@ func (v *ModFilter) GetLimit() int { return v.Limit }
 // GetOffset returns ModFilter.Offset, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetOffset() int { return v.Offset }
 
+// GetOrder_by returns ModFilter.Order_by, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetOrder_by() ModFields { return v.Order_by }
+
 // GetOrder returns ModFilter.Order, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetOrder() Order { return v.Order }
 
-// GetOrder_by returns ModFilter.Order_by, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetOrder_by() ModFields { return v.Order_by }
+// GetSearch returns ModFilter.Search, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetSearch() string { return v.Search }
+
+// GetIds returns ModFilter.Ids, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetIds() []string { return v.Ids }
 
 // GetReferences returns ModFilter.References, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetReferences() []string { return v.References }
 
-// GetSearch returns ModFilter.Search, and is useful for accessing the field via an interface.
-func (v *ModFilter) GetSearch() string { return v.Search }
+// GetHidden returns ModFilter.Hidden, and is useful for accessing the field via an interface.
+func (v *ModFilter) GetHidden() bool { return v.Hidden }
 
 // GetTagIDs returns ModFilter.TagIDs, and is useful for accessing the field via an interface.
 func (v *ModFilter) GetTagIDs() []string { return v.TagIDs }
@@ -312,6 +336,76 @@ type ModVersionsResponse struct {
 
 // GetMod returns ModVersionsResponse.Mod, and is useful for accessing the field via an interface.
 func (v *ModVersionsResponse) GetMod() ModVersionsMod { return v.Mod }
+
+// ModVersionsWithDependenciesMod includes the requested fields of the GraphQL type Mod.
+type ModVersionsWithDependenciesMod struct {
+	Id       string                                          `json:"id"`
+	Versions []ModVersionsWithDependenciesModVersionsVersion `json:"versions"`
+}
+
+// GetId returns ModVersionsWithDependenciesMod.Id, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesMod) GetId() string { return v.Id }
+
+// GetVersions returns ModVersionsWithDependenciesMod.Versions, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesMod) GetVersions() []ModVersionsWithDependenciesModVersionsVersion {
+	return v.Versions
+}
+
+// ModVersionsWithDependenciesModVersionsVersion includes the requested fields of the GraphQL type Version.
+type ModVersionsWithDependenciesModVersionsVersion struct {
+	Id           string                                                                       `json:"id"`
+	Version      string                                                                       `json:"version"`
+	Link         string                                                                       `json:"link"`
+	Hash         string                                                                       `json:"hash"`
+	Dependencies []ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency `json:"dependencies"`
+}
+
+// GetId returns ModVersionsWithDependenciesModVersionsVersion.Id, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersion) GetId() string { return v.Id }
+
+// GetVersion returns ModVersionsWithDependenciesModVersionsVersion.Version, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersion) GetVersion() string { return v.Version }
+
+// GetLink returns ModVersionsWithDependenciesModVersionsVersion.Link, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersion) GetLink() string { return v.Link }
+
+// GetHash returns ModVersionsWithDependenciesModVersionsVersion.Hash, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersion) GetHash() string { return v.Hash }
+
+// GetDependencies returns ModVersionsWithDependenciesModVersionsVersion.Dependencies, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersion) GetDependencies() []ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency {
+	return v.Dependencies
+}
+
+// ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency includes the requested fields of the GraphQL type VersionDependency.
+type ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency struct {
+	Mod_id    string `json:"mod_id"`
+	Condition string `json:"condition"`
+	Optional  bool   `json:"optional"`
+}
+
+// GetMod_id returns ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency.Mod_id, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency) GetMod_id() string {
+	return v.Mod_id
+}
+
+// GetCondition returns ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency.Condition, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency) GetCondition() string {
+	return v.Condition
+}
+
+// GetOptional returns ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency.Optional, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesModVersionsVersionDependenciesVersionDependency) GetOptional() bool {
+	return v.Optional
+}
+
+// ModVersionsWithDependenciesResponse is returned by ModVersionsWithDependencies on success.
+type ModVersionsWithDependenciesResponse struct {
+	Mod ModVersionsWithDependenciesMod `json:"mod"`
+}
+
+// GetMod returns ModVersionsWithDependenciesResponse.Mod, and is useful for accessing the field via an interface.
+func (v *ModVersionsWithDependenciesResponse) GetMod() ModVersionsWithDependenciesMod { return v.Mod }
 
 // ModsModsGetMods includes the requested fields of the GraphQL type GetMods.
 type ModsModsGetMods struct {
@@ -627,21 +721,18 @@ type VersionFields string
 
 const (
 	VersionFieldsCreatedAt VersionFields = "created_at"
-	VersionFieldsDownloads VersionFields = "downloads"
 	VersionFieldsUpdatedAt VersionFields = "updated_at"
+	VersionFieldsDownloads VersionFields = "downloads"
 )
 
 type VersionFilter struct {
-	Ids      []string      `json:"ids,omitempty"`
 	Limit    int           `json:"limit,omitempty"`
 	Offset   int           `json:"offset,omitempty"`
-	Order    Order         `json:"order,omitempty"`
 	Order_by VersionFields `json:"order_by,omitempty"`
+	Order    Order         `json:"order,omitempty"`
 	Search   string        `json:"search,omitempty"`
+	Ids      []string      `json:"ids,omitempty"`
 }
-
-// GetIds returns VersionFilter.Ids, and is useful for accessing the field via an interface.
-func (v *VersionFilter) GetIds() []string { return v.Ids }
 
 // GetLimit returns VersionFilter.Limit, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetLimit() int { return v.Limit }
@@ -649,14 +740,57 @@ func (v *VersionFilter) GetLimit() int { return v.Limit }
 // GetOffset returns VersionFilter.Offset, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetOffset() int { return v.Offset }
 
-// GetOrder returns VersionFilter.Order, and is useful for accessing the field via an interface.
-func (v *VersionFilter) GetOrder() Order { return v.Order }
-
 // GetOrder_by returns VersionFilter.Order_by, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetOrder_by() VersionFields { return v.Order_by }
 
+// GetOrder returns VersionFilter.Order, and is useful for accessing the field via an interface.
+func (v *VersionFilter) GetOrder() Order { return v.Order }
+
 // GetSearch returns VersionFilter.Search, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetSearch() string { return v.Search }
+
+// GetIds returns VersionFilter.Ids, and is useful for accessing the field via an interface.
+func (v *VersionFilter) GetIds() []string { return v.Ids }
+
+// VersionMod includes the requested fields of the GraphQL type Mod.
+type VersionMod struct {
+	Id      string            `json:"id"`
+	Version VersionModVersion `json:"version"`
+}
+
+// GetId returns VersionMod.Id, and is useful for accessing the field via an interface.
+func (v *VersionMod) GetId() string { return v.Id }
+
+// GetVersion returns VersionMod.Version, and is useful for accessing the field via an interface.
+func (v *VersionMod) GetVersion() VersionModVersion { return v.Version }
+
+// VersionModVersion includes the requested fields of the GraphQL type Version.
+type VersionModVersion struct {
+	Id      string `json:"id"`
+	Version string `json:"version"`
+	Link    string `json:"link"`
+	Hash    string `json:"hash"`
+}
+
+// GetId returns VersionModVersion.Id, and is useful for accessing the field via an interface.
+func (v *VersionModVersion) GetId() string { return v.Id }
+
+// GetVersion returns VersionModVersion.Version, and is useful for accessing the field via an interface.
+func (v *VersionModVersion) GetVersion() string { return v.Version }
+
+// GetLink returns VersionModVersion.Link, and is useful for accessing the field via an interface.
+func (v *VersionModVersion) GetLink() string { return v.Link }
+
+// GetHash returns VersionModVersion.Hash, and is useful for accessing the field via an interface.
+func (v *VersionModVersion) GetHash() string { return v.Hash }
+
+// VersionResponse is returned by Version on success.
+type VersionResponse struct {
+	Mod VersionMod `json:"mod"`
+}
+
+// GetMod returns VersionResponse.Mod, and is useful for accessing the field via an interface.
+func (v *VersionResponse) GetMod() VersionMod { return v.Mod }
 
 type VersionStabilities string
 
@@ -710,6 +844,14 @@ type __GetModInput struct {
 // GetModId returns __GetModInput.ModId, and is useful for accessing the field via an interface.
 func (v *__GetModInput) GetModId() string { return v.ModId }
 
+// __GetModNameInput is used internally by genqlient
+type __GetModNameInput struct {
+	ModId string `json:"modId"`
+}
+
+// GetModId returns __GetModNameInput.ModId, and is useful for accessing the field via an interface.
+func (v *__GetModNameInput) GetModId() string { return v.ModId }
+
 // __ModVersionsInput is used internally by genqlient
 type __ModVersionsInput struct {
 	ModId  string        `json:"modId,omitempty"`
@@ -721,6 +863,14 @@ func (v *__ModVersionsInput) GetModId() string { return v.ModId }
 
 // GetFilter returns __ModVersionsInput.Filter, and is useful for accessing the field via an interface.
 func (v *__ModVersionsInput) GetFilter() VersionFilter { return v.Filter }
+
+// __ModVersionsWithDependenciesInput is used internally by genqlient
+type __ModVersionsWithDependenciesInput struct {
+	ModId string `json:"modId,omitempty"`
+}
+
+// GetModId returns __ModVersionsWithDependenciesInput.ModId, and is useful for accessing the field via an interface.
+func (v *__ModVersionsWithDependenciesInput) GetModId() string { return v.ModId }
 
 // __ModsInput is used internally by genqlient
 type __ModsInput struct {
@@ -737,6 +887,18 @@ type __ResolveModDependenciesInput struct {
 
 // GetFilter returns __ResolveModDependenciesInput.Filter, and is useful for accessing the field via an interface.
 func (v *__ResolveModDependenciesInput) GetFilter() []ModVersionConstraint { return v.Filter }
+
+// __VersionInput is used internally by genqlient
+type __VersionInput struct {
+	ModId   string `json:"modId,omitempty"`
+	Version string `json:"version,omitempty"`
+}
+
+// GetModId returns __VersionInput.ModId, and is useful for accessing the field via an interface.
+func (v *__VersionInput) GetModId() string { return v.ModId }
+
+// GetVersion returns __VersionInput.Version, and is useful for accessing the field via an interface.
+func (v *__VersionInput) GetVersion() string { return v.Version }
 
 func CheckVersionUploadState(
 	ctx context.Context,
@@ -884,6 +1046,40 @@ query GetMod ($modId: String!) {
 	return &data, err
 }
 
+func GetModName(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+) (*GetModNameResponse, error) {
+	req := &graphql.Request{
+		OpName: "GetModName",
+		Query: `
+query GetModName ($modId: String!) {
+	mod: getModByIdOrReference(modIdOrReference: $modId) {
+		id
+		mod_reference
+		name
+	}
+}
+`,
+		Variables: &__GetModNameInput{
+			ModId: modId,
+		},
+	}
+	var err error
+
+	var data GetModNameResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
 func ModVersions(
 	ctx context.Context,
 	client graphql.Client,
@@ -911,6 +1107,49 @@ query ModVersions ($modId: String!, $filter: VersionFilter) {
 	var err error
 
 	var data ModVersionsResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
+func ModVersionsWithDependencies(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+) (*ModVersionsWithDependenciesResponse, error) {
+	req := &graphql.Request{
+		OpName: "ModVersionsWithDependencies",
+		Query: `
+query ModVersionsWithDependencies ($modId: String!) {
+	mod: getModByIdOrReference(modIdOrReference: $modId) {
+		id
+		versions(filter: {limit:100}) {
+			id
+			version
+			link
+			hash
+			dependencies {
+				mod_id
+				condition
+				optional
+			}
+		}
+	}
+}
+`,
+		Variables: &__ModVersionsWithDependenciesInput{
+			ModId: modId,
+		},
+	}
+	var err error
+
+	var data ModVersionsWithDependenciesResponse
 	resp := &graphql.Response{Data: &data}
 
 	err = client.MakeRequest(
@@ -1031,6 +1270,46 @@ query SMLVersions {
 	var err error
 
 	var data SMLVersionsResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
+
+func Version(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+	version string,
+) (*VersionResponse, error) {
+	req := &graphql.Request{
+		OpName: "Version",
+		Query: `
+query Version ($modId: String!, $version: String!) {
+	mod: getModByIdOrReference(modIdOrReference: $modId) {
+		id
+		version(version: $version) {
+			id
+			version
+			link
+			hash
+		}
+	}
+}
+`,
+		Variables: &__VersionInput{
+			ModId:   modId,
+			Version: version,
+		},
+	}
+	var err error
+
+	var data VersionResponse
 	resp := &graphql.Response{Data: &data}
 
 	err = client.MakeRequest(

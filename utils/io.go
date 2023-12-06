@@ -4,45 +4,15 @@ import (
 	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 )
-
-type Progresser struct {
-	io.Reader
-	updates chan<- GenericProgress
-	total   int64
-	running int64
-}
-
-func (pt *Progresser) Read(p []byte) (int, error) {
-	n, err := pt.Reader.Read(p)
-	pt.running += int64(n)
-
-	if err == nil {
-		if pt.updates != nil {
-			select {
-			case pt.updates <- GenericProgress{Completed: pt.running, Total: pt.total}:
-			default:
-			}
-		}
-	}
-
-	if err == io.EOF {
-		return n, io.EOF
-	}
-
-	return n, errors.Wrap(err, "failed to read")
-}
 
 type GenericProgress struct {
 	Completed int64
@@ -56,106 +26,31 @@ func (gp GenericProgress) Percentage() float64 {
 	return float64(gp.Completed) / float64(gp.Total)
 }
 
-func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- GenericProgress, downloadSemaphore chan int) (io.ReaderAt, int64, error) {
-	if updates != nil {
-		defer close(updates)
-	}
+type Progresser struct {
+	io.Reader
+	Updates chan<- GenericProgress
+	Total   int64
+	Running int64
+}
 
-	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
-	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
-		if !os.IsExist(err) {
-			return nil, 0, errors.Wrap(err, "failed creating download cache")
-		}
-	}
+func (pt *Progresser) Read(p []byte) (int, error) {
+	n, err := pt.Reader.Read(p)
+	pt.Running += int64(n)
 
-	location := filepath.Join(downloadCache, cacheKey)
-
-	stat, err := os.Stat(location)
 	if err == nil {
-		existingHash := ""
-
-		if hash != "" {
-			f, err := os.Open(location)
-			if err != nil {
-				return nil, 0, errors.Wrap(err, "failed to open file: "+location)
-			}
-
-			existingHash, err = SHA256Data(f)
-			if err != nil {
-				return nil, 0, errors.Wrap(err, "could not compute hash for file: "+location)
+		if pt.Updates != nil {
+			select {
+			case pt.Updates <- GenericProgress{Completed: pt.Running, Total: pt.Total}:
+			default:
 			}
 		}
-
-		if hash == existingHash {
-			f, err := os.Open(location)
-			if err != nil {
-				return nil, 0, errors.Wrap(err, "failed to open file: "+location)
-			}
-
-			return f, stat.Size(), nil
-		}
-
-		if err := os.Remove(location); err != nil {
-			return nil, 0, errors.Wrap(err, "failed to delete file: "+location)
-		}
-	} else if !os.IsNotExist(err) {
-		return nil, 0, errors.Wrap(err, "failed to stat file: "+location)
 	}
 
-	if updates != nil {
-		headResp, err := http.Head(url)
-		if err != nil {
-			return nil, 0, errors.Wrap(err, "failed to head: "+url)
-		}
-		defer headResp.Body.Close()
-		updates <- GenericProgress{Total: headResp.ContentLength}
+	if err == io.EOF {
+		return n, io.EOF
 	}
 
-	if downloadSemaphore != nil {
-		downloadSemaphore <- 1
-		defer func() { <-downloadSemaphore }()
-	}
-
-	out, err := os.Create(location)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed creating file at: "+location)
-	}
-	defer out.Close()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to fetch: "+url)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("bad status: %s on url: %s", resp.Status, url)
-	}
-
-	progresser := &Progresser{
-		Reader:  resp.Body,
-		total:   resp.ContentLength,
-		updates: updates,
-	}
-
-	_, err = io.Copy(out, progresser)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed writing file to disk")
-	}
-
-	f, err := os.Open(location)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to open file: "+location)
-	}
-
-	if updates != nil {
-		select {
-		case updates <- GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}:
-		default:
-		}
-	}
-
-	return f, resp.ContentLength, nil
+	return n, errors.Wrap(err, "failed to read")
 }
 
 func SHA256Data(f io.Reader) (string, error) {
@@ -273,8 +168,8 @@ func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates c
 
 	progressInReader := &Progresser{
 		Reader:  inFile,
-		total:   int64(file.UncompressedSize64),
-		updates: updates,
+		Total:   int64(file.UncompressedSize64),
+		Updates: updates,
 	}
 
 	if _, err := io.Copy(outFile, progressInReader); err != nil {

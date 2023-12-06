@@ -87,7 +87,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	model.help.Width = root.Size().Width
 
 	go func() {
-		fullMod, err := ficsit.GetMod(context.TODO(), root.GetAPIClient(), mod.Reference)
+		fullMod, err := root.GetProvider().GetMod(context.TODO(), mod.Reference)
 		if err != nil {
 			model.modError <- err.Error()
 			return

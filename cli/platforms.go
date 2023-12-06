@@ -9,11 +9,11 @@ type Platform struct {
 
 var platforms = []Platform{
 	{
-		VersionPath:  filepath.Join("Engine", "Binaries", "Linux", "UE4Server-Linux-Shipping.version"),
+		VersionPath:  filepath.Join("Engine", "Binaries", "Linux", "UnrealServer-Linux-Shipping.version"),
 		LockfilePath: filepath.Join("FactoryGame", "Mods"),
 	},
 	{
-		VersionPath:  filepath.Join("Engine", "Binaries", "Win64", "UE4Server-Win64-Shipping.version"),
+		VersionPath:  filepath.Join("Engine", "Binaries", "Win64", "UnrealServer-Win64-Shipping.version"),
 		LockfilePath: filepath.Join("FactoryGame", "Mods"),
 	},
 	{
