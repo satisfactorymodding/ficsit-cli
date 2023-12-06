@@ -552,13 +552,16 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 
 		go func() {
 			for up := range extractUpdates {
-				updates <- InstallUpdate{
+				select {
+				case updates <- InstallUpdate{
 					Item: InstallUpdateItem{
 						Mod:     modReference,
 						Version: version,
 					},
 					Type:     InstallUpdateTypeModExtract,
 					Progress: up,
+				}:
+				default:
 				}
 			}
 		}()
@@ -570,12 +573,15 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 	}
 
 	if updates != nil {
-		updates <- InstallUpdate{
+		select {
+		case updates <- InstallUpdate{
 			Type: InstallUpdateTypeModComplete,
 			Item: InstallUpdateItem{
 				Mod:     modReference,
 				Version: version,
 			},
+		}:
+		default:
 		}
 	}
 

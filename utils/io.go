@@ -145,6 +145,13 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 		return errors.Wrap(err, "failed to write .smm mod hash file")
 	}
 
+	if updates != nil {
+		select {
+		case updates <- GenericProgress{Completed: totalSize, Total: totalSize}:
+		default:
+		}
+	}
+
 	return nil
 }
 
