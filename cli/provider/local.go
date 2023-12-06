@@ -245,3 +245,45 @@ func (p localProvider) ResolveModDependencies(_ context.Context, filter []ficsit
 		Mods: mods,
 	}, nil
 }
+
+func (p localProvider) ModVersionsWithDependencies(_ context.Context, modID string) (*ficsit.ModVersionsWithDependenciesResponse, error) {
+	cachedModFiles, err := cache.GetCacheMod(modID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get cache")
+	}
+
+	versions := make([]ficsit.ModVersionsWithDependenciesModVersionsVersion, 0)
+
+	for _, modFile := range cachedModFiles {
+		versions = append(versions, ficsit.ModVersionsWithDependenciesModVersionsVersion{
+			Id:      modID + ":" + modFile.Plugin.SemVersion,
+			Version: modFile.Plugin.SemVersion,
+		})
+	}
+
+	return &ficsit.ModVersionsWithDependenciesResponse{
+		Mod: ficsit.ModVersionsWithDependenciesMod{
+			Id:       modID,
+			Versions: versions,
+		},
+	}, nil
+}
+
+func (p localProvider) GetModName(_ context.Context, modReference string) (*ficsit.GetModNameResponse, error) {
+	cachedModFiles, err := cache.GetCacheMod(modReference)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get cache")
+	}
+
+	if len(cachedModFiles) == 0 {
+		return nil, errors.New("mod not found")
+	}
+
+	return &ficsit.GetModNameResponse{
+		Mod: ficsit.GetModNameMod{
+			Id:            modReference,
+			Name:          cachedModFiles[0].Plugin.FriendlyName,
+			Mod_reference: modReference,
+		},
+	}, nil
+}

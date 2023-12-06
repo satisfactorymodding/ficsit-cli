@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Khan/genqlient/graphql"
 	"github.com/mircearoata/pubgrub-go/pubgrub"
 	"github.com/mircearoata/pubgrub-go/pubgrub/semver"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
 type DependencyResolverError struct {
 	pubgrub.SolvingError
-	apiClient   graphql.Client
+	provider    provider.Provider
 	smlVersions []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
 	gameVersion int
 }
@@ -23,7 +23,7 @@ func (e DependencyResolverError) Error() string {
 	rootPkg := e.Cause().Terms()[0].Dependency()
 	writer := pubgrub.NewStandardErrorWriter(rootPkg).
 		WithIncompatibilityStringer(
-			MakeDependencyResolverErrorStringer(e.apiClient, e.smlVersions, e.gameVersion),
+			MakeDependencyResolverErrorStringer(e.provider, e.smlVersions, e.gameVersion),
 		)
 	e.WriteTo(writer)
 	return writer.String()
@@ -31,15 +31,15 @@ func (e DependencyResolverError) Error() string {
 
 type DependencyResolverErrorStringer struct {
 	pubgrub.StandardIncompatibilityStringer
-	apiClient    graphql.Client
+	provider     provider.Provider
 	packageNames map[string]string
 	smlVersions  []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
 	gameVersion  int
 }
 
-func MakeDependencyResolverErrorStringer(apiClient graphql.Client, smlVersions []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion, gameVersion int) *DependencyResolverErrorStringer {
+func MakeDependencyResolverErrorStringer(provider provider.Provider, smlVersions []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion, gameVersion int) *DependencyResolverErrorStringer {
 	s := &DependencyResolverErrorStringer{
-		apiClient:    apiClient,
+		provider:     provider,
 		smlVersions:  smlVersions,
 		gameVersion:  gameVersion,
 		packageNames: map[string]string{},
@@ -58,7 +58,7 @@ func (w *DependencyResolverErrorStringer) getPackageName(pkg string) string {
 	if name, ok := w.packageNames[pkg]; ok {
 		return name
 	}
-	result, err := ficsit.GetModName(context.Background(), w.apiClient, pkg)
+	result, err := w.provider.GetModName(context.TODO(), pkg)
 	if err != nil {
 		return pkg
 	}
@@ -98,7 +98,7 @@ func (w *DependencyResolverErrorStringer) Term(t pubgrub.Term, includeVersion bo
 			}
 			return fmt.Sprintf("%s \"%s\"", fullName, t.Constraint())
 		default:
-			res, err := ficsit.ModVersions(context.Background(), w.apiClient, t.Dependency(), ficsit.VersionFilter{
+			res, err := w.provider.ModVersions(context.TODO(), t.Dependency(), ficsit.VersionFilter{
 				Limit: 100,
 			})
 			if err != nil {

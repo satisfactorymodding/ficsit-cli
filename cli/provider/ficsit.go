@@ -37,3 +37,11 @@ func (p ficsitProvider) SMLVersions(context context.Context) (*ficsit.SMLVersion
 func (p ficsitProvider) ResolveModDependencies(context context.Context, filter []ficsit.ModVersionConstraint) (*ficsit.ResolveModDependenciesResponse, error) {
 	return ficsit.ResolveModDependencies(context, p.client, filter)
 }
+
+func (p ficsitProvider) ModVersionsWithDependencies(context context.Context, modID string) (*ficsit.ModVersionsWithDependenciesResponse, error) {
+	return ficsit.ModVersionsWithDependencies(context, p.client, modID)
+}
+
+func (p ficsitProvider) GetModName(context context.Context, modReference string) (*ficsit.GetModNameResponse, error) {
+	return ficsit.GetModName(context, p.client, modReference)
+}

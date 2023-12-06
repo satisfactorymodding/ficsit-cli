@@ -56,3 +56,17 @@ func (p MixedProvider) ResolveModDependencies(context context.Context, filter []
 	}
 	return p.ficsitProvider.ResolveModDependencies(context, filter)
 }
+
+func (p MixedProvider) ModVersionsWithDependencies(context context.Context, modID string) (*ficsit.ModVersionsWithDependenciesResponse, error) {
+	if p.Offline {
+		return p.localProvider.ModVersionsWithDependencies(context, modID)
+	}
+	return p.ficsitProvider.ModVersionsWithDependencies(context, modID)
+}
+
+func (p MixedProvider) GetModName(context context.Context, modReference string) (*ficsit.GetModNameResponse, error) {
+	if p.Offline {
+		return p.localProvider.GetModName(context, modReference)
+	}
+	return p.ficsitProvider.GetModName(context, modReference)
+}
