@@ -74,6 +74,13 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			},
 		},
 		utils.SimpleItem[mainMenu]{
+			ItemTitle: "Toggle Vanilla",
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
+				currentModel.root.GetCurrentInstallation().Vanilla = !currentModel.root.GetCurrentInstallation().Vanilla
+				return currentModel, nil
+			},
+		},
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Profiles",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				newModel := profile.NewProfiles(root, currentModel)
