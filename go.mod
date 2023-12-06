@@ -13,7 +13,7 @@ require (
 	github.com/charmbracelet/glamour v0.5.0
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/jlaffaye/ftp v0.1.0
-	github.com/mircearoata/pubgrub-go v0.3.2
+	github.com/mircearoata/pubgrub-go v0.3.3
 	github.com/muesli/reflow v0.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.67

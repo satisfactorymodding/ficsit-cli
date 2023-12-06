@@ -548,11 +548,14 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 
 	var extractUpdates chan utils.GenericProgress
 
+	var wg sync.WaitGroup
 	if updates != nil {
 		// Forward the inner updates as InstallUpdates
 		extractUpdates = make(chan utils.GenericProgress)
 
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for up := range extractUpdates {
 				select {
 				case updates <- InstallUpdate{
@@ -585,7 +588,11 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		}:
 		default:
 		}
+
+		close(extractUpdates)
 	}
+
+	wg.Wait()
 
 	return nil
 }

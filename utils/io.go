@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -101,12 +102,13 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 	}
 
 	totalExtracted := int64(0)
+	totalExtractedPtr := &totalExtracted
+
 	channelUsers := sync.WaitGroup{}
 
 	if updates != nil {
 		defer func() {
 			channelUsers.Wait()
-			close(updates)
 		}()
 	}
 
@@ -126,7 +128,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 					defer channelUsers.Done()
 					for fileUpdate := range fileUpdates {
 						updates <- GenericProgress{
-							Completed: totalExtracted + fileUpdate.Completed,
+							Completed: atomic.LoadInt64(totalExtractedPtr) + fileUpdate.Completed,
 							Total:     totalSize,
 						}
 					}
@@ -137,7 +139,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 				return err
 			}
 
-			totalExtracted += int64(file.UncompressedSize64)
+			atomic.AddInt64(totalExtractedPtr, int64(file.UncompressedSize64))
 		}
 	}
 
