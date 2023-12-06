@@ -76,7 +76,7 @@ Run `ficsit help` to see a list of available commands.
 
 ### Dependencies
 
-* [Go 1.18](https://go.dev/doc/install)
+* [Go 1.21](https://go.dev/doc/install)
 * IDE of Choice. Goland or VSCode suggested.
 
 ## Building

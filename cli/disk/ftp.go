@@ -175,7 +175,7 @@ func (l *ftpDisk) IsExist(err error) bool {
 	return strings.Contains(err.Error(), "Create directory operation failed")
 }
 
-func (l *ftpDisk) Open(path string, flag int) (io.WriteCloser, error) {
+func (l *ftpDisk) Open(path string, _ int) (io.WriteCloser, error) {
 	reader, writer := io.Pipe()
 
 	log.Debug().Str("path", path).Str("schema", "ftp").Msg("opening for writing")

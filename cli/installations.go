@@ -435,11 +435,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		completed++
 	}
 
-	if err := i.WriteLockFile(ctx, lockfile); err != nil {
-		return err
-	}
-
-	return nil
+	return i.WriteLockFile(ctx, lockfile)
 }
 
 func (i *Installation) SetProfile(ctx *GlobalContext, profile string) error {
@@ -520,9 +516,8 @@ func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 		if err != nil {
 			if d.IsNotExist(err) {
 				continue
-			} else {
-				return nil, errors.Wrap(err, "failed detecting version file")
 			}
+			return nil, errors.Wrap(err, "failed detecting version file")
 		}
 		return &platform, nil
 	}
