@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -11,6 +12,11 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/errors"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/installation"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/mods"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/profile"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -63,28 +69,35 @@ func NewMainMenu(root components.RootModel) tea.Model {
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Installations",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewInstallations(root, currentModel)
+				newModel := installation.NewInstallations(root, currentModel)
 				return newModel, newModel.Init()
+			},
+		},
+		utils.SimpleItem[mainMenu]{
+			ItemTitle: "Toggle Vanilla",
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
+				currentModel.root.GetCurrentInstallation().Vanilla = !currentModel.root.GetCurrentInstallation().Vanilla
+				return currentModel, nil
 			},
 		},
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Profiles",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewProfiles(root, currentModel)
+				newModel := profile.NewProfiles(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "All Mods",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewMods(root, currentModel)
+				newModel := mods.NewMods(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Installed Mods",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewInstalledMods(root, currentModel)
+				newModel := mods.NewInstalledMods(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},
@@ -92,7 +105,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			ItemTitle: "Apply Changes",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					log.Error().Err(err).Msg(ErrorFailedAddMod)
+					log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
 					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 					currentModel.error = errorComponent
 					return currentModel, cmd
@@ -106,7 +119,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			ItemTitle: "Save",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					log.Error().Err(err).Msg(ErrorFailedAddMod)
+					log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
 					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 					currentModel.error = errorComponent
 					return currentModel, cmd
@@ -127,7 +140,11 @@ func NewMainMenu(root components.RootModel) tea.Model {
 	model.list.SetFilteringEnabled(false)
 	model.list.Title = "Main Menu"
 	model.list.Styles = utils.ListStyles
-	model.list.DisableQuitKeybindings()
+	model.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	return model
 }
@@ -140,11 +157,11 @@ func (m mainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[mainMenu])
 			if ok {
 				if i.Activate != nil {
@@ -202,6 +219,6 @@ func (m mainMenu) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, header, err, m.list.View())
 	}
 
-	m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header))
+	m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header)-1)
 	return lipgloss.JoinVertical(lipgloss.Left, header, m.list.View())
 }

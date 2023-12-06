@@ -1,8 +1,9 @@
-package scenes
+package installation
 
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,6 +19,7 @@ import (
 	"github.com/sahilm/fuzzy"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -42,10 +44,17 @@ func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
 	l.SetShowTitle(false)
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
-	l.KeyMap.Quit.SetHelp("esc", "back")
-	l.DisableQuitKeybindings()
-	l.SetShowHelp(false)
 	l.SetShowStatusBar(false)
+	l.KeyMap.ShowFullHelp.Unbind()
+	l.KeyMap.Quit.SetHelp("esc", "back")
+	l.KeyMap.CursorDown.SetHelp("↓", "down")
+	l.KeyMap.CursorUp.SetHelp("↑", "up")
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys(keys.KeyTab), key.WithHelp(keys.KeyTab, "select")),
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "continue")),
+		}
+	}
 
 	model := newInstallation{
 		root:    root,
@@ -69,11 +78,11 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
-		case KeyEscape:
+		case keys.KeyEscape:
 			return m.parent, nil
-		case KeyEnter:
+		case keys.KeyEnter:
 			newInstall, err := m.root.GetGlobal().Installations.AddInstallation(m.root.GetGlobal(), m.input.Value(), m.root.GetGlobal().Profiles.SelectedProfile)
 			if err != nil {
 				errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
@@ -90,7 +99,7 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			return m.parent, updateInstallationListCmd
-		case KeyTab:
+		case keys.KeyTab:
 			var cmd tea.Cmd
 			m.input, cmd = m.input.Update(msg)
 
@@ -149,7 +158,8 @@ func (m newInstallation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m newInstallation) View() string {
-	inputView := lipgloss.NewStyle().Padding(1, 2).Render(m.input.View())
+	style := lipgloss.NewStyle().Padding(1, 2)
+	inputView := style.Render(m.input.View())
 
 	mandatory := lipgloss.JoinVertical(lipgloss.Left, m.root.View(), m.title, inputView)
 
@@ -157,19 +167,18 @@ func (m newInstallation) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.error.View())
 	}
 
-	if len(m.dirList.Items()) > 0 {
-		m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory)-1)
-		return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.dirList.View())
+	if len(m.dirList.Items()) == 0 {
+		infoBox := lipgloss.NewStyle().
+			BorderStyle(lipgloss.ThickBorder()).
+			BorderForeground(lipgloss.Color("39")).
+			Padding(0, 1).
+			Margin(0, 0, 0, 2).
+			Render("Enter the path to the satisfactory installation")
+		mandatory = lipgloss.JoinVertical(lipgloss.Left, mandatory, infoBox)
 	}
 
-	infoBox := lipgloss.NewStyle().
-		BorderStyle(lipgloss.ThickBorder()).
-		BorderForeground(lipgloss.Color("39")).
-		Padding(0, 1).
-		Margin(0, 0, 0, 2).
-		Render("Enter the path to the satisfactory installation")
-
-	return lipgloss.JoinVertical(lipgloss.Left, mandatory, infoBox)
+	m.dirList.SetSize(m.dirList.Width(), m.root.Size().Height-lipgloss.Height(mandatory)-1)
+	return lipgloss.JoinVertical(lipgloss.Left, mandatory, m.dirList.View())
 }
 
 // I know this is awful, but beats re-implementing the entire list model
@@ -193,7 +202,7 @@ func getDirItems(inputValue string) []list.Item {
 		if filter != "" {
 			dirNames := make([]string, 0)
 			for _, entry := range dir {
-				if entry.IsDir() {
+				if entry.IsDir() || entry.Type() == fs.ModeSymlink {
 					dirNames = append(dirNames, entry.Name())
 				}
 			}
@@ -213,7 +222,7 @@ func getDirItems(inputValue string) []list.Item {
 			globalMatches = matches
 		} else {
 			for _, entry := range dir {
-				if entry.IsDir() {
+				if entry.IsDir() || entry.Type() == fs.ModeSymlink {
 					newItems = append(newItems, utils.SimpleItemExtra[newInstallation, string]{
 						SimpleItem: utils.SimpleItem[newInstallation]{
 							ItemTitle: entry.Name(),

@@ -66,11 +66,11 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 
 func (g *GlobalContext) Save() error {
 	if err := g.Installations.Save(); err != nil {
-		return err
+		return errors.Wrap(err, "failed to save installations")
 	}
 
 	if err := g.Profiles.Save(); err != nil {
-		return err
+		return errors.Wrap(err, "failed to save profiles")
 	}
 
 	return nil

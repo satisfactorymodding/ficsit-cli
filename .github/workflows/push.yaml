@@ -10,7 +10,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
@@ -47,6 +47,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
+          version: v1.54
           skip-pkg-cache: true
           skip-build-cache: true
 
@@ -61,7 +62,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2

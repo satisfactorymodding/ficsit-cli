@@ -32,7 +32,7 @@ func (e ErrorComponent) Init() tea.Cmd {
 	return nil
 }
 
-func (e ErrorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (e ErrorComponent) Update(_ tea.Msg) (tea.Model, tea.Cmd) {
 	return e, nil
 }
 
