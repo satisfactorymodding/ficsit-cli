@@ -102,6 +102,13 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			},
 		},
 		utils.SimpleItem[mainMenu]{
+			ItemTitle: "Update Mods",
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
+				newModel := mods.NewUpdateMods(root, currentModel)
+				return newModel, newModel.Init()
+			},
+		},
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Apply Changes",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {

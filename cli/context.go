@@ -64,6 +64,29 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 	return globalContext, nil
 }
 
+// Wipe will remove any trace of ficsit anywhere
+func (g *GlobalContext) Wipe() error {
+	// Wipe all installations
+	for _, installation := range g.Installations.Installations {
+		if err := installation.Wipe(); err != nil {
+			return errors.Wrap(err, "failed wiping installation")
+		}
+
+		if err := g.Installations.DeleteInstallation(installation.Path); err != nil {
+			return errors.Wrap(err, "failed deleting installation")
+		}
+	}
+
+	// Wipe all profiles
+	for _, profile := range g.Profiles.Profiles {
+		if err := g.Profiles.DeleteProfile(profile.Name); err != nil {
+			return errors.Wrap(err, "failed deleting profile")
+		}
+	}
+
+	return g.Save()
+}
+
 func (g *GlobalContext) Save() error {
 	if err := g.Installations.Save(); err != nil {
 		return errors.Wrap(err, "failed to save installations")
