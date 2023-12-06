@@ -417,6 +417,8 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		}
 	}
 
+	log.Info().Int("concurrency", viper.GetInt("concurrent-downloads")).Str("path", i.Path).Msg("starting installation")
+
 	errg := errgroup.Group{}
 	channelUsers := sync.WaitGroup{}
 	downloadSemaphore := make(chan int, viper.GetInt("concurrent-downloads"))

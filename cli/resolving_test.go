@@ -7,7 +7,13 @@ import (
 
 	"github.com/MarvinJWendt/testza"
 	"github.com/rs/zerolog/log"
+
+	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
+
+func init() {
+	cfg.SetDefaults()
+}
 
 func profilesGetResolver() DependencyResolver {
 	ctx, err := InitCLI(false)
