@@ -139,6 +139,7 @@ func init() {
 	RootCmd.PersistentFlags().String("api-key", "", "API key to use when sending requests")
 
 	RootCmd.PersistentFlags().Bool("offline", false, "Whether to only use local data")
+	RootCmd.PersistentFlags().Int("concurrent-downloads", 5, "Maximum number of concurrent downloads")
 
 	_ = viper.BindPFlag("log", RootCmd.PersistentFlags().Lookup("log"))
 	_ = viper.BindPFlag("log-file", RootCmd.PersistentFlags().Lookup("log-file"))
@@ -157,4 +158,5 @@ func init() {
 	_ = viper.BindPFlag("api-key", RootCmd.PersistentFlags().Lookup("api-key"))
 
 	_ = viper.BindPFlag("offline", RootCmd.PersistentFlags().Lookup("offline"))
+	_ = viper.BindPFlag("concurrent-downloads", RootCmd.PersistentFlags().Lookup("concurrent-downloads"))
 }

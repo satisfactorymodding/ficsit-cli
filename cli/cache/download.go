@@ -13,34 +13,11 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
-type Progresser struct {
-	io.Reader
-	updates chan utils.GenericUpdate
-	total   int64
-	running int64
-}
-
-func (pt *Progresser) Read(p []byte) (int, error) {
-	n, err := pt.Reader.Read(p)
-	pt.running += int64(n)
-
-	if err == nil {
-		if pt.updates != nil {
-			select {
-			case pt.updates <- utils.GenericUpdate{Progress: float64(pt.running) / float64(pt.total)}:
-			default:
-			}
-		}
+func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (io.ReaderAt, int64, error) {
+	if updates != nil {
+		defer close(updates)
 	}
 
-	if err == io.EOF {
-		return n, io.EOF
-	}
-
-	return n, errors.Wrap(err, "failed to read")
-}
-
-func DownloadOrCache(cacheKey string, hash string, url string, updates chan utils.GenericUpdate) (io.ReaderAt, int64, error) {
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
 		if !os.IsExist(err) {
@@ -82,6 +59,20 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan util
 		return nil, 0, errors.Wrap(err, "failed to stat file: "+location)
 	}
 
+	if updates != nil {
+		headResp, err := http.Head(url)
+		if err != nil {
+			return nil, 0, errors.Wrap(err, "failed to head: "+url)
+		}
+		defer headResp.Body.Close()
+		updates <- utils.GenericProgress{Total: headResp.ContentLength}
+	}
+
+	if downloadSemaphore != nil {
+		downloadSemaphore <- 1
+		defer func() { <-downloadSemaphore }()
+	}
+
 	out, err := os.Create(location)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "failed creating file at: "+location)
@@ -98,10 +89,10 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan util
 		return nil, 0, fmt.Errorf("bad status: %s on url: %s", resp.Status, url)
 	}
 
-	progresser := &Progresser{
+	progresser := &utils.Progresser{
 		Reader:  resp.Body,
-		total:   resp.ContentLength,
-		updates: updates,
+		Total:   resp.ContentLength,
+		Updates: updates,
 	}
 
 	_, err = io.Copy(out, progresser)
@@ -116,7 +107,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan util
 
 	if updates != nil {
 		select {
-		case updates <- utils.GenericUpdate{Progress: 1}:
+		case updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}:
 		default:
 		}
 	}

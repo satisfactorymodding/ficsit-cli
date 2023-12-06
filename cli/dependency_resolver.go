@@ -9,6 +9,7 @@ import (
 	"github.com/mircearoata/pubgrub-go/pubgrub/helpers"
 	"github.com/mircearoata/pubgrub-go/pubgrub/semver"
 	"github.com/pkg/errors"
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
@@ -35,7 +36,7 @@ type ficsitAPISource struct {
 	provider       provider.Provider
 	lockfile       *LockFile
 	toInstall      map[string]semver.Constraint
-	modVersionInfo map[string]ficsit.ModVersionsWithDependenciesResponse
+	modVersionInfo *xsync.MapOf[string, ficsit.ModVersionsWithDependenciesResponse]
 	gameVersion    semver.Version
 	smlVersions    []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
 }
@@ -74,7 +75,7 @@ func (f *ficsitAPISource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersi
 	if response.Mod.Id == "" {
 		return nil, errors.Errorf("mod %s not found", pkg)
 	}
-	f.modVersionInfo[pkg] = *response
+	f.modVersionInfo.Store(pkg, *response)
 	versions := make([]pubgrub.PackageVersion, len(response.Mod.Versions))
 	for i, modVersion := range response.Mod.Versions {
 		v, err := semver.NewVersion(modVersion.Version)
@@ -145,7 +146,7 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		gameVersion:    gameVersionSemver,
 		lockfile:       lockFile,
 		toInstall:      toInstall,
-		modVersionInfo: make(map[string]ficsit.ModVersionsWithDependenciesResponse),
+		modVersionInfo: xsync.NewMapOf[string, ficsit.ModVersionsWithDependenciesResponse](),
 	}
 
 	result, err := pubgrub.Solve(helpers.NewCachingSource(ficsitSource), rootPkg)
@@ -170,7 +171,8 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 			}
 			continue
 		}
-		versions := ficsitSource.modVersionInfo[k].Mod.Versions
+		value, _ := ficsitSource.modVersionInfo.Load(k)
+		versions := value.Mod.Versions
 		for _, ver := range versions {
 			if ver.Version == v.RawString() {
 				outputLock[k] = LockedMod{

@@ -35,11 +35,11 @@ func TestAddInstallation(t *testing.T) {
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
 
-		err = installation.Install(ctx, nil)
+		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
 
 		installation.Vanilla = true
-		err = installation.Install(ctx, nil)
+		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
 	}
 }

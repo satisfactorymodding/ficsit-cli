@@ -6,7 +6,14 @@ import (
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
+	"github.com/rs/zerolog/log"
+
+	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
+
+func init() {
+	cfg.SetDefaults()
+}
 
 func profilesGetResolver() DependencyResolver {
 	ctx, err := InitCLI(false)
@@ -15,6 +22,22 @@ func profilesGetResolver() DependencyResolver {
 	}
 
 	return NewDependencyResolver(ctx.Provider)
+}
+
+func installWatcher() chan<- InstallUpdate {
+	c := make(chan InstallUpdate)
+	go func() {
+		for i := range c {
+			if i.Progress.Total == i.Progress.Completed {
+				if i.Type != InstallUpdateTypeOverall {
+					log.Info().Str("mod_reference", i.Item.Mod).Str("version", i.Item.Version).Str("type", string(i.Type)).Msg("progress completed")
+				} else {
+					log.Info().Msg("overall completed")
+				}
+			}
+		}
+	}()
+	return c
 }
 
 func TestProfileResolution(t *testing.T) {
@@ -108,7 +131,7 @@ func TestUpdateMods(t *testing.T) {
 		err = installation.WriteLockFile(ctx, oldLockfile)
 		testza.AssertNoError(t, err)
 
-		err = installation.Install(ctx, nil)
+		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
 
 		lockFile, err := installation.LockFile(ctx)
@@ -126,7 +149,7 @@ func TestUpdateMods(t *testing.T) {
 		testza.AssertEqual(t, 2, len(*lockFile))
 		testza.AssertEqual(t, "1.6.6", (*lockFile)["AreaActions"].Version)
 
-		err = installation.Install(ctx, nil)
+		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
 	}
 }

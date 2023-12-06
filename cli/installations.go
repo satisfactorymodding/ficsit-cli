@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
@@ -351,14 +352,27 @@ func (i *Installation) ResolveProfile(ctx *GlobalContext) (LockFile, error) {
 	return lockfile, nil
 }
 
+type InstallUpdateType string
+
+var (
+	InstallUpdateTypeOverall     InstallUpdateType = "overall"
+	InstallUpdateTypeModDownload InstallUpdateType = "download"
+	InstallUpdateTypeModExtract  InstallUpdateType = "extract"
+	InstallUpdateTypeModComplete InstallUpdateType = "complete"
+)
+
 type InstallUpdate struct {
-	ModName          string
-	OverallProgress  float64
-	DownloadProgress float64
-	ExtractProgress  float64
+	Type     InstallUpdateType
+	Item     InstallUpdateItem
+	Progress utils.GenericProgress
 }
 
-func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) error {
+type InstallUpdateItem struct {
+	Mod     string
+	Version string
+}
+
+func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate) error {
 	if err := i.Validate(ctx); err != nil {
 		return errors.Wrap(err, "failed to validate installation")
 	}
@@ -403,78 +417,65 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 		}
 	}
 
-	downloading := true
-	completed := 0
+	log.Info().Int("concurrency", viper.GetInt("concurrent-downloads")).Str("path", i.Path).Msg("starting installation")
 
-	var genericUpdates chan utils.GenericUpdate
+	errg := errgroup.Group{}
+	channelUsers := sync.WaitGroup{}
+	downloadSemaphore := make(chan int, viper.GetInt("concurrent-downloads"))
+	defer close(downloadSemaphore)
+
+	var modComplete chan int
 	if updates != nil {
-		var wg sync.WaitGroup
-		wg.Add(1)
-		defer wg.Wait()
-
-		genericUpdates = make(chan utils.GenericUpdate)
-		defer close(genericUpdates)
-
+		channelUsers.Add(1)
+		modComplete = make(chan int)
+		defer close(modComplete)
 		go func() {
-			defer wg.Done()
-
-			update := InstallUpdate{
-				OverallProgress:  float64(completed) / float64(len(lockfile)),
-				DownloadProgress: 0,
-				ExtractProgress:  0,
-			}
-
-			select {
-			case updates <- update:
-			default:
-			}
-
-			for up := range genericUpdates {
-				if downloading {
-					update.DownloadProgress = up.Progress
-				} else {
-					update.DownloadProgress = 1
-					update.ExtractProgress = up.Progress
+			defer channelUsers.Done()
+			completed := 0
+			for range modComplete {
+				completed++
+				overallUpdate := InstallUpdate{
+					Type: InstallUpdateTypeOverall,
+					Progress: utils.GenericProgress{
+						Completed: int64(completed),
+						Total:     int64(len(lockfile)),
+					},
 				}
-
-				if up.ModReference != nil {
-					update.ModName = *up.ModReference
-				}
-
-				update.OverallProgress = float64(completed) / float64(len(lockfile))
-
-				select {
-				case updates <- update:
-				default:
-				}
+				updates <- overallUpdate
 			}
 		}()
 	}
 
 	for modReference, version := range lockfile {
-		// Only install if a link is provided, otherwise assume mod is already installed
-		if version.Link != "" {
-			downloading = true
-
-			if genericUpdates != nil {
-				genericUpdates <- utils.GenericUpdate{ModReference: &modReference}
+		channelUsers.Add(1)
+		modReference := modReference
+		version := version
+		errg.Go(func() error {
+			defer channelUsers.Done()
+			// Only install if a link is provided, otherwise assume mod is already installed
+			if version.Link != "" {
+				err := downloadAndExtractMod(modReference, version.Version, version.Link, version.Hash, modsDirectory, updates, downloadSemaphore, d)
+				if err != nil {
+					return errors.Wrapf(err, "failed to install %s@%s", modReference, version.Version)
+				}
 			}
 
-			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("downloading mod")
-			reader, size, err := cache.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link, genericUpdates)
-			if err != nil {
-				return errors.Wrap(err, "failed to download "+modReference+" from: "+version.Link)
+			if modComplete != nil {
+				modComplete <- 1
 			}
+			return nil
+		})
+	}
 
-			downloading = false
+	if updates != nil {
+		go func() {
+			channelUsers.Wait()
+			close(updates)
+		}()
+	}
 
-			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("extracting mod")
-			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), version.Hash, genericUpdates, d); err != nil {
-				return errors.Wrap(err, "could not extract "+modReference)
-			}
-		}
-
-		completed++
+	if err := errg.Wait(); err != nil {
+		return errors.Wrap(err, "failed to install mods")
 	}
 
 	return nil
@@ -514,6 +515,84 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 	if err := i.WriteLockFile(ctx, newLockFile); err != nil {
 		return errors.Wrap(err, "failed to write lock file")
 	}
+
+	return nil
+}
+
+func downloadAndExtractMod(modReference string, version string, link string, hash string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) error {
+	var downloadUpdates chan utils.GenericProgress
+
+	if updates != nil {
+		// Forward the inner updates as InstallUpdates
+		downloadUpdates = make(chan utils.GenericProgress)
+
+		go func() {
+			for up := range downloadUpdates {
+				updates <- InstallUpdate{
+					Item: InstallUpdateItem{
+						Mod:     modReference,
+						Version: version,
+					},
+					Type:     InstallUpdateTypeModDownload,
+					Progress: up,
+				}
+			}
+		}()
+	}
+
+	log.Info().Str("mod_reference", modReference).Str("version", version).Str("link", link).Msg("downloading mod")
+	reader, size, err := cache.DownloadOrCache(modReference+"_"+version+".zip", hash, link, downloadUpdates, downloadSemaphore)
+	if err != nil {
+		return errors.Wrap(err, "failed to download "+modReference+" from: "+link)
+	}
+
+	var extractUpdates chan utils.GenericProgress
+
+	var wg sync.WaitGroup
+	if updates != nil {
+		// Forward the inner updates as InstallUpdates
+		extractUpdates = make(chan utils.GenericProgress)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for up := range extractUpdates {
+				select {
+				case updates <- InstallUpdate{
+					Item: InstallUpdateItem{
+						Mod:     modReference,
+						Version: version,
+					},
+					Type:     InstallUpdateTypeModExtract,
+					Progress: up,
+				}:
+				default:
+				}
+			}
+		}()
+	}
+
+	log.Info().Str("mod_reference", modReference).Str("version", version).Str("link", link).Msg("extracting mod")
+	if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), hash, extractUpdates, d); err != nil {
+		return errors.Wrap(err, "could not extract "+modReference)
+	}
+
+	if updates != nil {
+		select {
+		case updates <- InstallUpdate{
+			Type: InstallUpdateTypeModComplete,
+			Item: InstallUpdateItem{
+				Mod:     modReference,
+				Version: version,
+			},
+		}:
+		default:
+		}
+
+		close(extractUpdates)
+	}
+
+	wg.Wait()
 
 	return nil
 }
