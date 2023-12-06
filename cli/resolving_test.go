@@ -13,7 +13,7 @@ func profilesGetResolver() DependencyResolver {
 		panic(err)
 	}
 
-	return NewDependencyResolver(ctx.APIClient)
+	return NewDependencyResolver(ctx.Provider)
 }
 
 func TestProfileResolution(t *testing.T) {

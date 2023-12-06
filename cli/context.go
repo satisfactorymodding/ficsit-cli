@@ -3,7 +3,10 @@ package cli
 import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
+	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
@@ -11,6 +14,7 @@ type GlobalContext struct {
 	Installations *Installations
 	Profiles      *Profiles
 	APIClient     graphql.Client
+	Provider      *provider.MixedProvider
 }
 
 var globalContext *GlobalContext
@@ -18,6 +22,14 @@ var globalContext *GlobalContext
 func InitCLI(apiOnly bool) (*GlobalContext, error) {
 	if globalContext != nil {
 		return globalContext, nil
+	}
+
+	apiClient := ficsit.InitAPI()
+
+	mixedProvider := provider.InitMixedProvider(apiClient)
+
+	if viper.GetBool("offline") {
+		mixedProvider.Offline = true
 	}
 
 	if !apiOnly {
@@ -31,14 +43,21 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 			return nil, errors.Wrap(err, "failed to initialize installations")
 		}
 
+		_, err = cache.LoadCache()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to load cache")
+		}
+
 		globalContext = &GlobalContext{
 			Installations: installations,
 			Profiles:      profiles,
-			APIClient:     ficsit.InitAPI(),
+			APIClient:     apiClient,
+			Provider:      mixedProvider,
 		}
 	} else {
 		globalContext = &GlobalContext{
-			APIClient: ficsit.InitAPI(),
+			APIClient: apiClient,
+			Provider:  mixedProvider,
 		}
 	}
 

@@ -6,6 +6,7 @@ require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.6
 	github.com/Khan/genqlient v0.5.0
 	github.com/MarvinJWendt/testza v0.5.2
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/charmbracelet/bubbles v0.14.0
 	github.com/charmbracelet/bubbletea v0.22.1

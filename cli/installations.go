@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
@@ -317,7 +318,7 @@ func (i *Installation) ResolveProfile(ctx *GlobalContext) (LockFile, error) {
 		return nil, err
 	}
 
-	resolver := NewDependencyResolver(ctx.APIClient)
+	resolver := NewDependencyResolver(ctx.Provider)
 
 	gameVersion, err := i.GetGameVersion(ctx)
 	if err != nil {
@@ -446,7 +447,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 			}
 
 			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("downloading mod")
-			reader, size, err := utils.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link, genericUpdates)
+			reader, size, err := cache.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link, genericUpdates)
 			if err != nil {
 				return errors.Wrap(err, "failed to download "+modReference+" from: "+version.Link)
 			}

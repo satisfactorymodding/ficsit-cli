@@ -5,24 +5,24 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/Khan/genqlient/graphql"
 	"github.com/mircearoata/pubgrub-go/pubgrub"
 	"github.com/mircearoata/pubgrub-go/pubgrub/helpers"
 	"github.com/mircearoata/pubgrub-go/pubgrub/semver"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
 const smlDownloadTemplate = `https://github.com/satisfactorymodding/SatisfactoryModLoader/releases/download/v%s/SML.zip`
 
 type DependencyResolver struct {
-	apiClient graphql.Client
+	provider provider.Provider
 }
 
-func NewDependencyResolver(apiClient graphql.Client) DependencyResolver {
-	return DependencyResolver{apiClient: apiClient}
+func NewDependencyResolver(provider provider.Provider) DependencyResolver {
+	return DependencyResolver{provider}
 }
 
 var (
@@ -32,7 +32,7 @@ var (
 )
 
 type ficsitAPISource struct {
-	apiClient      graphql.Client
+	provider       provider.Provider
 	lockfile       *LockFile
 	toInstall      map[string]semver.Constraint
 	modVersionInfo map[string]ficsit.ModVersionsWithDependenciesResponse
@@ -67,7 +67,7 @@ func (f *ficsitAPISource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersi
 		}
 		return versions, nil
 	}
-	response, err := ficsit.ModVersionsWithDependencies(context.TODO(), f.apiClient, pkg)
+	response, err := f.provider.ModVersionsWithDependencies(context.TODO(), pkg)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch mod %s", pkg)
 	}
@@ -120,7 +120,7 @@ func (f *ficsitAPISource) PickVersion(pkg string, versions []semver.Version) sem
 }
 
 func (d DependencyResolver) ResolveModDependencies(constraints map[string]string, lockFile *LockFile, gameVersion int) (LockFile, error) {
-	smlVersionsDB, err := ficsit.SMLVersions(context.TODO(), d.apiClient)
+	smlVersionsDB, err := d.provider.SMLVersions(context.TODO())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed fetching SML versions")
 	}
@@ -140,7 +140,7 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 	}
 
 	ficsitSource := &ficsitAPISource{
-		apiClient:      d.apiClient,
+		provider:       d.provider,
 		smlVersions:    smlVersionsDB.SmlVersions.Sml_versions,
 		gameVersion:    gameVersionSemver,
 		lockfile:       lockFile,
@@ -153,7 +153,7 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		finalError := err
 		var solverErr pubgrub.SolvingError
 		if errors.As(err, &solverErr) {
-			finalError = DependencyResolverError{SolvingError: solverErr, apiClient: d.apiClient, smlVersions: smlVersionsDB.SmlVersions.Sml_versions, gameVersion: gameVersion}
+			finalError = DependencyResolverError{SolvingError: solverErr, provider: d.provider, smlVersions: smlVersionsDB.SmlVersions.Sml_versions, gameVersion: gameVersion}
 		}
 		return nil, errors.Wrap(finalError, "failed to solve dependencies")
 	}

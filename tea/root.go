@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
+	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes"
 )
@@ -25,7 +26,7 @@ func newModel(global *cli.GlobalContext) *rootModel {
 			Width:  20,
 			Height: 14,
 		},
-		dependencyResolver: cli.NewDependencyResolver(global.APIClient),
+		dependencyResolver: cli.NewDependencyResolver(global.Provider),
 	}
 
 	m.headerComponent = components.NewHeaderComponent(m)
@@ -61,6 +62,10 @@ func (m *rootModel) SetCurrentInstallation(installation *cli.Installation) error
 
 func (m *rootModel) GetAPIClient() graphql.Client {
 	return m.global.APIClient
+}
+
+func (m *rootModel) GetProvider() *provider.MixedProvider {
+	return m.global.Provider
 }
 
 func (m *rootModel) Size() tea.WindowSizeMsg {
