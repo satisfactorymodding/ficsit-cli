@@ -104,7 +104,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Update Mods",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				newModel := NewUpdateMods(root, currentModel)
+				newModel := mods.NewUpdateMods(root, currentModel)
 				return newModel, newModel.Init()
 			},
 		},

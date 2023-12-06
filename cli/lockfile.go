@@ -16,3 +16,11 @@ func (l LockFile) Clone() LockFile {
 	}
 	return lockFile
 }
+
+func (l *LockFile) Remove(modID ...string) *LockFile {
+	out := *l
+	for _, s := range modID {
+		delete(out, s)
+	}
+	return &out
+}

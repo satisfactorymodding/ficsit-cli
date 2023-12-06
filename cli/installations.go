@@ -476,7 +476,7 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 		return errors.Wrap(err, "failed to read lock file")
 	}
 
-	resolver := NewDependencyResolver(ctx.APIClient)
+	resolver := NewDependencyResolver(ctx.Provider)
 
 	gameVersion, err := i.GetGameVersion(ctx)
 	if err != nil {
@@ -489,7 +489,7 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 	}
 
 	for _, modReference := range mods {
-		delete(lockFile, modReference)
+		lockFile = lockFile.Remove(modReference)
 	}
 
 	newLockFile, err := profile.Resolve(resolver, lockFile, gameVersion)

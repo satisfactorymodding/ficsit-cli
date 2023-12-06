@@ -1,4 +1,4 @@
-package scenes
+package mods
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -110,7 +111,7 @@ func (m updateModsList) LoadModData() {
 		return
 	}
 
-	resolver := cli.NewDependencyResolver(m.root.GetAPIClient())
+	resolver := cli.NewDependencyResolver(m.root.GetProvider())
 
 	updatedLockfile, err := currentProfile.Resolve(resolver, nil, gameVersion)
 	if err != nil {
@@ -119,7 +120,7 @@ func (m updateModsList) LoadModData() {
 
 	items := make([]list.Item, 0)
 	i := 0
-	for reference, currentLockedMod := range currentLockfile {
+	for reference, currentLockedMod := range *currentLockfile {
 		r := reference
 		updatedLockedMod, ok := updatedLockfile[reference]
 		if !ok {
@@ -239,7 +240,7 @@ func (m updateModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {
@@ -257,7 +258,7 @@ func (m updateModsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.processActivation(i2.SimpleItem, msg)
 			}
 			return m, nil
-		case KeyEnter:
+		case keys.KeyEnter:
 			if len(m.selectedMods) > 0 {
 				err := m.root.GetCurrentInstallation().UpdateMods(m.root.GetGlobal(), m.selectedMods)
 				if err != nil {
