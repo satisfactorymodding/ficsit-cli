@@ -2,6 +2,7 @@ package cli
 
 import (
 	"math"
+	"os"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
@@ -68,4 +69,64 @@ func TestResolutionNonExistentMod(t *testing.T) {
 	}).Resolve(resolver, nil, math.MaxInt)
 
 	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: failed to make decision: failed to get package versions: mod ThisModDoesNotExist$$$ not found", err.Error())
+}
+
+func TestUpdateMods(t *testing.T) {
+	ctx, err := InitCLI(false)
+	testza.AssertNoError(t, err)
+
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
+
+	resolver := NewDependencyResolver(ctx.Provider)
+
+	oldLockfile, err := (&Profile{
+		Name: DefaultProfileName,
+		Mods: map[string]ProfileMod{
+			"AreaActions": {
+				Version: "1.6.5",
+				Enabled: true,
+			},
+		},
+	}).Resolve(resolver, nil, math.MaxInt)
+
+	testza.AssertNoError(t, err)
+	testza.AssertNotNil(t, oldLockfile)
+	testza.AssertLen(t, oldLockfile, 2)
+
+	profileName := "UpdateTest"
+	profile, err := ctx.Profiles.AddProfile(profileName)
+	testza.AssertNoError(t, err)
+	testza.AssertNoError(t, profile.AddMod("AreaActions", "<=1.6.6"))
+
+	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
+	if serverLocation != "" {
+		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
+		testza.AssertNoError(t, err)
+		testza.AssertNotNil(t, installation)
+
+		err = installation.WriteLockFile(ctx, oldLockfile)
+		testza.AssertNoError(t, err)
+
+		err = installation.Install(ctx, nil)
+		testza.AssertNoError(t, err)
+
+		lockFile, err := installation.LockFile(ctx)
+		testza.AssertNoError(t, err)
+
+		testza.AssertEqual(t, 2, len(*lockFile))
+		testza.AssertEqual(t, "1.6.5", (*lockFile)["AreaActions"].Version)
+
+		err = installation.UpdateMods(ctx, []string{"AreaActions"})
+		testza.AssertNoError(t, err)
+
+		lockFile, err = installation.LockFile(ctx)
+		testza.AssertNoError(t, err)
+
+		testza.AssertEqual(t, 2, len(*lockFile))
+		testza.AssertEqual(t, "1.6.6", (*lockFile)["AreaActions"].Version)
+
+		err = installation.Install(ctx, nil)
+		testza.AssertNoError(t, err)
+	}
 }

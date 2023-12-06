@@ -312,6 +312,20 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) erro
 	return nil
 }
 
+func (i *Installation) Wipe() error {
+	d, err := i.GetDisk()
+	if err != nil {
+		return err
+	}
+
+	modsDirectory := filepath.Join(i.BasePath(), "FactoryGame", "Mods")
+	if err := d.Remove(modsDirectory); err != nil {
+		return errors.Wrap(err, "failed removing Mods directory")
+	}
+
+	return nil
+}
+
 func (i *Installation) ResolveProfile(ctx *GlobalContext) (LockFile, error) {
 	lockFile, err := i.LockFile(ctx)
 	if err != nil {
