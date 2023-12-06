@@ -34,12 +34,6 @@ func installWatcher() chan<- InstallUpdate {
 				} else {
 					log.Info().Msg("overall completed")
 				}
-			} else {
-				if i.Type != InstallUpdateTypeOverall {
-					if int(i.Progress.Percentage()*100000)%10 == 0 {
-						log.Info().Str("mod_reference", i.Item.Mod).Str("version", i.Item.Version).Str("type", string(i.Type)).Float64("percent", i.Progress.Percentage()*100).Msg("progress")
-					}
-				}
 			}
 		}
 	}()
