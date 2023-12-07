@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download GQL schema
-        run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
+        run: "npx graphqurl https://api.ficsit.dev/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 
       - name: Go Generate
         run: go generate -tags tools -x ./...
@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download GQL schema
-        run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
+        run: "npx graphqurl https://api.ficsit.dev/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 
       - name: Go Generate
         run: go generate -tags tools -x ./...
@@ -82,7 +82,7 @@ jobs:
         run: tree /F
 
       - name: Download GQL schema
-        run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
+        run: "npx graphqurl https://api.ficsit.dev/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 
       - name: Go Generate
         run: go generate -tags tools -x ./...
