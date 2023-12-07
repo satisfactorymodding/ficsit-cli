@@ -36,6 +36,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 			if err != nil {
 				return nil, 0, errors.Wrap(err, "failed to open file: "+location)
 			}
+			defer f.Close()
 
 			existingHash, err = utils.SHA256Data(f)
 			if err != nil {
