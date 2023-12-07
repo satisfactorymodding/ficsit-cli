@@ -89,7 +89,7 @@ func (m *rootModel) GetGlobal() *cli.GlobalContext {
 }
 
 func RunTea(global *cli.GlobalContext) error {
-	if err := tea.NewProgram(scenes.NewMainMenu(newModel(global)), tea.WithAltScreen(), tea.WithMouseCellMotion()).Start(); err != nil {
+	if _, err := tea.NewProgram(scenes.NewMainMenu(newModel(global)), tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
 		return errors.Wrap(err, "internal tea error")
 	}
 	return nil

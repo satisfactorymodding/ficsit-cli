@@ -64,6 +64,26 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 	return globalContext, nil
 }
 
+// ReInit will initialize the context
+//
+// Used only by tests
+func (g *GlobalContext) ReInit() error {
+	profiles, err := InitProfiles()
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize profiles")
+	}
+
+	installations, err := InitInstallations()
+	if err != nil {
+		return errors.Wrap(err, "failed to initialize installations")
+	}
+
+	g.Installations = installations
+	g.Profiles = profiles
+
+	return g.Save()
+}
+
 // Wipe will remove any trace of ficsit anywhere
 func (g *GlobalContext) Wipe() error {
 	// Wipe all installations

@@ -24,4 +24,15 @@ var platforms = []Platform{
 		LockfilePath: filepath.Join("FactoryGame", "Mods"),
 		TargetName:   "Windows",
 	},
+	// Update 9 stuff below
+	{
+		VersionPath:  filepath.Join("Engine", "Binaries", "Linux", "FactoryServer-Linux-Shipping.version"),
+		LockfilePath: filepath.Join("FactoryGame", "Mods"),
+		TargetName:   "LinuxServer",
+	},
+	{
+		VersionPath:  filepath.Join("Engine", "Binaries", "Win64", "FactoryServer-Win64-Shipping.version"),
+		LockfilePath: filepath.Join("FactoryGame", "Mods"),
+		TargetName:   "WindowsServer",
+	},
 }

@@ -105,7 +105,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 }
 
 func (m modInfo) Init() tea.Cmd {
-	return tea.Batch(utils.Ticker(), spinner.Tick)
+	return tea.Batch(utils.Ticker(), m.spinner.Tick)
 }
 
 func (m modInfo) CalculateSizes(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {

@@ -23,6 +23,12 @@ func TestAddInstallation(t *testing.T) {
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
+
+	err = ctx.ReInit()
+	testza.AssertNoError(t, err)
+
 	ctx.Provider = MockProvider{}
 
 	profileName := "InstallationTest"
