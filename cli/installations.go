@@ -557,6 +557,8 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		return errors.Wrap(err, "failed to download "+modReference+" from: "+link)
 	}
 
+	defer reader.Close()
+
 	var extractUpdates chan utils.GenericProgress
 
 	var wg sync.WaitGroup

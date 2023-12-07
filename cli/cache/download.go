@@ -13,7 +13,7 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
-func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (io.ReaderAt, int64, error) {
+func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (*os.File, int64, error) {
 	if updates != nil {
 		defer close(updates)
 	}
