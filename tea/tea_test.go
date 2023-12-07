@@ -3,6 +3,7 @@ package tea
 import (
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,11 @@ func init() {
 }
 
 func TestTea(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Windows just sucks
+		return
+	}
+
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation == "" {
 		return
