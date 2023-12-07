@@ -68,7 +68,6 @@ func (m MockProvider) Mods(_ context.Context, f ficsit.ModFilter) (*ficsit.ModsR
 
 func (m MockProvider) GetMod(_ context.Context, _ string) (*ficsit.GetModResponse, error) {
 	// Currently used only by TUI
-	panic("HELLO")
 	return nil, nil
 }
 

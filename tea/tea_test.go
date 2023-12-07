@@ -1,17 +1,19 @@
 package tea
 
 import (
-	"github.com/MarvinJWendt/testza"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/exp/teatest"
-	"github.com/satisfactorymodding/ficsit-cli/cfg"
-	"github.com/satisfactorymodding/ficsit-cli/cli"
-	"github.com/satisfactorymodding/ficsit-cli/tea/scenes"
 	"io"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/MarvinJWendt/testza"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/exp/teatest"
+
+	"github.com/satisfactorymodding/ficsit-cli/cfg"
+	"github.com/satisfactorymodding/ficsit-cli/cli"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes"
 )
 
 func init() {
@@ -118,7 +120,7 @@ func TestTea(t *testing.T) {
 }
 
 // dump the current tea buffer to stderr
-func dump(tm *teatest.TestModel) {
+func dump(tm *teatest.TestModel) { // nolint
 	_, _ = io.Copy(os.Stderr, tm.Output())
 }
 
