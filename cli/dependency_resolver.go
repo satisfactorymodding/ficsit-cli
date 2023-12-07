@@ -17,10 +17,9 @@ import (
 )
 
 const (
-	smlDownloadTemplate = `https://github.com/satisfactorymodding/SatisfactoryModLoader/releases/download/v%s/SML.zip`
-	rootPkg             = "$$root$$"
-	smlPkg              = "SML"
-	factoryGamePkg      = "FactoryGame"
+	rootPkg        = "$$root$$"
+	smlPkg         = "SML"
+	factoryGamePkg = "FactoryGame"
 )
 
 type DependencyResolver struct {
