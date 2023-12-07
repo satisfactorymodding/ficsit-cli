@@ -10,6 +10,7 @@ import (
 	"github.com/MarvinJWendt/testza"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/teatest"
+	"github.com/pkg/errors"
 
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 	"github.com/satisfactorymodding/ficsit-cli/cli"
@@ -96,13 +97,27 @@ func TestTea(t *testing.T) {
 	eat(tm)
 	press(tm, tea.KeyEnter)
 
+	i := 0
+	buffer := ""
 	for {
 		s := read(tm)
+		buffer += "\n-------------------------\n" + s
 
 		if strings.Contains(s, "Done! Press Enter to return") {
-			println("FOUND")
+			break
+		}
+
+		if strings.Contains(s, "Cancelled! Press Enter to return") {
+			testza.AssertNoError(t, errors.New("failed installing"))
 			println(s)
 			break
+		}
+
+		i++
+		if i >= 60 {
+			testza.AssertNoError(t, errors.New("failed installing"))
+			println(s)
+			return
 		}
 
 		time.Sleep(time.Second)
