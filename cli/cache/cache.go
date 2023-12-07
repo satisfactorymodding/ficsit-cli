@@ -77,8 +77,10 @@ func addFileToCache(filename string) (*File, error) {
 		return nil, errors.Wrap(err, "failed to read cache file")
 	}
 
-	value, _ := loadedCache.Load(cacheFile.ModReference)
-	loadedCache.Store(cacheFile.ModReference, append(value, *cacheFile))
+	loadedCache.Compute(cacheFile.ModReference, func(oldValue []File, _ bool) ([]File, bool) {
+		return append(oldValue, *cacheFile), false
+	})
+
 	return cacheFile, nil
 }
 
