@@ -108,15 +108,15 @@ func TestTea(t *testing.T) {
 		}
 
 		if strings.Contains(s, "Cancelled! Press Enter to return") {
-			testza.AssertNoError(t, errors.New("failed installing"))
-			println(s)
+			testza.AssertNoError(t, errors.New("installation cancelled"))
+			println(buffer)
 			break
 		}
 
 		i++
 		if i >= 60 {
 			testza.AssertNoError(t, errors.New("failed installing"))
-			println(s)
+			println(buffer)
 			return
 		}
 
