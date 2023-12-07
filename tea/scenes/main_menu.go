@@ -76,7 +76,9 @@ func NewMainMenu(root components.RootModel) tea.Model {
 		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Toggle Vanilla",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
-				currentModel.root.GetCurrentInstallation().Vanilla = !currentModel.root.GetCurrentInstallation().Vanilla
+				if currentModel.root.GetCurrentInstallation() != nil {
+					currentModel.root.GetCurrentInstallation().Vanilla = !currentModel.root.GetCurrentInstallation().Vanilla
+				}
 				return currentModel, nil
 			},
 		},

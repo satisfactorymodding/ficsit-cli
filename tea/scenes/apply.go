@@ -119,15 +119,26 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch keypress := msg.String(); keypress {
 		case keys.KeyControlC:
 			return m, tea.Quit
+		case keys.KeyQ:
+			fallthrough
 		case keys.KeyEscape:
 			m.cancelled = true
-			m.cancelChannel <- true
-			return m, nil
-		case keys.KeyEnter:
-			if m.status.done {
+
+			if m.error != nil {
 				if m.parent != nil {
 					return m.parent, m.parent.Init()
 				}
+				return m, tea.Quit
+			}
+
+			m.cancelChannel <- true
+			return m, nil
+		case keys.KeyEnter:
+			if m.status.done || m.error != nil {
+				if m.parent != nil {
+					return m.parent, m.parent.Init()
+				}
+				return m, tea.Quit
 			}
 			return m, nil
 		}
@@ -191,13 +202,13 @@ func (m apply) View() string {
 		strs = append(strs, lipgloss.NewStyle().MarginBottom(1).Render(m.overall.ViewAs(m.status.overallProgress.Percentage())))
 	}
 
-	keys := make([]string, 0)
+	modReferences := make([]string, 0)
 	for k := range m.status.modProgresses {
-		keys = append(keys, k)
+		modReferences = append(modReferences, k)
 	}
-	sort.Strings(keys)
+	sort.Strings(modReferences)
 
-	for _, modReference := range keys {
+	for _, modReference := range modReferences {
 		p := m.status.modProgresses[modReference]
 		if p.complete {
 			strs = append(strs, lipgloss.NewStyle().Foreground(lipgloss.Color("22")).Render("✓ ")+modReference)

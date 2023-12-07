@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"time"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
@@ -11,13 +12,63 @@ var _ provider.Provider = (*MockProvider)(nil)
 
 type MockProvider struct{}
 
-func (m MockProvider) Mods(_ context.Context, _ ficsit.ModFilter) (*ficsit.ModsResponse, error) {
-	// Currently used only by TUI
-	return nil, nil
+func (m MockProvider) Mods(_ context.Context, f ficsit.ModFilter) (*ficsit.ModsResponse, error) {
+	if f.Offset > 0 {
+		return &ficsit.ModsResponse{
+			Mods: ficsit.ModsModsGetMods{
+				Count: 5,
+				Mods:  []ficsit.ModsModsGetModsModsMod{},
+			},
+		}, nil
+	}
+
+	return &ficsit.ModsResponse{
+		Mods: ficsit.ModsModsGetMods{
+			Count: 5,
+			Mods: []ficsit.ModsModsGetModsModsMod{
+				{
+					Id:                "9LguyCdDUrpT9N",
+					Name:              "Ficsit Remote Monitoring",
+					Mod_reference:     "FicsitRemoteMonitoring",
+					Last_version_date: time.Now(),
+					Created_at:        time.Now(),
+				},
+				{
+					Id:                "DGiLzB3ZErWu2V",
+					Name:              "Refined Power",
+					Mod_reference:     "RefinedPower",
+					Last_version_date: time.Now(),
+					Created_at:        time.Now(),
+				},
+				{
+					Id:                "B24emzbs6xVZQr",
+					Name:              "RefinedRDLib",
+					Mod_reference:     "RefinedRDLib",
+					Last_version_date: time.Now(),
+					Created_at:        time.Now(),
+				},
+				{
+					Id:                "6vQ6ckVYFiidDh",
+					Name:              "Area Actions",
+					Mod_reference:     "AreaActions",
+					Last_version_date: time.Now(),
+					Created_at:        time.Now(),
+				},
+				{
+					Id:                "As2uJmQLLxjXLG",
+					Name:              "ModularUI",
+					Mod_reference:     "ModularUI",
+					Last_version_date: time.Now(),
+					Created_at:        time.Now(),
+				},
+			},
+		},
+	}, nil
 }
 
 func (m MockProvider) GetMod(_ context.Context, _ string) (*ficsit.GetModResponse, error) {
 	// Currently used only by TUI
+	panic("HELLO")
 	return nil, nil
 }
 
