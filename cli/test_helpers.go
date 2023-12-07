@@ -2,14 +2,14 @@ package cli
 
 import (
 	"context"
+
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
 var _ provider.Provider = (*MockProvider)(nil)
 
-type MockProvider struct {
-}
+type MockProvider struct{}
 
 func (m MockProvider) Mods(_ context.Context, _ ficsit.ModFilter) (*ficsit.ModsResponse, error) {
 	// Currently used only by TUI
@@ -23,6 +23,7 @@ func (m MockProvider) GetMod(_ context.Context, _ string) (*ficsit.GetModRespons
 
 func (m MockProvider) ModVersions(_ context.Context, modReference string, _ ficsit.VersionFilter) (*ficsit.ModVersionsResponse, error) {
 	switch modReference {
+	//nolint
 	case "RefinedPower":
 		return &ficsit.ModVersionsResponse{Mod: ficsit.ModVersionsMod{
 			Id: "DGiLzB3ZErWu2V",
@@ -32,6 +33,7 @@ func (m MockProvider) ModVersions(_ context.Context, modReference string, _ fics
 				{Id: "4XTjMpqFngbu9r", Version: "3.2.10"},
 			},
 		}}, nil
+	//nolint
 	case "RefinedRDLib":
 		return &ficsit.ModVersionsResponse{Mod: ficsit.ModVersionsMod{
 			Id: "B24emzbs6xVZQr",

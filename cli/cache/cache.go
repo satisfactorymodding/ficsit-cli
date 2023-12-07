@@ -4,13 +4,13 @@ import (
 	"archive/zip"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/puzpuzpuz/xsync/v3"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )

@@ -3,13 +3,14 @@ package cli
 import (
 	"context"
 	"fmt"
+	"slices"
+
 	"github.com/mircearoata/pubgrub-go/pubgrub"
 	"github.com/mircearoata/pubgrub-go/pubgrub/helpers"
 	"github.com/mircearoata/pubgrub-go/pubgrub/semver"
 	"github.com/pkg/errors"
 	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/spf13/viper"
-	"slices"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
@@ -29,8 +30,6 @@ type DependencyResolver struct {
 func NewDependencyResolver(provider provider.Provider) DependencyResolver {
 	return DependencyResolver{provider}
 }
-
-var ()
 
 type ficsitAPISource struct {
 	provider       provider.Provider
@@ -106,7 +105,7 @@ func (f *ficsitAPISource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersi
 
 func (f *ficsitAPISource) PickVersion(pkg string, versions []semver.Version) semver.Version {
 	if f.lockfile != nil {
-		if existing, ok := (*f.lockfile).Mods[pkg]; ok {
+		if existing, ok := f.lockfile.Mods[pkg]; ok {
 			v, err := semver.NewVersion(existing.Version)
 			if err == nil {
 				if slices.ContainsFunc(versions, func(version semver.Version) bool {

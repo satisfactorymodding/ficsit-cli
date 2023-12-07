@@ -2,13 +2,13 @@ package cache
 
 import (
 	"encoding/json"
-	"github.com/puzpuzpuz/xsync/v3"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
@@ -95,7 +95,12 @@ func loadHashCache() {
 
 func saveHashCache() {
 	cacheFile := filepath.Join(viper.GetString("cache-dir"), "downloadCache", integrityFilename)
-	hashCacheJSON, err := json.Marshal(hashCache)
+	plainCache := make(map[string]hashInfo, hashCache.Size())
+	hashCache.Range(func(k string, v hashInfo) bool {
+		plainCache[k] = v
+		return true
+	})
+	hashCacheJSON, err := json.Marshal(plainCache)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to marshal hash cache")
 		return
