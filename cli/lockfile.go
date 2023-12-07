@@ -28,15 +28,15 @@ type LockedModTarget struct {
 	Link string `json:"link"`
 }
 
-func MakeLockfile() LockFile {
-	return LockFile{
+func MakeLockfile() *LockFile {
+	return &LockFile{
 		Mods:    make(map[string]LockedMod),
 		Version: CurrentLockfileVersion,
 	}
 }
 
-func (l LockFile) Clone() LockFile {
-	lockFile := LockFile{
+func (l *LockFile) Clone() *LockFile {
+	lockFile := &LockFile{
 		Mods:    make(map[string]LockedMod),
 		Version: l.Version,
 	}
@@ -44,4 +44,11 @@ func (l LockFile) Clone() LockFile {
 		lockFile.Mods[k] = v
 	}
 	return lockFile
+}
+
+func (l *LockFile) Remove(modID ...string) *LockFile {
+	for _, s := range modID {
+		delete(l.Mods, s)
+	}
+	return l
 }

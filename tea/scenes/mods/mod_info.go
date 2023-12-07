@@ -1,4 +1,4 @@
-package scenes
+package mods
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -71,14 +72,14 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 		ready:    false,
 		help:     help.New(),
 		keys: modInfoKeyMap{
-			Up:       key.NewBinding(key.WithHelp("↑/k", "move up")),
-			UpHalf:   key.NewBinding(key.WithHelp("u", "up half page")),
-			UpPage:   key.NewBinding(key.WithHelp("pgup/b", "page up")),
-			Down:     key.NewBinding(key.WithHelp("↓/j", "move down")),
-			DownHalf: key.NewBinding(key.WithHelp("d", "down half page")),
-			DownPage: key.NewBinding(key.WithHelp("pgdn/ /f", "page down")),
-			Help:     key.NewBinding(key.WithHelp("?", "toggle help")),
-			Back:     key.NewBinding(key.WithHelp("q", "back")),
+			Up:       key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "move up")),
+			UpHalf:   key.NewBinding(key.WithKeys("u"), key.WithHelp("u", "up half page")),
+			UpPage:   key.NewBinding(key.WithKeys("pgup", "b"), key.WithHelp("pgup/b", "page up")),
+			Down:     key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "move down")),
+			DownHalf: key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "down half page")),
+			DownPage: key.NewBinding(key.WithKeys("pgdn", "f"), key.WithHelp("pgdn/f", "page down")),
+			Help:     key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "toggle help")),
+			Back:     key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "back")),
 		},
 	}
 
@@ -86,7 +87,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	model.help.Width = root.Size().Width
 
 	go func() {
-		fullMod, err := ficsit.GetMod(context.TODO(), root.GetAPIClient(), mod.Reference)
+		fullMod, err := root.GetProvider().GetMod(context.TODO(), mod.Reference)
 		if err != nil {
 			model.modError <- err.Error()
 			return
@@ -133,7 +134,7 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {

@@ -1,4 +1,4 @@
-package scenes
+package mods
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -36,17 +37,9 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
-	l.DisableQuitKeybindings()
-
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-		}
-	}
-
-	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 		}
 	}
 
@@ -63,7 +56,7 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 		allVersions := make([]ficsit.ModVersionsModVersionsVersion, 0)
 		offset := 0
 		for {
-			versions, err := ficsit.ModVersions(context.TODO(), root.GetAPIClient(), mod.Reference, ficsit.VersionFilter{
+			versions, err := root.GetProvider().ModVersions(context.TODO(), mod.Reference, ficsit.VersionFilter{
 				Limit:    100,
 				Offset:   offset,
 				Order:    ficsit.OrderDesc,
@@ -115,7 +108,7 @@ func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {
@@ -123,7 +116,7 @@ func (m selectModVersionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.parent, nil
 			}
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[selectModVersionList])
 			if ok {
 				if i.Activate != nil {

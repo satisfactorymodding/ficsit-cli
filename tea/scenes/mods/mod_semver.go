@@ -1,4 +1,4 @@
-package scenes
+package mods
 
 import (
 	"time"
@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -46,11 +47,11 @@ func (m modSemver) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
-		case KeyEscape:
+		case keys.KeyEscape:
 			return m.parent, nil
-		case KeyEnter:
+		case keys.KeyEnter:
 			err := m.root.GetCurrentProfile().AddMod(m.mod.Reference, m.input.Value())
 			if err != nil {
 				errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)

@@ -1,4 +1,4 @@
-package scenes
+package installation
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -66,17 +67,10 @@ func NewInstallation(root components.RootModel, parent tea.Model, installationDa
 	model.list.Styles = utils.ListStyles
 	model.list.SetSize(model.list.Width(), model.list.Height())
 	model.list.StatusMessageLifetime = time.Second * 3
-	model.list.DisableQuitKeybindings()
-
+	model.list.KeyMap.Quit.SetHelp("q", "back")
 	model.list.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-		}
-	}
-
-	model.list.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 		}
 	}
 
@@ -91,7 +85,7 @@ func (m installation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.parent != nil {
@@ -104,7 +98,7 @@ func (m installation) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.parent, nil
 			}
 			return m, nil
-		case KeyEnter:
+		case keys.KeyEnter:
 			i, ok := m.list.SelectedItem().(utils.SimpleItem[installation])
 			if ok {
 				if i.Activate != nil {

@@ -25,7 +25,7 @@ func (h headerComponent) Init() tea.Cmd {
 	return nil
 }
 
-func (h headerComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (h headerComponent) Update(_ tea.Msg) (tea.Model, tea.Cmd) {
 	return h, nil
 }
 
@@ -43,6 +43,23 @@ func (h headerComponent) View() string {
 		out += h.root.GetCurrentProfile().Name
 	} else {
 		out += "None"
+	}
+	out += "\n"
+
+	out += h.labelStyle.Render("Vanilla: ")
+	if h.root.GetCurrentInstallation() != nil {
+		if h.root.GetCurrentInstallation().Vanilla {
+			out += "On"
+		} else {
+			out += "Off"
+		}
+	} else {
+		out += "N/A"
+	}
+
+	if h.root.GetProvider().IsOffline() {
+		out += "\n"
+		out += h.labelStyle.Render("Offline")
 	}
 
 	return lipgloss.NewStyle().Margin(1, 0).Render(out)

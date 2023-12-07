@@ -5,6 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
+	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 )
 
 type RootModel interface {
@@ -17,6 +18,7 @@ type RootModel interface {
 	SetCurrentInstallation(installation *cli.Installation) error
 
 	GetAPIClient() graphql.Client
+	GetProvider() provider.Provider
 
 	Size() tea.WindowSizeMsg
 	SetSize(size tea.WindowSizeMsg)

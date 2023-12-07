@@ -1,4 +1,4 @@
-package scenes
+package mods
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -36,6 +37,8 @@ type listUpdate struct {
 	Done  bool
 }
 
+// type keys
+
 type modsList struct {
 	list              list.Model
 	sortFieldList     list.Model
@@ -52,7 +55,7 @@ type modsList struct {
 }
 
 func NewMods(root components.RootModel, parent tea.Model) tea.Model {
-	l := list.New([]list.Item{}, ModsListDelegate{
+	l := list.New([]list.Item{}, ListDelegate{
 		ItemDelegate: utils.NewItemDelegate(),
 		Context:      root.GetGlobal(),
 	}, root.Size().Width, root.Size().Height-root.Height())
@@ -64,23 +67,15 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	l.Styles = utils.ListStyles
 	l.SetSize(l.Width(), l.Height())
 	l.KeyMap.Quit.SetHelp("q", "back")
-	l.DisableQuitKeybindings()
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-			key.NewBinding(key.WithHelp("s", "sort")),
-			key.NewBinding(key.WithHelp("o", "order")),
+			key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "sort")),
+			key.NewBinding(key.WithKeys("o"), key.WithHelp("o", "order")),
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 		}
 	}
-
-	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithHelp("q", "back")),
-			key.NewBinding(key.WithHelp("s", "sort")),
-			key.NewBinding(key.WithHelp("o", "order")),
-		}
-	}
+	l.AdditionalFullHelpKeys = l.AdditionalShortHelpKeys
 
 	sortFieldList := list.New([]list.Item{
 		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
@@ -167,8 +162,11 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortFieldList.Title = modsTitle
 	sortFieldList.Styles = utils.ListStyles
 	sortFieldList.SetSize(l.Width(), l.Height())
-	sortFieldList.KeyMap.Quit.SetHelp("q", "back")
-	sortFieldList.DisableQuitKeybindings()
+	sortFieldList.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	sortOrderList := list.New([]list.Item{
 		utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod]{
@@ -200,8 +198,11 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 	sortOrderList.Title = modsTitle
 	sortOrderList.Styles = utils.ListStyles
 	sortOrderList.SetSize(l.Width(), l.Height())
-	sortOrderList.KeyMap.Quit.SetHelp("q", "back")
-	sortOrderList.DisableQuitKeybindings()
+	sortOrderList.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	m := &modsList{
 		root:          root,
@@ -220,7 +221,7 @@ func NewMods(root components.RootModel, parent tea.Model) tea.Model {
 		allMods := make([]ficsit.ModsModsGetModsModsMod, 0)
 		offset := 0
 		for {
-			mods, err := ficsit.Mods(context.TODO(), root.GetAPIClient(), ficsit.ModFilter{
+			mods, err := root.GetProvider().Mods(context.TODO(), ficsit.ModFilter{
 				Limit:    100,
 				Offset:   offset,
 				Order_by: ficsit.ModFieldsLastVersionDate,
@@ -281,8 +282,12 @@ func (m modsList) Init() tea.Cmd {
 }
 
 func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// List enables its own keybindings when they were previously disabled
-	m.list.DisableQuitKeybindings()
+	m.list.KeyMap.Quit.SetHelp("q", "back")
+	m.list.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
+		}
+	}
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -299,7 +304,7 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "o":
 			m.showSortOrderList = !m.showSortOrderList
 			return m, nil
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
 		case "q":
 			if m.showSortFieldList {
@@ -317,7 +322,7 @@ func (m modsList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.parent, nil
 			}
 			return m, tea.Quit
-		case KeyEnter:
+		case keys.KeyEnter:
 			if m.showSortFieldList {
 				m.showSortFieldList = false
 				i, ok := m.sortFieldList.SelectedItem().(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
@@ -473,12 +478,12 @@ func ascDesc(order sortOrder, result bool) bool {
 	return !result
 }
 
-type ModsListDelegate struct {
+type ListDelegate struct {
 	list.ItemDelegate
 	Context *cli.GlobalContext
 }
 
-func (c ModsListDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+func (c ListDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	realItem := item.(utils.SimpleItemExtra[modsList, ficsit.ModsModsGetModsModsMod])
 	realDelegate := c.ItemDelegate.(list.DefaultDelegate)
 

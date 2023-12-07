@@ -2,352 +2,207 @@ package cli
 
 import (
 	"context"
-	"sort"
-
-	"github.com/Khan/genqlient/graphql"
-	"github.com/Masterminds/semver/v3"
+	"fmt"
+	"github.com/mircearoata/pubgrub-go/pubgrub"
+	"github.com/mircearoata/pubgrub-go/pubgrub/helpers"
+	"github.com/mircearoata/pubgrub-go/pubgrub/semver"
 	"github.com/pkg/errors"
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/spf13/viper"
+	"slices"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
+const (
+	smlDownloadTemplate = `https://github.com/satisfactorymodding/SatisfactoryModLoader/releases/download/v%s/SML.zip`
+	rootPkg             = "$$root$$"
+	smlPkg              = "SML"
+	factoryGamePkg      = "FactoryGame"
+)
+
 type DependencyResolver struct {
-	apiClient graphql.Client
+	provider provider.Provider
 }
 
-func NewDependencyResolver(apiClient graphql.Client) DependencyResolver {
-	return DependencyResolver{apiClient: apiClient}
+func NewDependencyResolver(provider provider.Provider) DependencyResolver {
+	return DependencyResolver{provider}
 }
 
-func (d DependencyResolver) ResolveModDependencies(constraints map[string]string, lockFile *LockFile, gameVersion int) (*LockFile, error) {
-	smlVersionsDB, err := ficsit.SMLVersions(context.TODO(), d.apiClient)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed fetching SMl versions")
-	}
+var ()
 
-	copied := make(map[string][]string, len(constraints))
-	for k, v := range constraints {
-		copied[k] = []string{v}
-	}
-
-	instance := &resolvingInstance{
-		Resolver:    d,
-		InputLock:   lockFile,
-		ToResolve:   copied,
-		OutputLock:  MakeLockfile(),
-		SMLVersions: smlVersionsDB,
-		GameVersion: gameVersion,
-	}
-
-	if err := instance.Step(); err != nil {
-		return nil, err
-	}
-
-	return &instance.OutputLock, nil
+type ficsitAPISource struct {
+	provider       provider.Provider
+	lockfile       *LockFile
+	toInstall      map[string]semver.Constraint
+	modVersionInfo *xsync.MapOf[string, ficsit.ModVersionsWithDependenciesResponse]
+	gameVersion    semver.Version
+	smlVersions    []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
 }
 
-type resolvingInstance struct {
-	Resolver DependencyResolver
-
-	InputLock *LockFile
-
-	ToResolve map[string][]string
-
-	OutputLock LockFile
-
-	SMLVersions *ficsit.SMLVersionsResponse
-	GameVersion int
-}
-
-func (r *resolvingInstance) Step() error {
-	if len(r.ToResolve) > 0 {
-		if err := r.LockStep(make(map[string]bool)); err != nil {
-			return err
+func (f *ficsitAPISource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersion, error) {
+	if pkg == rootPkg {
+		return []pubgrub.PackageVersion{{Version: semver.Version{}, Dependencies: f.toInstall}}, nil
+	}
+	if pkg == factoryGamePkg {
+		return []pubgrub.PackageVersion{{Version: f.gameVersion}}, nil
+	}
+	if pkg == smlPkg {
+		versions := make([]pubgrub.PackageVersion, len(f.smlVersions))
+		for i, smlVersion := range f.smlVersions {
+			v, err := semver.NewVersion(smlVersion.Version)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to parse version %s", smlVersion.Version)
+			}
+			gameConstraint, err := semver.NewConstraint(fmt.Sprintf(">=%d", smlVersion.Satisfactory_version))
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to parse constraint %s", fmt.Sprintf(">=%d", smlVersion.Satisfactory_version))
+			}
+			versions[i] = pubgrub.PackageVersion{
+				Version: v,
+				Dependencies: map[string]semver.Constraint{
+					factoryGamePkg: gameConstraint,
+				},
+			}
 		}
-
-		converted := make([]ficsit.ModVersionConstraint, 0)
-		for id, constraint := range r.ToResolve {
-			if id != "SML" {
-				converted = append(converted, ficsit.ModVersionConstraint{
-					ModIdOrReference: id,
-					Version:          constraint[0],
-				})
+		return versions, nil
+	}
+	response, err := f.provider.ModVersionsWithDependencies(context.TODO(), pkg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch mod %s", pkg)
+	}
+	if response.Mod.Id == "" {
+		return nil, errors.Errorf("mod %s not found", pkg)
+	}
+	f.modVersionInfo.Store(pkg, *response)
+	versions := make([]pubgrub.PackageVersion, len(response.Mod.Versions))
+	for i, modVersion := range response.Mod.Versions {
+		v, err := semver.NewVersion(modVersion.Version)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse version %s", modVersion.Version)
+		}
+		dependencies := make(map[string]semver.Constraint)
+		optionalDependencies := make(map[string]semver.Constraint)
+		for _, dependency := range modVersion.Dependencies {
+			c, err := semver.NewConstraint(dependency.Condition)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to parse constraint %s", dependency.Condition)
+			}
+			if dependency.Optional {
+				optionalDependencies[dependency.Mod_id] = c
 			} else {
-				if existingSML, ok := r.OutputLock.Mods[id]; ok {
-					for _, cs := range constraint {
-						smlVersionConstraint, _ := semver.NewConstraint(cs)
-						if !smlVersionConstraint.Check(semver.MustParse(existingSML.Version)) {
-							return errors.Errorf("mod %s version %s does not match constraint %s",
-								id,
-								existingSML.Version,
-								constraint,
-							)
-						}
-					}
-				}
+				dependencies[dependency.Mod_id] = c
+			}
+		}
+		versions[i] = pubgrub.PackageVersion{
+			Version:              v,
+			Dependencies:         dependencies,
+			OptionalDependencies: optionalDependencies,
+		}
+	}
+	return versions, nil
+}
 
-				var chosenSMLVersion *semver.Version
-				var chosenSMLTargets []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget
-				for _, version := range r.SMLVersions.SmlVersions.Sml_versions {
-					if version.Satisfactory_version > r.GameVersion {
-						continue
-					}
-
-					currentVersion := semver.MustParse(version.Version)
-
-					matches := true
-					for _, cs := range constraint {
-						smlVersionConstraint, _ := semver.NewConstraint(cs)
-
-						if !smlVersionConstraint.Check(currentVersion) {
-							matches = false
-							break
-						}
-					}
-
-					if matches {
-						if chosenSMLVersion == nil || currentVersion.GreaterThan(chosenSMLVersion) {
-							chosenSMLVersion = currentVersion
-							chosenSMLTargets = version.Targets
-						}
-					}
-				}
-
-				if chosenSMLVersion == nil {
-					return errors.Errorf("could not find an SML version that matches constraint %s and game version %d", constraint, r.GameVersion)
-				}
-
-				targets := make(map[string]LockedModTarget)
-				for _, target := range chosenSMLTargets {
-					targets[target.TargetName] = LockedModTarget{
-						Link: target.Link,
-					}
-				}
-
-				r.OutputLock.Mods[id] = LockedMod{
-					Version:      chosenSMLVersion.String(),
-					Targets:      targets,
-					Dependencies: map[string]string{},
+func (f *ficsitAPISource) PickVersion(pkg string, versions []semver.Version) semver.Version {
+	if f.lockfile != nil {
+		if existing, ok := (*f.lockfile).Mods[pkg]; ok {
+			v, err := semver.NewVersion(existing.Version)
+			if err == nil {
+				if slices.ContainsFunc(versions, func(version semver.Version) bool {
+					return v.Compare(version) == 0
+				}) {
+					return v
 				}
 			}
 		}
+	}
+	return helpers.StandardVersionPriority(versions)
+}
 
-		nextResolve := make(map[string][]string)
+func (d DependencyResolver) ResolveModDependencies(constraints map[string]string, lockFile *LockFile, gameVersion int) (*LockFile, error) {
+	smlVersionsDB, err := d.provider.SMLVersions(context.TODO())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed fetching SML versions")
+	}
 
-		// TODO Cache
-		dependencies, err := ficsit.ResolveModDependencies(context.TODO(), r.Resolver.apiClient, converted)
+	gameVersionSemver, err := semver.NewVersion(fmt.Sprintf("%d", gameVersion))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed parsing game version")
+	}
+
+	toInstall := make(map[string]semver.Constraint, len(constraints))
+	for k, v := range constraints {
+		c, err := semver.NewConstraint(v)
 		if err != nil {
-			return errors.Wrap(err, "failed resolving mod dependencies")
+			return nil, errors.Wrapf(err, "failed to parse constraint %s", v)
+		}
+		toInstall[k] = c
+	}
+
+	ficsitSource := &ficsitAPISource{
+		provider:       d.provider,
+		smlVersions:    smlVersionsDB.SmlVersions.Sml_versions,
+		gameVersion:    gameVersionSemver,
+		lockfile:       lockFile,
+		toInstall:      toInstall,
+		modVersionInfo: xsync.NewMapOf[string, ficsit.ModVersionsWithDependenciesResponse](),
+	}
+
+	result, err := pubgrub.Solve(helpers.NewCachingSource(ficsitSource), rootPkg)
+	if err != nil {
+		finalError := err
+		var solverErr pubgrub.SolvingError
+		if errors.As(err, &solverErr) {
+			finalError = DependencyResolverError{SolvingError: solverErr, provider: d.provider, smlVersions: smlVersionsDB.SmlVersions.Sml_versions, gameVersion: gameVersion}
+		}
+		return nil, errors.Wrap(finalError, "failed to solve dependencies")
+	}
+	delete(result, rootPkg)
+	delete(result, factoryGamePkg)
+
+	outputLock := MakeLockfile()
+	for k, v := range result {
+		if k == smlPkg {
+			for _, version := range ficsitSource.smlVersions {
+				if version.Version == v.String() {
+					targets := make(map[string]LockedModTarget)
+					for _, target := range version.Targets {
+						targets[string(target.TargetName)] = LockedModTarget{
+							Link: target.Link,
+						}
+					}
+
+					outputLock.Mods[k] = LockedMod{
+						Version: v.String(),
+						Targets: targets,
+					}
+					break
+				}
+			}
+			continue
 		}
 
-		for _, mod := range dependencies.Mods {
-			modVersions := make([]ModVersion, len(mod.Versions))
-			for i, version := range mod.Versions {
-				versionDependencies := make([]VersionDependency, len(version.Dependencies))
-
-				for j, dependency := range version.Dependencies {
-					versionDependencies[j] = VersionDependency{
-						ModReference: dependency.Mod_id,
-						Constraint:   dependency.Condition,
-						Optional:     dependency.Optional,
-					}
-				}
-
-				versionTargets := make(map[string]VersionTarget)
-				for _, target := range version.Targets {
-					versionTargets[target.TargetName] = VersionTarget{
+		value, _ := ficsitSource.modVersionInfo.Load(k)
+		versions := value.Mod.Versions
+		for _, ver := range versions {
+			if ver.Version == v.RawString() {
+				targets := make(map[string]LockedModTarget)
+				for _, target := range ver.Targets {
+					targets[string(target.TargetName)] = LockedModTarget{
 						Link: viper.GetString("api-base") + target.Link,
 						Hash: target.Hash,
 					}
 				}
 
-				modVersions[i] = ModVersion{
-					ID:           version.Id,
-					Version:      version.Version,
-					Targets:      versionTargets,
-					Dependencies: versionDependencies,
+				outputLock.Mods[k] = LockedMod{
+					Version: v.String(),
+					Targets: targets,
 				}
-			}
-
-			sort.Slice(modVersions, func(i, j int) bool {
-				a := semver.MustParse(modVersions[i].Version)
-				b := semver.MustParse(modVersions[j].Version)
-				return b.LessThan(a)
-			})
-
-			// Pick latest version
-			// TODO Clone and branch
-			var selectedVersion ModVersion
-			for _, version := range modVersions {
-				matches := true
-
-				for _, cs := range r.ToResolve[mod.Mod_reference] {
-					resolvingConstraint, _ := semver.NewConstraint(cs)
-					if !resolvingConstraint.Check(semver.MustParse(version.Version)) {
-						matches = false
-						break
-					}
-				}
-
-				if matches {
-					selectedVersion = version
-					break
-				}
-			}
-
-			if selectedVersion.Version == "" {
-				return errors.Errorf("no version of %s matches constraints", mod.Mod_reference)
-			}
-
-			if _, ok := r.OutputLock.Mods[mod.Mod_reference]; ok {
-				if r.OutputLock.Mods[mod.Mod_reference].Version != selectedVersion.Version {
-					return errors.New("failed resolving dependencies. requires different versions of " + mod.Mod_reference)
-				}
-			}
-
-			modDependencies := make(map[string]string)
-			for _, dependency := range selectedVersion.Dependencies {
-				if !dependency.Optional {
-					modDependencies[dependency.ModReference] = dependency.Constraint
-				}
-			}
-
-			targets := make(map[string]LockedModTarget)
-			for targetName, target := range selectedVersion.Targets {
-				targets[targetName] = LockedModTarget{
-					Link: target.Link,
-					Hash: target.Hash,
-				}
-			}
-
-			r.OutputLock.Mods[mod.Mod_reference] = LockedMod{
-				Version:      selectedVersion.Version,
-				Targets:      targets,
-				Dependencies: modDependencies,
-			}
-
-			for _, dependency := range selectedVersion.Dependencies {
-				if previousSelectedVersion, ok := r.OutputLock.Mods[dependency.ModReference]; ok {
-					constraint, _ := semver.NewConstraint(dependency.Constraint)
-					if !constraint.Check(semver.MustParse(previousSelectedVersion.Version)) {
-						return errors.Errorf("mod %s version %s does not match constraint %s",
-							dependency.ModReference,
-							previousSelectedVersion.Version,
-							dependency.Constraint,
-						)
-					}
-				}
-
-				if resolving, ok := nextResolve[dependency.ModReference]; ok {
-					constraint, _ := semver.NewConstraint(dependency.Constraint)
-
-					for _, cs := range resolving {
-						resolvingConstraint, _ := semver.NewConstraint(cs)
-						intersects, _ := constraint.Intersects(resolvingConstraint)
-						if !intersects {
-							return errors.Errorf("mod %s constraint %s does not intersect with %s",
-								dependency.ModReference,
-								resolving,
-								dependency.Constraint,
-							)
-						}
-					}
-				}
-
-				if dependency.Optional {
-					continue
-				}
-
-				nextResolve[dependency.ModReference] = append(nextResolve[dependency.ModReference], dependency.Constraint)
-			}
-		}
-
-		r.ToResolve = nextResolve
-
-		for _, constraint := range converted {
-			if _, ok := r.OutputLock.Mods[constraint.ModIdOrReference]; !ok {
-				return errors.New("failed resolving dependency: " + constraint.ModIdOrReference)
+				break
 			}
 		}
 	}
 
-	if len(r.ToResolve) > 0 {
-		if err := r.Step(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *resolvingInstance) LockStep(viewed map[string]bool) error {
-	added := false
-	if r.InputLock != nil {
-		for modReference, constraints := range r.ToResolve {
-			if _, ok := viewed[modReference]; ok {
-				continue
-			}
-
-			viewed[modReference] = true
-
-			if locked, ok := r.InputLock.Mods[modReference]; ok {
-				passes := true
-
-				for _, cs := range constraints {
-					constraint, _ := semver.NewConstraint(cs)
-					if !constraint.Check(semver.MustParse(locked.Version)) {
-						passes = false
-						break
-					}
-				}
-
-				if passes {
-					delete(r.ToResolve, modReference)
-					r.OutputLock.Mods[modReference] = locked
-					for k, v := range locked.Dependencies {
-						if alreadyResolving, ok := r.ToResolve[k]; ok {
-							newConstraint, _ := semver.NewConstraint(v)
-							for _, resolvingConstraint := range alreadyResolving {
-								cs2, _ := semver.NewConstraint(resolvingConstraint)
-								intersects, _ := newConstraint.Intersects(cs2)
-								if !intersects {
-									return errors.Errorf("mod %s constraint %s does not intersect with %s",
-										k,
-										v,
-										alreadyResolving,
-									)
-								}
-							}
-
-							r.ToResolve[k] = append(r.ToResolve[k], v)
-
-							continue
-						}
-
-						if outVersion, ok := r.OutputLock.Mods[k]; ok {
-							constraint, _ := semver.NewConstraint(v)
-							if !constraint.Check(semver.MustParse(outVersion.Version)) {
-								return errors.Errorf("mod %s version %s does not match constraint %s",
-									k,
-									outVersion.Version,
-									v,
-								)
-							}
-							continue
-						}
-
-						r.ToResolve[k] = append(r.ToResolve[k], v)
-						added = true
-					}
-				}
-			}
-		}
-	}
-	if added {
-		if err := r.LockStep(viewed); err != nil {
-			return err
-		}
-	}
-	return nil
+	return outputLock, nil
 }

@@ -1,4 +1,4 @@
-package scenes
+package profile
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
+	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
 )
 
@@ -48,11 +49,11 @@ func (m renameProfile) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case KeyControlC:
+		case keys.KeyControlC:
 			return m, tea.Quit
-		case KeyEscape:
+		case keys.KeyEscape:
 			return m.parent, nil
-		case KeyEnter:
+		case keys.KeyEnter:
 			if err := m.root.GetGlobal().Profiles.RenameProfile(m.root.GetGlobal(), m.oldName, m.input.Value()); err != nil {
 				errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 				m.error = errorComponent

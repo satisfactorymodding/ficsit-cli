@@ -15,6 +15,7 @@ func SetDefaults() {
 	viper.SetDefault("profiles-file", "profiles.json")
 	viper.SetDefault("installations-file", "installations.json")
 	viper.SetDefault("dry-run", false)
-	viper.SetDefault("api-base", "https://api.ficsit.app")
+	viper.SetDefault("api-base", "https://api.ficsit.dev")
 	viper.SetDefault("graphql-api", "/v2/query")
+	viper.SetDefault("concurrent-downloads", 5)
 }

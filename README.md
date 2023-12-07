@@ -4,56 +4,85 @@ A CLI tool for managing mods for the game Satisfactory
 
 ## Installation
 
-### Windows
+<table>
+  <tr>
+    <th></th>
+    <th>amd64</th>
+    <th>386</th>
+    <th>arm64</th>
+    <th>armv7</th>
+    <th>ppc64le</th>
+  </tr>
+  <tr>
+    <th>Windows</th>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_windows_amd64.exe">amd64</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_windows_386.exe">386</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_windows_arm64.exe">arm64</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_windows_armv7.exe">armv7</a></td>
+    <td>N/A</td>
+  </tr>
+  <tr>
+    <th>Arch</th>
+    <td colspan="5" style="text-align: center"><a href="https://aur.archlinux.org/packages/ficsit-cli-bin"><code>yay -S ficsit-cli-bin</code></a></td>
+  </tr>
+  <tr>
+    <th>Debian</th>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_amd64.deb">amd64</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_386.deb">386</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_arm64.deb">arm64</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_armv7.deb">armv7</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_ppc64le.deb">ppc64le</a></td>
+  </tr>
+  <tr>
+    <th>Fedora</th>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_amd64.rpm">amd64</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_386.rpm">386</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_arm64.rpm">arm64</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_armv7.rpm">armv7</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_ppc64le.rpm">ppc64le</a></td>
+  </tr>
+  <tr>
+    <th>Alpine</th>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_amd64.apk">amd64</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_386.apk">386</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_arm64.apk">arm64</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_armv7.apk">armv7</a></td>
+    <td><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_ppc64le.apk">ppc64le</a></td>
+  </tr>
+  <tr>
+    <th>macOS</th>
+    <td colspan="4" style="text-align: center"><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_darwin_all">darwin_all</a></td>
+    <td>N/A</td>
+  </tr>
+</table>
 
-Download the appropriate `.exe` for your CPU architecture.
 
-* [AMD64 (64-bit)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_windows_amd64.exe)
-* [386 (32-bit)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_windows_386.exe)
-* [ARM64 (64-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_windows_arm64.exe)
-* [ARMv7 (32-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_windows_armv7.exe)
+## Usage
 
-### Linux
+### Interactive CLI
 
-#### Arch
+To launch the interactive CLI, run the executable without any arguments.
 
-A package is published to AUR under the name [`ficsit-cli-bin`](https://aur.archlinux.org/packages/ficsit-cli-bin)
+### Command Line
 
-```shell
-yay -S ficsit-cli-bin
+Run `ficsit help` to see a list of available commands.
+
+## Troubleshooting
+
+* Profile and installation records are located in `%APPDATA%\ficsit\`
+* Downloads are cached in `%LOCALAPPDATA%\ficsit\downloadCache\`
+
+## Development
+
+### Dependencies
+
+* [Go 1.21](https://go.dev/doc/install)
+* IDE of Choice. Goland or VSCode suggested.
+
+## Building
+
+```bash
+go build
 ```
 
-#### Debian (inc. Ubuntu, Mint, PopOS!, etc)
-
-Download the appropriate `.deb` for your CPU architecture.
-
-* [AMD64 (64-bit)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_amd64.deb)
-* [386 (32-bit)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_386.deb)
-* [ARM64 (64-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_arm64.deb)
-* [ARMv7 (32-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_armv7.deb)
-* [PowerPC64](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_ppc64le.deb)
-
-
-#### Fedora
-
-Download the appropriate `.rpm` for your CPU architecture.
-
-* [AMD64 (64-bit)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_amd64.rpm)
-* [386 (32-bit)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_386.rpm)
-* [ARM64 (64-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_arm64.rpm)
-* [ARMv7 (32-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_armv7.rpm)
-* [PowerPC64](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_ppc64le.rpm)
-
-#### Alpine
-
-Download the appropriate `.apk` for your CPU architecture.
-
-* [AMD64 (64-bit)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_amd64.apk)
-* [386 (32-bit)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_386.apk)
-* [ARM64 (64-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_arm64.apk)
-* [ARMv7 (32-bit ARM)](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_armv7.apk)
-* [PowerPC64](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_linux_ppc64le.apk)
-
-### macOS
-
-Download the "all" build [here](https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_darwin_all).
+Will produce `ficsit-cli.exe` in the repo root directory.

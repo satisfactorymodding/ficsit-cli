@@ -4,33 +4,44 @@ import (
 	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 )
 
+type GenericProgress struct {
+	Completed int64
+	Total     int64
+}
+
+func (gp GenericProgress) Percentage() float64 {
+	if gp.Total == 0 {
+		return 0
+	}
+	return float64(gp.Completed) / float64(gp.Total)
+}
+
 type Progresser struct {
 	io.Reader
-	updates chan GenericUpdate
-	total   int64
-	running int64
+	Updates chan<- GenericProgress
+	Total   int64
+	Running int64
 }
 
 func (pt *Progresser) Read(p []byte) (int, error) {
 	n, err := pt.Reader.Read(p)
-	pt.running += int64(n)
+	pt.Running += int64(n)
 
 	if err == nil {
-		if pt.updates != nil {
+		if pt.Updates != nil {
 			select {
-			case pt.updates <- GenericUpdate{Progress: float64(pt.running) / float64(pt.total)}:
+			case pt.Updates <- GenericProgress{Completed: pt.Running, Total: pt.Total}:
 			default:
 			}
 		}
@@ -43,95 +54,6 @@ func (pt *Progresser) Read(p []byte) (int, error) {
 	return n, errors.Wrap(err, "failed to read")
 }
 
-type GenericUpdate struct {
-	ModReference *string
-	Progress     float64
-}
-
-func DownloadOrCache(cacheKey string, hash string, url string, updates chan GenericUpdate) (io.ReaderAt, int64, error) {
-	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
-	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
-		if !os.IsExist(err) {
-			return nil, 0, errors.Wrap(err, "failed creating download cache")
-		}
-	}
-
-	location := filepath.Join(downloadCache, cacheKey)
-
-	stat, err := os.Stat(location)
-	if err == nil {
-		existingHash := ""
-
-		if hash != "" {
-			f, err := os.Open(location)
-			if err != nil {
-				return nil, 0, errors.Wrap(err, "failed to open file: "+location)
-			}
-
-			existingHash, err = SHA256Data(f)
-			if err != nil {
-				return nil, 0, errors.Wrap(err, "could not compute hash for file: "+location)
-			}
-		}
-
-		if hash == existingHash {
-			f, err := os.Open(location)
-			if err != nil {
-				return nil, 0, errors.Wrap(err, "failed to open file: "+location)
-			}
-
-			return f, stat.Size(), nil
-		}
-
-		if err := os.Remove(location); err != nil {
-			return nil, 0, errors.Wrap(err, "failed to delete file: "+location)
-		}
-	} else if !os.IsNotExist(err) {
-		return nil, 0, errors.Wrap(err, "failed to stat file: "+location)
-	}
-
-	out, err := os.Create(location)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed creating file at: "+location)
-	}
-	defer out.Close()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to fetch: "+url)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("bad status: %s on url: %s", resp.Status, url)
-	}
-
-	progresser := &Progresser{
-		Reader:  resp.Body,
-		total:   resp.ContentLength,
-		updates: updates,
-	}
-
-	_, err = io.Copy(out, progresser)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed writing file to disk")
-	}
-
-	f, err := os.Open(location)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to open file: "+location)
-	}
-
-	if updates != nil {
-		select {
-		case updates <- GenericUpdate{Progress: 1}:
-		default:
-		}
-	}
-
-	return f, resp.ContentLength, nil
-}
-
 func SHA256Data(f io.Reader) (string, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -141,7 +63,7 @@ func SHA256Data(f io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan GenericUpdate, d disk.Disk) error {
+func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan<- GenericProgress, d disk.Disk) error {
 	hashFile := filepath.Join(location, ".smm")
 	hashBytes, err := d.Read(hashFile)
 	if err != nil {
@@ -173,7 +95,24 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 		return errors.Wrap(err, "failed to read file as zip")
 	}
 
-	for i, file := range reader.File {
+	totalSize := int64(0)
+
+	for _, file := range reader.File {
+		totalSize += int64(file.UncompressedSize64)
+	}
+
+	totalExtracted := int64(0)
+	totalExtractedPtr := &totalExtracted
+
+	channelUsers := sync.WaitGroup{}
+
+	if updates != nil {
+		defer func() {
+			channelUsers.Wait()
+		}()
+	}
+
+	for _, file := range reader.File {
 		if !file.FileInfo().IsDir() {
 			outFileLocation := filepath.Join(location, file.Name)
 
@@ -181,16 +120,26 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 				return errors.Wrap(err, "failed to create mod directory: "+location)
 			}
 
-			if err := writeZipFile(outFileLocation, file, d); err != nil {
+			var fileUpdates chan GenericProgress
+			if updates != nil {
+				fileUpdates = make(chan GenericProgress)
+				channelUsers.Add(1)
+				go func() {
+					defer channelUsers.Done()
+					for fileUpdate := range fileUpdates {
+						updates <- GenericProgress{
+							Completed: atomic.LoadInt64(totalExtractedPtr) + fileUpdate.Completed,
+							Total:     totalSize,
+						}
+					}
+				}()
+			}
+
+			if err := writeZipFile(outFileLocation, file, d, fileUpdates); err != nil {
 				return err
 			}
-		}
 
-		if updates != nil {
-			select {
-			case updates <- GenericUpdate{Progress: float64(i) / float64(len(reader.File)-1)}:
-			default:
-			}
+			atomic.AddInt64(totalExtractedPtr, int64(file.UncompressedSize64))
 		}
 	}
 
@@ -200,7 +149,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 
 	if updates != nil {
 		select {
-		case updates <- GenericUpdate{Progress: 1}:
+		case updates <- GenericProgress{Completed: totalSize, Total: totalSize}:
 		default:
 		}
 	}
@@ -208,7 +157,11 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 	return nil
 }
 
-func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk) error {
+func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates chan<- GenericProgress) error {
+	if updates != nil {
+		defer close(updates)
+	}
+
 	outFile, err := d.Open(outFileLocation, os.O_CREATE|os.O_RDWR)
 	if err != nil {
 		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
@@ -220,8 +173,15 @@ func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to process mod zip")
 	}
+	defer inFile.Close()
 
-	if _, err := io.Copy(outFile, inFile); err != nil {
+	progressInReader := &Progresser{
+		Reader:  inFile,
+		Total:   int64(file.UncompressedSize64),
+		Updates: updates,
+	}
+
+	if _, err := io.Copy(outFile, progressInReader); err != nil {
 		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
 	}
 
