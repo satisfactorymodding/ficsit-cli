@@ -91,4 +91,3 @@ jobs:
         run: go test -race -v ./...
         env:
           SF_DEDICATED_SERVER: ${{ github.workspace }}/SatisfactoryDedicatedServer
-          GOMAXPROCS: "1"
