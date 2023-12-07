@@ -283,7 +283,7 @@ func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
 	return lockFile, nil
 }
 
-func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) error {
+func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *LockFile) error {
 	lockfilePath, err := i.LockFilePath(ctx)
 	if err != nil {
 		return err
@@ -327,7 +327,7 @@ func (i *Installation) Wipe() error {
 	return nil
 }
 
-func (i *Installation) ResolveProfile(ctx *GlobalContext) (LockFile, error) {
+func (i *Installation) ResolveProfile(ctx *GlobalContext) (*LockFile, error) {
 	lockFile, err := i.LockFile(ctx)
 	if err != nil {
 		return nil, err
@@ -377,7 +377,12 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		return errors.Wrap(err, "failed to validate installation")
 	}
 
-	lockfile := make(LockFile)
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to detect platform")
+	}
+
+	lockfile := MakeLockfile()
 
 	if !i.Vanilla {
 		var err error
@@ -404,7 +409,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 
 	for _, entry := range dir {
 		if entry.IsDir() {
-			if _, ok := lockfile[entry.Name()]; !ok {
+			if _, ok := lockfile.Mods[entry.Name()]; !ok {
 				modDir := filepath.Join(modsDirectory, entry.Name())
 				err := d.Exists(filepath.Join(modDir, ".smm"))
 				if err == nil {
@@ -438,7 +443,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 					Type: InstallUpdateTypeOverall,
 					Progress: utils.GenericProgress{
 						Completed: int64(completed),
-						Total:     int64(len(lockfile)),
+						Total:     int64(len(lockfile.Mods)),
 					},
 				}
 				updates <- overallUpdate
@@ -446,15 +451,21 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		}()
 	}
 
-	for modReference, version := range lockfile {
+	for modReference, version := range lockfile.Mods {
 		channelUsers.Add(1)
 		modReference := modReference
 		version := version
 		errg.Go(func() error {
 			defer channelUsers.Done()
+
+			target, ok := version.Targets[platform.TargetName]
+			if !ok {
+				return errors.Errorf("%s@%s not available for %s", modReference, version.Version, platform.TargetName)
+			}
+
 			// Only install if a link is provided, otherwise assume mod is already installed
-			if version.Link != "" {
-				err := downloadAndExtractMod(modReference, version.Version, version.Link, version.Hash, modsDirectory, updates, downloadSemaphore, d)
+			if target.Link != "" {
+				err := downloadAndExtractMod(modReference, version.Version, target.Link, target.Hash, modsDirectory, updates, downloadSemaphore, d)
 				if err != nil {
 					return errors.Wrapf(err, "failed to install %s@%s", modReference, version.Version)
 				}
@@ -546,6 +557,8 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		return errors.Wrap(err, "failed to download "+modReference+" from: "+link)
 	}
 
+	defer reader.Close()
+
 	var extractUpdates chan utils.GenericProgress
 
 	var wg sync.WaitGroup
@@ -557,16 +570,13 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		go func() {
 			defer wg.Done()
 			for up := range extractUpdates {
-				select {
-				case updates <- InstallUpdate{
+				updates <- InstallUpdate{
 					Item: InstallUpdateItem{
 						Mod:     modReference,
 						Version: version,
 					},
 					Type:     InstallUpdateTypeModExtract,
 					Progress: up,
-				}:
-				default:
 				}
 			}
 		}()
@@ -578,15 +588,12 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 	}
 
 	if updates != nil {
-		select {
-		case updates <- InstallUpdate{
+		updates <- InstallUpdate{
 			Type: InstallUpdateTypeModComplete,
 			Item: InstallUpdateItem{
 				Mod:     modReference,
 				Version: version,
 			},
-		}:
-		default:
 		}
 
 		close(extractUpdates)

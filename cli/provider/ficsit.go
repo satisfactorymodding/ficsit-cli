@@ -34,10 +34,6 @@ func (p ficsitProvider) SMLVersions(context context.Context) (*ficsit.SMLVersion
 	return ficsit.SMLVersions(context, p.client)
 }
 
-func (p ficsitProvider) ResolveModDependencies(context context.Context, filter []ficsit.ModVersionConstraint) (*ficsit.ResolveModDependenciesResponse, error) {
-	return ficsit.ResolveModDependencies(context, p.client, filter)
-}
-
 func (p ficsitProvider) ModVersionsWithDependencies(context context.Context, modID string) (*ficsit.ModVersionsWithDependenciesResponse, error) {
 	return ficsit.ModVersionsWithDependencies(context, p.client, modID)
 }

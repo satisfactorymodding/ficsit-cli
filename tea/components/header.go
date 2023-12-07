@@ -57,7 +57,7 @@ func (h headerComponent) View() string {
 		out += "N/A"
 	}
 
-	if h.root.GetProvider().Offline {
+	if h.root.GetProvider().IsOffline() {
 		out += "\n"
 		out += h.labelStyle.Render("Offline")
 	}

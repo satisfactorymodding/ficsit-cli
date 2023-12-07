@@ -18,7 +18,7 @@ type RootModel interface {
 	SetCurrentInstallation(installation *cli.Installation) error
 
 	GetAPIClient() graphql.Client
-	GetProvider() *provider.MixedProvider
+	GetProvider() provider.Provider
 
 	Size() tea.WindowSizeMsg
 	SetSize(size tea.WindowSizeMsg)

@@ -288,7 +288,7 @@ func (p *Profile) HasMod(reference string) bool {
 // An optional lockfile can be passed if one exists.
 //
 // Returns an error if resolution is impossible.
-func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile, gameVersion int) (LockFile, error) {
+func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile, gameVersion int) (*LockFile, error) {
 	toResolve := make(map[string]string)
 	for modReference, mod := range p.Mods {
 		if mod.Enabled {

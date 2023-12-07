@@ -16,7 +16,11 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
-const smlDownloadTemplate = `https://github.com/satisfactorymodding/SatisfactoryModLoader/releases/download/v%s/SML.zip`
+const (
+	rootPkg        = "$$root$$"
+	smlPkg         = "SML"
+	factoryGamePkg = "FactoryGame"
+)
 
 type DependencyResolver struct {
 	provider provider.Provider
@@ -25,12 +29,6 @@ type DependencyResolver struct {
 func NewDependencyResolver(provider provider.Provider) DependencyResolver {
 	return DependencyResolver{provider}
 }
-
-var (
-	rootPkg        = "$$root$$"
-	smlPkg         = "SML"
-	factoryGamePkg = "FactoryGame"
-)
 
 type ficsitAPISource struct {
 	provider       provider.Provider
@@ -106,7 +104,7 @@ func (f *ficsitAPISource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersi
 
 func (f *ficsitAPISource) PickVersion(pkg string, versions []semver.Version) semver.Version {
 	if f.lockfile != nil {
-		if existing, ok := (*f.lockfile)[pkg]; ok {
+		if existing, ok := f.lockfile.Mods[pkg]; ok {
 			v, err := semver.NewVersion(existing.Version)
 			if err == nil {
 				if slices.ContainsFunc(versions, func(version semver.Version) bool {
@@ -120,7 +118,7 @@ func (f *ficsitAPISource) PickVersion(pkg string, versions []semver.Version) sem
 	return helpers.StandardVersionPriority(versions)
 }
 
-func (d DependencyResolver) ResolveModDependencies(constraints map[string]string, lockFile *LockFile, gameVersion int) (LockFile, error) {
+func (d DependencyResolver) ResolveModDependencies(constraints map[string]string, lockFile *LockFile, gameVersion int) (*LockFile, error) {
 	smlVersionsDB, err := d.provider.SMLVersions(context.TODO())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed fetching SML versions")
@@ -161,24 +159,43 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 	delete(result, rootPkg)
 	delete(result, factoryGamePkg)
 
-	outputLock := make(LockFile, len(result))
+	outputLock := MakeLockfile()
 	for k, v := range result {
 		if k == smlPkg {
-			outputLock[k] = LockedMod{
-				Version: v.String(),
-				Hash:    "",
-				Link:    fmt.Sprintf(smlDownloadTemplate, v.String()),
+			for _, version := range ficsitSource.smlVersions {
+				if version.Version == v.String() {
+					targets := make(map[string]LockedModTarget)
+					for _, target := range version.Targets {
+						targets[string(target.TargetName)] = LockedModTarget{
+							Link: target.Link,
+						}
+					}
+
+					outputLock.Mods[k] = LockedMod{
+						Version: v.String(),
+						Targets: targets,
+					}
+					break
+				}
 			}
 			continue
 		}
+
 		value, _ := ficsitSource.modVersionInfo.Load(k)
 		versions := value.Mod.Versions
 		for _, ver := range versions {
 			if ver.Version == v.RawString() {
-				outputLock[k] = LockedMod{
+				targets := make(map[string]LockedModTarget)
+				for _, target := range ver.Targets {
+					targets[string(target.TargetName)] = LockedModTarget{
+						Link: viper.GetString("api-base") + target.Link,
+						Hash: target.Hash,
+					}
+				}
+
+				outputLock.Mods[k] = LockedMod{
 					Version: v.String(),
-					Hash:    ver.Hash,
-					Link:    viper.GetString("api-base") + ver.Link,
+					Targets: targets,
 				}
 				break
 			}

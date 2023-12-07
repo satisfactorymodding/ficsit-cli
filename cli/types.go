@@ -3,9 +3,13 @@ package cli
 type ModVersion struct {
 	ID           string
 	Version      string
-	Link         string
-	Hash         string
+	Targets      map[string]VersionTarget
 	Dependencies []VersionDependency
+}
+
+type VersionTarget struct {
+	Link string
+	Hash string
 }
 
 type VersionDependency struct {

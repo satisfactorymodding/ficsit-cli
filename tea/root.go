@@ -64,7 +64,7 @@ func (m *rootModel) GetAPIClient() graphql.Client {
 	return m.global.APIClient
 }
 
-func (m *rootModel) GetProvider() *provider.MixedProvider {
+func (m *rootModel) GetProvider() provider.Provider {
 	return m.global.Provider
 }
 

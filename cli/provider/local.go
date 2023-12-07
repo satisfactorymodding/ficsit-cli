@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
@@ -26,9 +25,9 @@ func (p localProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit
 
 	mods := make([]ficsit.ModsModsGetModsModsMod, 0)
 
-	for modReference, files := range cachedMods {
+	cachedMods.Range(func(modReference string, files []cache.File) bool {
 		if modReference == "SML" {
-			continue
+			return true
 		}
 
 		if len(filter.References) > 0 {
@@ -42,7 +41,7 @@ func (p localProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit
 			}
 
 			if skip {
-				continue
+				return true
 			}
 		}
 
@@ -56,7 +55,9 @@ func (p localProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit
 			Popularity:        0,
 			Hotness:           0,
 		})
-	}
+
+		return true
+	})
 
 	if filter.Limit == 0 {
 		filter.Limit = 25
@@ -172,77 +173,6 @@ func (p localProvider) SMLVersions(_ context.Context) (*ficsit.SMLVersionsRespon
 			Count:        len(smlVersions),
 			Sml_versions: smlVersions,
 		},
-	}, nil
-}
-
-func (p localProvider) ResolveModDependencies(_ context.Context, filter []ficsit.ModVersionConstraint) (*ficsit.ResolveModDependenciesResponse, error) {
-	cachedMods, err := cache.GetCache()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get cache")
-	}
-
-	mods := make([]ficsit.ResolveModDependenciesModsModVersion, 0)
-
-	constraintMap := make(map[string]string)
-
-	for _, constraint := range filter {
-		constraintMap[constraint.ModIdOrReference] = constraint.Version
-	}
-
-	for modReference, modFiles := range cachedMods {
-		constraint, ok := constraintMap[modReference]
-		if !ok {
-			continue
-		}
-
-		semverConstraint, err := semver.NewConstraint(constraint)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse constraint for %s", modReference)
-		}
-
-		versions := make([]ficsit.ResolveModDependenciesModsModVersionVersionsVersion, 0)
-
-		for _, modFile := range modFiles {
-			semverVersion, err := semver.NewVersion(modFile.Plugin.SemVersion)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse version for %s", modReference)
-			}
-
-			if !semverConstraint.Check(semverVersion) {
-				continue
-			}
-
-			dependencies := make([]ficsit.ResolveModDependenciesModsModVersionVersionsVersionDependenciesVersionDependency, 0)
-
-			for _, dependency := range modFile.Plugin.Plugins {
-				if dependency.BasePlugin {
-					continue
-				}
-				dependencies = append(dependencies, ficsit.ResolveModDependenciesModsModVersionVersionsVersionDependenciesVersionDependency{
-					Mod_id:    dependency.Name,
-					Condition: dependency.SemVersion,
-					Optional:  dependency.Optional,
-				})
-			}
-
-			versions = append(versions, ficsit.ResolveModDependenciesModsModVersionVersionsVersion{
-				Id:           modReference + ":" + modFile.Plugin.SemVersion,
-				Version:      modFile.Plugin.SemVersion,
-				Link:         "",
-				Hash:         modFile.Hash,
-				Dependencies: dependencies,
-			})
-		}
-
-		mods = append(mods, ficsit.ResolveModDependenciesModsModVersion{
-			Id:            modReference,
-			Mod_reference: modReference,
-			Versions:      versions,
-		})
-	}
-
-	return &ficsit.ResolveModDependenciesResponse{
-		Mods: mods,
 	}, nil
 }
 

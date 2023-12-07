@@ -14,7 +14,7 @@ type GlobalContext struct {
 	Installations *Installations
 	Profiles      *Profiles
 	APIClient     graphql.Client
-	Provider      *provider.MixedProvider
+	Provider      provider.Provider
 }
 
 var globalContext *GlobalContext

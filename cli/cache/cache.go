@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
@@ -24,9 +25,9 @@ type File struct {
 	Size         int64
 }
 
-var loadedCache map[string][]File
+var loadedCache *xsync.MapOf[string, []File]
 
-func GetCache() (map[string][]File, error) {
+func GetCache() (*xsync.MapOf[string, []File], error) {
 	if loadedCache != nil {
 		return loadedCache, nil
 	}
@@ -38,14 +39,15 @@ func GetCacheMod(mod string) ([]File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cache[mod], nil
+	value, _ := cache.Load(mod)
+	return value, nil
 }
 
-func LoadCache() (map[string][]File, error) {
-	loadedCache = map[string][]File{}
+func LoadCache() (*xsync.MapOf[string, []File], error) {
+	loadedCache = xsync.NewMapOf[string, []File]()
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if _, err := os.Stat(downloadCache); os.IsNotExist(err) {
-		return map[string][]File{}, nil
+		return loadedCache, nil
 	}
 
 	items, err := os.ReadDir(downloadCache)
@@ -75,7 +77,10 @@ func addFileToCache(filename string) (*File, error) {
 		return nil, errors.Wrap(err, "failed to read cache file")
 	}
 
-	loadedCache[cacheFile.ModReference] = append(loadedCache[cacheFile.ModReference], *cacheFile)
+	loadedCache.Compute(cacheFile.ModReference, func(oldValue []File, _ bool) ([]File, bool) {
+		return append(oldValue, *cacheFile), false
+	})
+
 	return cacheFile, nil
 }
 

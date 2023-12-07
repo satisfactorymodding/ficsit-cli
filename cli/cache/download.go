@@ -13,7 +13,7 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
-func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (io.ReaderAt, int64, error) {
+func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (*os.File, int64, error) {
 	if updates != nil {
 		defer close(updates)
 	}
@@ -36,6 +36,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 			if err != nil {
 				return nil, 0, errors.Wrap(err, "failed to open file: "+location)
 			}
+			defer f.Close()
 
 			existingHash, err = utils.SHA256Data(f)
 			if err != nil {
@@ -106,10 +107,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 	}
 
 	if updates != nil {
-		select {
-		case updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}:
-		default:
-		}
+		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
 
 	_, err = addFileToCache(cacheKey)

@@ -120,9 +120,9 @@ func (m updateModsList) LoadModData() {
 
 	items := make([]list.Item, 0)
 	i := 0
-	for reference, currentLockedMod := range *currentLockfile {
+	for reference, currentLockedMod := range currentLockfile.Mods {
 		r := reference
-		updatedLockedMod, ok := updatedLockfile[reference]
+		updatedLockedMod, ok := updatedLockfile.Mods[reference]
 		if !ok {
 			continue
 		}

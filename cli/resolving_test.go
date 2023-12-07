@@ -16,12 +16,7 @@ func init() {
 }
 
 func profilesGetResolver() DependencyResolver {
-	ctx, err := InitCLI(false)
-	if err != nil {
-		panic(err)
-	}
-
-	return NewDependencyResolver(ctx.Provider)
+	return NewDependencyResolver(MockProvider{})
 }
 
 func installWatcher() chan<- InstallUpdate {
@@ -47,7 +42,7 @@ func TestProfileResolution(t *testing.T) {
 		Name: DefaultProfileName,
 		Mods: map[string]ProfileMod{
 			"RefinedPower": {
-				Version: "3.0.9",
+				Version: "3.2.10",
 				Enabled: true,
 			},
 		},
@@ -55,7 +50,7 @@ func TestProfileResolution(t *testing.T) {
 
 	testza.AssertNoError(t, err)
 	testza.AssertNotNil(t, resolved)
-	testza.AssertLen(t, resolved, 4)
+	testza.AssertLen(t, resolved.Mods, 4)
 }
 
 func TestProfileRequiredOlderVersion(t *testing.T) {
@@ -65,17 +60,17 @@ func TestProfileRequiredOlderVersion(t *testing.T) {
 		Name: DefaultProfileName,
 		Mods: map[string]ProfileMod{
 			"RefinedPower": {
-				Version: "3.0.9",
+				Version: "3.2.11",
 				Enabled: true,
 			},
 			"RefinedRDLib": {
-				Version: "1.0.6",
+				Version: "1.1.5",
 				Enabled: true,
 			},
 		},
 	}).Resolve(resolver, nil, math.MaxInt)
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: Because installing Refined Power (RefinedPower) \"3.0.9\" and Refined Power (RefinedPower) \"3.0.9\" depends on RefinedRDLib \"^1.0.7\", installing RefinedRDLib \"^1.0.7\".\nSo, because installing RefinedRDLib \"1.0.6\", version solving failed.", err.Error())
+	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: Because installing Refined Power (RefinedPower) \"3.2.11\" and Refined Power (RefinedPower) \"3.2.11\" depends on RefinedRDLib \"^1.1.6\", installing RefinedRDLib \"^1.1.6\".\nSo, because installing RefinedRDLib \"1.1.5\", version solving failed.", err.Error())
 }
 
 func TestResolutionNonExistentMod(t *testing.T) {
@@ -101,13 +96,15 @@ func TestUpdateMods(t *testing.T) {
 	err = ctx.Wipe()
 	testza.AssertNoError(t, err)
 
+	ctx.Provider = MockProvider{}
+
 	resolver := NewDependencyResolver(ctx.Provider)
 
 	oldLockfile, err := (&Profile{
 		Name: DefaultProfileName,
 		Mods: map[string]ProfileMod{
-			"AreaActions": {
-				Version: "1.6.5",
+			"FicsitRemoteMonitoring": {
+				Version: "0.9.8",
 				Enabled: true,
 			},
 		},
@@ -115,12 +112,12 @@ func TestUpdateMods(t *testing.T) {
 
 	testza.AssertNoError(t, err)
 	testza.AssertNotNil(t, oldLockfile)
-	testza.AssertLen(t, oldLockfile, 2)
+	testza.AssertLen(t, oldLockfile.Mods, 2)
 
 	profileName := "UpdateTest"
 	profile, err := ctx.Profiles.AddProfile(profileName)
 	testza.AssertNoError(t, err)
-	testza.AssertNoError(t, profile.AddMod("AreaActions", "<=1.6.6"))
+	testza.AssertNoError(t, profile.AddMod("FicsitRemoteMonitoring", "<=0.10.0"))
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
@@ -137,17 +134,17 @@ func TestUpdateMods(t *testing.T) {
 		lockFile, err := installation.LockFile(ctx)
 		testza.AssertNoError(t, err)
 
-		testza.AssertEqual(t, 2, len(*lockFile))
-		testza.AssertEqual(t, "1.6.5", (*lockFile)["AreaActions"].Version)
+		testza.AssertEqual(t, 2, len(lockFile.Mods))
+		testza.AssertEqual(t, "0.9.8", (lockFile.Mods)["FicsitRemoteMonitoring"].Version)
 
-		err = installation.UpdateMods(ctx, []string{"AreaActions"})
+		err = installation.UpdateMods(ctx, []string{"FicsitRemoteMonitoring"})
 		testza.AssertNoError(t, err)
 
 		lockFile, err = installation.LockFile(ctx)
 		testza.AssertNoError(t, err)
 
-		testza.AssertEqual(t, 2, len(*lockFile))
-		testza.AssertEqual(t, "1.6.6", (*lockFile)["AreaActions"].Version)
+		testza.AssertEqual(t, 2, len(lockFile.Mods))
+		testza.AssertEqual(t, "0.10.0", (lockFile.Mods)["FicsitRemoteMonitoring"].Version)
 
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)

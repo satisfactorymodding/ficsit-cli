@@ -23,11 +23,13 @@ func TestAddInstallation(t *testing.T) {
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 
+	ctx.Provider = MockProvider{}
+
 	profileName := "InstallationTest"
 	profile, err := ctx.Profiles.AddProfile(profileName)
 	testza.AssertNoError(t, err)
 	testza.AssertNoError(t, profile.AddMod("AreaActions", ">=1.6.5"))
-	testza.AssertNoError(t, profile.AddMod("ArmorModules__Modpack_All", ">=1.4.1"))
+	testza.AssertNoError(t, profile.AddMod("RefinedPower", ">=3.2.10"))
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {

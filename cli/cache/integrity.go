@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
@@ -20,7 +21,7 @@ type hashInfo struct {
 	Size     int64
 }
 
-var hashCache map[string]hashInfo
+var hashCache *xsync.MapOf[string, hashInfo]
 
 var integrityFilename = ".integrity"
 
@@ -28,7 +29,7 @@ func getFileHash(file string) (string, error) {
 	if hashCache == nil {
 		loadHashCache()
 	}
-	cachedHash, ok := hashCache[file]
+	cachedHash, ok := hashCache.Load(file)
 	if !ok {
 		return cacheFileHash(file)
 	}
@@ -58,17 +59,17 @@ func cacheFileHash(file string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to hash file")
 	}
-	hashCache[file] = hashInfo{
+	hashCache.Store(file, hashInfo{
 		Hash:     hash,
 		Size:     stat.Size(),
 		Modified: stat.ModTime(),
-	}
+	})
 	saveHashCache()
 	return hash, nil
 }
 
 func loadHashCache() {
-	hashCache = map[string]hashInfo{}
+	hashCache = xsync.NewMapOf[string, hashInfo]()
 	cacheFile := filepath.Join(viper.GetString("cache-dir"), "downloadCache", integrityFilename)
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
 		return
@@ -94,7 +95,12 @@ func loadHashCache() {
 
 func saveHashCache() {
 	cacheFile := filepath.Join(viper.GetString("cache-dir"), "downloadCache", integrityFilename)
-	hashCacheJSON, err := json.Marshal(hashCache)
+	plainCache := make(map[string]hashInfo, hashCache.Size())
+	hashCache.Range(func(k string, v hashInfo) bool {
+		plainCache[k] = v
+		return true
+	})
+	hashCacheJSON, err := json.Marshal(plainCache)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to marshal hash cache")
 		return

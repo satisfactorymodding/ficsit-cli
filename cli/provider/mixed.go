@@ -50,13 +50,6 @@ func (p MixedProvider) SMLVersions(context context.Context) (*ficsit.SMLVersions
 	return p.ficsitProvider.SMLVersions(context)
 }
 
-func (p MixedProvider) ResolveModDependencies(context context.Context, filter []ficsit.ModVersionConstraint) (*ficsit.ResolveModDependenciesResponse, error) {
-	if p.Offline {
-		return p.localProvider.ResolveModDependencies(context, filter)
-	}
-	return p.ficsitProvider.ResolveModDependencies(context, filter)
-}
-
 func (p MixedProvider) ModVersionsWithDependencies(context context.Context, modID string) (*ficsit.ModVersionsWithDependenciesResponse, error) {
 	if p.Offline {
 		return p.localProvider.ModVersionsWithDependencies(context, modID)
@@ -69,4 +62,8 @@ func (p MixedProvider) GetModName(context context.Context, modReference string) 
 		return p.localProvider.GetModName(context, modReference)
 	}
 	return p.ficsitProvider.GetModName(context, modReference)
+}
+
+func (p MixedProvider) IsOffline() bool {
+	return p.Offline
 }
