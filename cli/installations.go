@@ -570,16 +570,13 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		go func() {
 			defer wg.Done()
 			for up := range extractUpdates {
-				select {
-				case updates <- InstallUpdate{
+				updates <- InstallUpdate{
 					Item: InstallUpdateItem{
 						Mod:     modReference,
 						Version: version,
 					},
 					Type:     InstallUpdateTypeModExtract,
 					Progress: up,
-				}:
-				default:
 				}
 			}
 		}()
@@ -591,15 +588,12 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 	}
 
 	if updates != nil {
-		select {
-		case updates <- InstallUpdate{
+		updates <- InstallUpdate{
 			Type: InstallUpdateTypeModComplete,
 			Item: InstallUpdateItem{
 				Mod:     modReference,
 				Version: version,
 			},
-		}:
-		default:
 		}
 
 		close(extractUpdates)

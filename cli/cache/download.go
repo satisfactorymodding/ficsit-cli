@@ -107,10 +107,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 	}
 
 	if updates != nil {
-		select {
-		case updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}:
-		default:
-		}
+		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
 
 	_, err = addFileToCache(cacheKey)

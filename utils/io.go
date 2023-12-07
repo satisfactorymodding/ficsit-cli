@@ -148,10 +148,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 	}
 
 	if updates != nil {
-		select {
-		case updates <- GenericProgress{Completed: totalSize, Total: totalSize}:
-		default:
-		}
+		updates <- GenericProgress{Completed: totalSize, Total: totalSize}
 	}
 
 	return nil
