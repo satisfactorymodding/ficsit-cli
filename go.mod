@@ -2,6 +2,8 @@ module github.com/satisfactorymodding/ficsit-cli
 
 go 1.21
 
+toolchain go1.21.4
+
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.4.2
 	github.com/Khan/genqlient v0.6.0

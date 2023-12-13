@@ -86,7 +86,7 @@ func TestResolutionNonExistentMod(t *testing.T) {
 		},
 	}).Resolve(resolver, nil, math.MaxInt)
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: failed to make decision: failed to get package versions: mod ThisModDoesNotExist$$$ not found", err.Error())
+	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: failed to make decision: failed to get package versions: mod ThisModDoesNotExist$$$ not found: mod not found", err.Error())
 }
 
 func TestUpdateMods(t *testing.T) {

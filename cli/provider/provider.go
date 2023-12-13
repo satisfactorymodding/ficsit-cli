@@ -11,7 +11,7 @@ type Provider interface {
 	GetMod(context context.Context, modReference string) (*ficsit.GetModResponse, error)
 	ModVersions(context context.Context, modReference string, filter ficsit.VersionFilter) (*ficsit.ModVersionsResponse, error)
 	SMLVersions(context context.Context) (*ficsit.SMLVersionsResponse, error)
-	ModVersionsWithDependencies(context context.Context, modID string) (*ficsit.ModVersionsWithDependenciesResponse, error)
+	ModVersionsWithDependencies(context context.Context, modID string) (*ficsit.AllVersionsResponse, error)
 	GetModName(context context.Context, modReference string) (*ficsit.GetModNameResponse, error)
 	IsOffline() bool
 }

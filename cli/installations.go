@@ -588,6 +588,9 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 	}
 
 	if updates != nil {
+		close(downloadUpdates)
+		close(extractUpdates)
+
 		updates <- InstallUpdate{
 			Type: InstallUpdateTypeModComplete,
 			Item: InstallUpdateItem{
@@ -595,8 +598,6 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 				Version: version,
 			},
 		}
-
-		close(extractUpdates)
 	}
 
 	wg.Wait()
