@@ -8,8 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wrap"
-	"github.com/rs/zerolog/log"
-
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
@@ -162,7 +160,6 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
-		log.Info().Int("height", msg.Height).Msg("set")
 		m.root.SetSize(msg)
 	case components.ErrorComponentTimeoutMsg:
 		m.error = nil
