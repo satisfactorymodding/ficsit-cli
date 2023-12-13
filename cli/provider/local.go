@@ -176,26 +176,24 @@ func (p localProvider) SMLVersions(_ context.Context) (*ficsit.SMLVersionsRespon
 	}, nil
 }
 
-func (p localProvider) ModVersionsWithDependencies(_ context.Context, modID string) (*ficsit.ModVersionsWithDependenciesResponse, error) {
+func (p localProvider) ModVersionsWithDependencies(_ context.Context, modID string) (*ficsit.AllVersionsResponse, error) {
 	cachedModFiles, err := cache.GetCacheMod(modID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cache")
 	}
 
-	versions := make([]ficsit.ModVersionsWithDependenciesModVersionsVersion, 0)
+	versions := make([]ficsit.ModVersion, 0)
 
 	for _, modFile := range cachedModFiles {
-		versions = append(versions, ficsit.ModVersionsWithDependenciesModVersionsVersion{
-			Id:      modID + ":" + modFile.Plugin.SemVersion,
+		versions = append(versions, ficsit.ModVersion{
+			ID:      modID + ":" + modFile.Plugin.SemVersion,
 			Version: modFile.Plugin.SemVersion,
 		})
 	}
 
-	return &ficsit.ModVersionsWithDependenciesResponse{
-		Mod: ficsit.ModVersionsWithDependenciesMod{
-			Id:       modID,
-			Versions: versions,
-		},
+	return &ficsit.AllVersionsResponse{
+		Success: true,
+		Data:    versions,
 	}, nil
 }
 

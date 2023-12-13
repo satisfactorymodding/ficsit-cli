@@ -2,6 +2,7 @@ package scenes
 
 import (
 	"sort"
+	"sync"
 
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
@@ -32,57 +33,70 @@ type status struct {
 }
 
 type apply struct {
-	root           components.RootModel
-	parent         tea.Model
-	error          *components.ErrorComponent
-	installChannel chan string
-	updateChannel  chan cli.InstallUpdate
-	doneChannel    chan bool
-	errorChannel   chan error
-	cancelChannel  chan bool
-	title          string
-	status         status
-	overall        progress.Model
-	sub            progress.Model
-	cancelled      bool
+	root          components.RootModel
+	parent        tea.Model
+	error         *components.ErrorComponent
+	updateChannel chan applyUpdate
+	doneChannel   chan bool
+	errorChannel  chan error
+	cancelChannel chan bool
+	title         string
+	status        map[string]status
+	overall       progress.Model
+	sub           progress.Model
+	cancelled     bool
+	done          bool
+}
+
+type applyUpdate struct {
+	Installation *cli.Installation
+	Update       cli.InstallUpdate
+	Done         bool
 }
 
 func NewApply(root components.RootModel, parent tea.Model) tea.Model {
 	overall := progress.New(progress.WithSolidFill("118"))
 	sub := progress.New(progress.WithSolidFill("202"))
 
-	installChannel := make(chan string)
-	updateChannel := make(chan cli.InstallUpdate)
+	updateChannel := make(chan applyUpdate)
 	doneChannel := make(chan bool, 1)
 	errorChannel := make(chan error)
 	cancelChannel := make(chan bool, 1)
 
 	model := &apply{
-		root:    root,
-		parent:  parent,
-		title:   teaUtils.NonListTitleStyle.MarginTop(1).MarginBottom(1).Render("Applying Changes"),
-		overall: overall,
-		sub:     sub,
-		status: status{
-			installName: "",
-			done:        false,
-		},
-		installChannel: installChannel,
-		updateChannel:  updateChannel,
-		doneChannel:    doneChannel,
-		errorChannel:   errorChannel,
-		cancelChannel:  cancelChannel,
-		cancelled:      false,
+		root:          root,
+		parent:        parent,
+		title:         teaUtils.NonListTitleStyle.MarginTop(1).MarginBottom(1).Render("Applying Changes"),
+		overall:       overall,
+		sub:           sub,
+		status:        make(map[string]status),
+		updateChannel: updateChannel,
+		doneChannel:   doneChannel,
+		errorChannel:  errorChannel,
+		cancelChannel: cancelChannel,
 	}
 
-	go func() {
-		for _, installation := range root.GetGlobal().Installations.Installations {
-			installChannel <- installation.Path
+	var wg sync.WaitGroup
+
+	for _, installation := range root.GetGlobal().Installations.Installations {
+		wg.Add(1)
+
+		model.status[installation.Path] = status{
+			modProgresses:   make(map[string]modProgress),
+			installName:     installation.Path,
+			overallProgress: utils.GenericProgress{},
+		}
+
+		go func(installation *cli.Installation) {
+			defer wg.Done()
 
 			installUpdateChannel := make(chan cli.InstallUpdate)
 			go func() {
 				for update := range installUpdateChannel {
-					updateChannel <- update
+					updateChannel <- applyUpdate{
+						Installation: installation,
+						Update:       update,
+					}
 				}
 			}()
 
@@ -91,18 +105,15 @@ func NewApply(root components.RootModel, parent tea.Model) tea.Model {
 				return
 			}
 
-			stop := false
-			select {
-			case <-cancelChannel:
-				stop = true
-			default:
+			updateChannel <- applyUpdate{
+				Installation: installation,
+				Done:         true,
 			}
+		}(installation)
+	}
 
-			if stop {
-				break
-			}
-		}
-
+	go func() {
+		wg.Wait()
 		doneChannel <- true
 	}()
 
@@ -122,6 +133,13 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case keys.KeyQ:
 			fallthrough
 		case keys.KeyEscape:
+			if m.done {
+				if m.parent != nil {
+					return m.parent, m.parent.Init()
+				}
+				return m, tea.Quit
+			}
+
 			m.cancelled = true
 
 			if m.error != nil {
@@ -134,7 +152,7 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cancelChannel <- true
 			return m, nil
 		case keys.KeyEnter:
-			if m.status.done || m.error != nil {
+			if m.done || m.error != nil {
 				if m.parent != nil {
 					return m.parent, m.parent.Init()
 				}
@@ -149,35 +167,37 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case teaUtils.TickMsg:
 		select {
 		case <-m.doneChannel:
-			m.status.done = true
-			m.status.installName = ""
-			break
-		case installName := <-m.installChannel:
-			m.status.installName = installName
-			m.status.modProgresses = make(map[string]modProgress)
-			m.status.overallProgress = utils.GenericProgress{}
+			m.done = true
 			break
 		case update := <-m.updateChannel:
-			switch update.Type {
-			case cli.InstallUpdateTypeOverall:
-				m.status.overallProgress = update.Progress
-			case cli.InstallUpdateTypeModDownload:
-				m.status.modProgresses[update.Item.Mod] = modProgress{
-					downloadProgress: update.Progress,
-					downloading:      true,
-					complete:         false,
-				}
-			case cli.InstallUpdateTypeModExtract:
-				m.status.modProgresses[update.Item.Mod] = modProgress{
-					extractProgress: update.Progress,
-					downloading:     false,
-					complete:        false,
-				}
-			case cli.InstallUpdateTypeModComplete:
-				m.status.modProgresses[update.Item.Mod] = modProgress{
-					complete: true,
+			s := m.status[update.Installation.Path]
+
+			if update.Done {
+				s.done = true
+			} else {
+				switch update.Update.Type {
+				case cli.InstallUpdateTypeOverall:
+					s.overallProgress = update.Update.Progress
+				case cli.InstallUpdateTypeModDownload:
+					s.modProgresses[update.Update.Item.Mod] = modProgress{
+						downloadProgress: update.Update.Progress,
+						downloading:      true,
+						complete:         false,
+					}
+				case cli.InstallUpdateTypeModExtract:
+					s.modProgresses[update.Update.Item.Mod] = modProgress{
+						extractProgress: update.Update.Progress,
+						downloading:     false,
+						complete:        false,
+					}
+				case cli.InstallUpdateTypeModComplete:
+					s.modProgresses[update.Update.Item.Mod] = modProgress{
+						complete: true,
+					}
 				}
 			}
+
+			m.status[update.Installation.Path] = s
 			break
 		case err := <-m.errorChannel:
 			wrappedErrMessage := wrap.String(err.Error(), int(float64(m.root.Size().Width)*0.8))
@@ -197,33 +217,77 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m apply) View() string {
 	strs := make([]string, 0)
 
-	if m.status.installName != "" {
-		strs = append(strs, lipgloss.NewStyle().Render(m.status.installName))
-		strs = append(strs, lipgloss.NewStyle().MarginBottom(1).Render(m.overall.ViewAs(m.status.overallProgress.Percentage())))
+	installationList := make([]string, len(m.status))
+	i := 0
+	for key := range m.status {
+		installationList[i] = key
+		i++
 	}
 
-	modReferences := make([]string, 0)
-	for k := range m.status.modProgresses {
-		modReferences = append(modReferences, k)
-	}
-	sort.Strings(modReferences)
+	sort.Strings(installationList)
 
-	for _, modReference := range modReferences {
-		p := m.status.modProgresses[modReference]
-		if p.complete {
-			strs = append(strs, lipgloss.NewStyle().Foreground(lipgloss.Color("22")).Render("✓ ")+modReference)
-		} else {
-			if p.downloading {
-				strs = append(strs, lipgloss.NewStyle().Render(modReference+" (Downloading)"))
-				strs = append(strs, m.sub.ViewAs(p.downloadProgress.Percentage()))
-			} else {
-				strs = append(strs, lipgloss.NewStyle().Render(modReference+" (Extracting)"))
-				strs = append(strs, m.sub.ViewAs(p.extractProgress.Percentage()))
+	totalHeight := 3 + 3                     // Header + Footer
+	totalHeight += len(installationList) * 2 // Bottom Margin + Overall progress per-install
+
+	bottomMargins := 1
+	if m.root.Size().Height < totalHeight {
+		bottomMargins = 0
+	}
+
+	totalHeight += len(installationList) // Top margin
+
+	topMargins := 1
+	if m.root.Size().Height < totalHeight {
+		topMargins = 0
+	}
+
+	for _, installPath := range installationList {
+		totalHeight += len(m.status[installPath].modProgresses)
+	}
+
+	for _, installPath := range installationList {
+		s := m.status[installPath]
+
+		strs = append(strs, lipgloss.NewStyle().Margin(topMargins, 0, bottomMargins, 1).Render(lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			m.overall.ViewAs(s.overallProgress.Percentage()),
+			" - ",
+			lipgloss.NewStyle().Render(installPath),
+		)))
+
+		modReferences := make([]string, 0)
+		for k := range s.modProgresses {
+			modReferences = append(modReferences, k)
+		}
+		sort.Strings(modReferences)
+
+		if m.root.Size().Height > totalHeight {
+			for _, modReference := range modReferences {
+				p := s.modProgresses[modReference]
+				if p.complete || s.done {
+					strs = append(strs, lipgloss.NewStyle().Foreground(lipgloss.Color("22")).Render("✓ ")+modReference)
+				} else {
+					if p.downloading {
+						strs = append(strs, lipgloss.JoinHorizontal(
+							lipgloss.Left,
+							m.sub.ViewAs(p.downloadProgress.Percentage()),
+							" - ",
+							lipgloss.NewStyle().Render(modReference+" (Downloading)"),
+						))
+					} else {
+						strs = append(strs, lipgloss.JoinHorizontal(
+							lipgloss.Left,
+							m.sub.ViewAs(p.extractProgress.Percentage()),
+							" - ",
+							lipgloss.NewStyle().Render(modReference+" (Extracting)"),
+						))
+					}
+				}
 			}
 		}
 	}
 
-	if m.status.done {
+	if m.done {
 		if m.cancelled {
 			strs = append(strs, teaUtils.LabelStyle.Copy().Foreground(lipgloss.Color("196")).Padding(0).Margin(1).Render("Cancelled! Press Enter to return"))
 		} else {

@@ -34,7 +34,7 @@ type ficsitAPISource struct {
 	provider       provider.Provider
 	lockfile       *LockFile
 	toInstall      map[string]semver.Constraint
-	modVersionInfo *xsync.MapOf[string, ficsit.ModVersionsWithDependenciesResponse]
+	modVersionInfo *xsync.MapOf[string, ficsit.AllVersionsResponse]
 	gameVersion    semver.Version
 	smlVersions    []ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion
 }
@@ -70,12 +70,15 @@ func (f *ficsitAPISource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersi
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch mod %s", pkg)
 	}
-	if response.Mod.Id == "" {
+	if !response.Success {
+		if response.Error != nil {
+			return nil, errors.Errorf("mod %s not found: %s", pkg, response.Error.Message)
+		}
 		return nil, errors.Errorf("mod %s not found", pkg)
 	}
 	f.modVersionInfo.Store(pkg, *response)
-	versions := make([]pubgrub.PackageVersion, len(response.Mod.Versions))
-	for i, modVersion := range response.Mod.Versions {
+	versions := make([]pubgrub.PackageVersion, len(response.Data))
+	for i, modVersion := range response.Data {
 		v, err := semver.NewVersion(modVersion.Version)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse version %s", modVersion.Version)
@@ -88,9 +91,9 @@ func (f *ficsitAPISource) GetPackageVersions(pkg string) ([]pubgrub.PackageVersi
 				return nil, errors.Wrapf(err, "failed to parse constraint %s", dependency.Condition)
 			}
 			if dependency.Optional {
-				optionalDependencies[dependency.Mod_id] = c
+				optionalDependencies[dependency.ModID] = c
 			} else {
-				dependencies[dependency.Mod_id] = c
+				dependencies[dependency.ModID] = c
 			}
 		}
 		versions[i] = pubgrub.PackageVersion{
@@ -144,7 +147,7 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		gameVersion:    gameVersionSemver,
 		lockfile:       lockFile,
 		toInstall:      toInstall,
-		modVersionInfo: xsync.NewMapOf[string, ficsit.ModVersionsWithDependenciesResponse](),
+		modVersionInfo: xsync.NewMapOf[string, ficsit.AllVersionsResponse](),
 	}
 
 	result, err := pubgrub.Solve(helpers.NewCachingSource(ficsitSource), rootPkg)
@@ -182,13 +185,13 @@ func (d DependencyResolver) ResolveModDependencies(constraints map[string]string
 		}
 
 		value, _ := ficsitSource.modVersionInfo.Load(k)
-		versions := value.Mod.Versions
+		versions := value.Data
 		for _, ver := range versions {
 			if ver.Version == v.RawString() {
 				targets := make(map[string]LockedModTarget)
 				for _, target := range ver.Targets {
-					targets[string(target.TargetName)] = LockedModTarget{
-						Link: viper.GetString("api-base") + target.Link,
+					targets[target.TargetName] = LockedModTarget{
+						Link: viper.GetString("api-base") + "/v1/version/" + ver.ID + "/" + target.TargetName + "/download",
 						Hash: target.Hash,
 					}
 				}

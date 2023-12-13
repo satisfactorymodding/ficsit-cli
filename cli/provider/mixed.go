@@ -50,7 +50,7 @@ func (p MixedProvider) SMLVersions(context context.Context) (*ficsit.SMLVersions
 	return p.ficsitProvider.SMLVersions(context)
 }
 
-func (p MixedProvider) ModVersionsWithDependencies(context context.Context, modID string) (*ficsit.ModVersionsWithDependenciesResponse, error) {
+func (p MixedProvider) ModVersionsWithDependencies(context context.Context, modID string) (*ficsit.AllVersionsResponse, error) {
 	if p.Offline {
 		return p.localProvider.ModVersionsWithDependencies(context, modID)
 	}

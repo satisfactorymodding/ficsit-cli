@@ -14,10 +14,6 @@ import (
 )
 
 func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (*os.File, int64, error) {
-	if updates != nil {
-		defer close(updates)
-	}
-
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
 		if !os.IsExist(err) {
