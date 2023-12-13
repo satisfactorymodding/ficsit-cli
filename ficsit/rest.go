@@ -3,9 +3,10 @@ package ficsit
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
 	"io"
 	"net/http"
+
+	"github.com/spf13/viper"
 )
 
 const allVersionEndpoint = `/v1/mod/%s/versions/all`

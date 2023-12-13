@@ -50,7 +50,6 @@ linters:
     - contextcheck
     - durationcheck
     - errorlint
-    - goconst
     - goimports
     - revive
     - misspell

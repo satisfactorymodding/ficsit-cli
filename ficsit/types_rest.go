@@ -1,9 +1,9 @@
 package ficsit
 
 type AllVersionsResponse struct {
+	Error   *Error       `json:"error,omitempty"`
 	Data    []ModVersion `json:"data,omitempty"`
 	Success bool         `json:"success"`
-	Error   *Error       `json:"error,omitempty"`
 }
 
 type ModVersion struct {

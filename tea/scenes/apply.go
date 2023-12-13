@@ -1,7 +1,6 @@
 package scenes
 
 import (
-	"github.com/rs/zerolog/log"
 	"sort"
 	"sync"
 
@@ -9,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wrap"
+	"github.com/rs/zerolog/log"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
