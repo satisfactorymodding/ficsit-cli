@@ -27,11 +27,11 @@ var _ tea.Model = (*newInstallation)(nil)
 
 type newInstallation struct {
 	dirList list.Model
-	input   textinput.Model
 	root    components.RootModel
 	parent  tea.Model
 	error   *components.ErrorComponent
 	title   string
+	input   textinput.Model
 }
 
 func NewNewInstallation(root components.RootModel, parent tea.Model) tea.Model {
