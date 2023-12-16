@@ -98,6 +98,12 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 			return
 		}
 
+		if fullMod.Mod.Id == "" {
+			// likely does not exist on GQL
+			model.modError <- mod.Reference + " was not found on ficsit.app"
+			return
+		}
+
 		model.modData <- fullMod.Mod
 	}()
 
