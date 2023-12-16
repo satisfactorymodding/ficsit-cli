@@ -1,22 +1,21 @@
 package cli
 
 import (
+	"context"
 	"math"
 	"os"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
 	"github.com/rs/zerolog/log"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
+	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
 
 func init() {
 	cfg.SetDefaults()
-}
-
-func profilesGetResolver() DependencyResolver {
-	return NewDependencyResolver(MockProvider{})
 }
 
 func installWatcher() chan<- InstallUpdate {
@@ -35,60 +34,6 @@ func installWatcher() chan<- InstallUpdate {
 	return c
 }
 
-func TestProfileResolution(t *testing.T) {
-	resolver := profilesGetResolver()
-
-	resolved, err := (&Profile{
-		Name: DefaultProfileName,
-		Mods: map[string]ProfileMod{
-			"RefinedPower": {
-				Version: "3.2.10",
-				Enabled: true,
-			},
-		},
-	}).Resolve(resolver, nil, math.MaxInt)
-
-	testza.AssertNoError(t, err)
-	testza.AssertNotNil(t, resolved)
-	testza.AssertLen(t, resolved.Mods, 4)
-}
-
-func TestProfileRequiredOlderVersion(t *testing.T) {
-	resolver := profilesGetResolver()
-
-	_, err := (&Profile{
-		Name: DefaultProfileName,
-		Mods: map[string]ProfileMod{
-			"RefinedPower": {
-				Version: "3.2.11",
-				Enabled: true,
-			},
-			"RefinedRDLib": {
-				Version: "1.1.5",
-				Enabled: true,
-			},
-		},
-	}).Resolve(resolver, nil, math.MaxInt)
-
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: Because installing Refined Power (RefinedPower) \"3.2.11\" and Refined Power (RefinedPower) \"3.2.11\" depends on RefinedRDLib \"^1.1.6\", installing RefinedRDLib \"^1.1.6\".\nSo, because installing RefinedRDLib \"1.1.5\", version solving failed.", err.Error())
-}
-
-func TestResolutionNonExistentMod(t *testing.T) {
-	resolver := profilesGetResolver()
-
-	_, err := (&Profile{
-		Name: DefaultProfileName,
-		Mods: map[string]ProfileMod{
-			"ThisModDoesNotExist$$$": {
-				Version: ">0.0.0",
-				Enabled: true,
-			},
-		},
-	}).Resolve(resolver, nil, math.MaxInt)
-
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed to solve dependencies: failed to make decision: failed to get package versions: mod ThisModDoesNotExist$$$ not found: mod not found", err.Error())
-}
-
 func TestUpdateMods(t *testing.T) {
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
@@ -98,17 +43,11 @@ func TestUpdateMods(t *testing.T) {
 
 	ctx.Provider = MockProvider{}
 
-	resolver := NewDependencyResolver(ctx.Provider)
+	depResolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
 
-	oldLockfile, err := (&Profile{
-		Name: DefaultProfileName,
-		Mods: map[string]ProfileMod{
-			"FicsitRemoteMonitoring": {
-				Version: "0.9.8",
-				Enabled: true,
-			},
-		},
-	}).Resolve(resolver, nil, math.MaxInt)
+	oldLockfile, err := depResolver.ResolveModDependencies(context.Background(), map[string]string{
+		"FicsitRemoteMonitoring": "0.9.8",
+	}, nil, math.MaxInt, nil)
 
 	testza.AssertNoError(t, err)
 	testza.AssertNotNil(t, oldLockfile)

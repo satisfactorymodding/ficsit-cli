@@ -6,14 +6,40 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/puzpuzpuz/xsync/v3"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
+type downloadGroup struct {
+	err     error
+	wait    chan bool
+	hash    string
+	updates []chan<- utils.GenericProgress
+	size    int64
+}
+
+var downloadSync = *xsync.NewMapOf[string, *downloadGroup]()
+
 func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (*os.File, int64, error) {
+	group, loaded := downloadSync.LoadOrCompute(cacheKey, func() *downloadGroup {
+		return &downloadGroup{
+			hash:    hash,
+			updates: make([]chan<- utils.GenericProgress, 0),
+			wait:    make(chan bool),
+		}
+	})
+
+	_, _ = downloadSync.Compute(cacheKey, func(oldValue *downloadGroup, loaded bool) (*downloadGroup, bool) {
+		oldValue.updates = append(oldValue.updates, updates)
+		return oldValue, false
+	})
+
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
 		if !os.IsExist(err) {
@@ -23,6 +49,75 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 
 	location := filepath.Join(downloadCache, cacheKey)
 
+	if loaded {
+		log.Info().Str("key", cacheKey).Msg("I wait")
+		if group.hash != hash {
+			return nil, 0, errors.New("hash mismatch in download group")
+		}
+
+		<-group.wait
+
+		if group.err != nil {
+			return nil, 0, group.err
+		}
+
+		f, err := os.Open(location)
+		if err != nil {
+			return nil, 0, errors.Wrap(err, "failed to open file: "+location)
+		}
+
+		return f, group.size, nil
+	}
+
+	defer downloadSync.Delete(cacheKey)
+
+	log.Info().Str("key", cacheKey).Msg("I am special")
+
+	upstreamUpdates := make(chan utils.GenericProgress)
+	defer close(upstreamUpdates)
+
+	upstreamWaiter := make(chan bool)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+	outer:
+		for {
+			select {
+			case update := <-upstreamUpdates:
+				for _, u := range group.updates {
+					u <- update
+				}
+			case <-upstreamWaiter:
+				break outer
+			}
+		}
+	}()
+
+	size, err := downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
+	if err != nil {
+		group.err = err
+		close(group.wait)
+		return nil, 0, err
+	}
+
+	close(upstreamWaiter)
+	wg.Wait()
+
+	group.size = size
+	close(group.wait)
+
+	f, err := os.Open(location)
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "failed to open file: "+location)
+	}
+
+	return f, size, nil
+}
+
+func downloadInternal(cacheKey string, location string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (int64, error) {
 	stat, err := os.Stat(location)
 	if err == nil {
 		existingHash := ""
@@ -30,36 +125,31 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 		if hash != "" {
 			f, err := os.Open(location)
 			if err != nil {
-				return nil, 0, errors.Wrap(err, "failed to open file: "+location)
+				return 0, errors.Wrap(err, "failed to open file: "+location)
 			}
 			defer f.Close()
 
 			existingHash, err = utils.SHA256Data(f)
 			if err != nil {
-				return nil, 0, errors.Wrap(err, "could not compute hash for file: "+location)
+				return 0, errors.Wrap(err, "could not compute hash for file: "+location)
 			}
 		}
 
 		if hash == existingHash {
-			f, err := os.Open(location)
-			if err != nil {
-				return nil, 0, errors.Wrap(err, "failed to open file: "+location)
-			}
-
-			return f, stat.Size(), nil
+			return stat.Size(), nil
 		}
 
 		if err := os.Remove(location); err != nil {
-			return nil, 0, errors.Wrap(err, "failed to delete file: "+location)
+			return 0, errors.Wrap(err, "failed to delete file: "+location)
 		}
 	} else if !os.IsNotExist(err) {
-		return nil, 0, errors.Wrap(err, "failed to stat file: "+location)
+		return 0, errors.Wrap(err, "failed to stat file: "+location)
 	}
 
 	if updates != nil {
 		headResp, err := http.Head(url)
 		if err != nil {
-			return nil, 0, errors.Wrap(err, "failed to head: "+url)
+			return 0, errors.Wrap(err, "failed to head: "+url)
 		}
 		defer headResp.Body.Close()
 		updates <- utils.GenericProgress{Total: headResp.ContentLength}
@@ -72,18 +162,18 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 
 	out, err := os.Create(location)
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed creating file at: "+location)
+		return 0, errors.Wrap(err, "failed creating file at: "+location)
 	}
 	defer out.Close()
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to fetch: "+url)
+		return 0, errors.Wrap(err, "failed to fetch: "+url)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("bad status: %s on url: %s", resp.Status, url)
+		return 0, fmt.Errorf("bad status: %s on url: %s", resp.Status, url)
 	}
 
 	progresser := &utils.Progresser{
@@ -94,12 +184,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 
 	_, err = io.Copy(out, progresser)
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed writing file to disk")
-	}
-
-	f, err := os.Open(location)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to open file: "+location)
+		return 0, errors.Wrap(err, "failed writing file to disk")
 	}
 
 	if updates != nil {
@@ -108,8 +193,8 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 
 	_, err = addFileToCache(cacheKey)
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to add file to cache")
+		return 0, errors.Wrap(err, "failed to add file to cache")
 	}
 
-	return f, resp.ContentLength, nil
+	return resp.ContentLength, nil
 }

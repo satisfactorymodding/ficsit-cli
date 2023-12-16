@@ -34,8 +34,8 @@ func TestAddInstallation(t *testing.T) {
 	profileName := "InstallationTest"
 	profile, err := ctx.Profiles.AddProfile(profileName)
 	testza.AssertNoError(t, err)
-	testza.AssertNoError(t, profile.AddMod("AreaActions", ">=1.6.5"))
-	testza.AssertNoError(t, profile.AddMod("RefinedPower", ">=3.2.10"))
+	testza.AssertNoError(t, profile.AddMod("AreaActions", "1.6.5"))
+	testza.AssertNoError(t, profile.AddMod("RefinedPower", "3.2.10"))
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {

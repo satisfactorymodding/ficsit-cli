@@ -5,6 +5,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
+	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
@@ -14,8 +16,8 @@ import (
 
 type rootModel struct {
 	headerComponent    tea.Model
-	dependencyResolver cli.DependencyResolver
 	global             *cli.GlobalContext
+	dependencyResolver resolver.DependencyResolver
 	currentSize        tea.WindowSizeMsg
 }
 
@@ -26,7 +28,7 @@ func newModel(global *cli.GlobalContext) *rootModel {
 			Width:  20,
 			Height: 14,
 		},
-		dependencyResolver: cli.NewDependencyResolver(global.Provider),
+		dependencyResolver: resolver.NewDependencyResolver(global.Provider, viper.GetString("api-base")),
 	}
 
 	m.headerComponent = components.NewHeaderComponent(m)
