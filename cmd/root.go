@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/lmittmann/tint"
 	"github.com/pterm/pterm"
+	slogmulti "github.com/samber/slog-multi"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -31,24 +31,11 @@ var RootCmd = &cobra.Command{
 
 		_ = viper.ReadInConfig()
 
-		writers := make([]io.Writer, 0)
+		handlers := make([]slog.Handler, 0)
 		if viper.GetBool("pretty") {
 			pterm.EnableStyling()
 		} else {
 			pterm.DisableStyling()
-		}
-
-		if !viper.GetBool("quiet") {
-			writers = append(writers, os.Stdout)
-		}
-
-		if viper.GetString("log-file") != "" {
-			logFile, err := os.OpenFile(viper.GetString("log-file"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o777)
-			if err != nil {
-				return fmt.Errorf("failed to open log file: %w", err)
-			}
-
-			writers = append(writers, logFile)
 		}
 
 		const (
@@ -63,8 +50,8 @@ var RootCmd = &cobra.Command{
 			return fmt.Errorf("failed parsing level: %w", err)
 		}
 
-		slog.SetDefault(slog.New(
-			tint.NewHandler(io.MultiWriter(writers...), &tint.Options{
+		if !viper.GetBool("quiet") {
+			handlers = append(handlers, tint.NewHandler(os.Stdout, &tint.Options{
 				Level:      level,
 				AddSource:  true,
 				TimeFormat: time.RFC3339Nano,
@@ -79,7 +66,20 @@ var RootCmd = &cobra.Command{
 					}
 					return attr
 				},
-			}),
+			}))
+		}
+
+		if viper.GetString("log-file") != "" {
+			logFile, err := os.OpenFile(viper.GetString("log-file"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o777)
+			if err != nil {
+				return fmt.Errorf("failed to open log file: %w", err)
+			}
+
+			handlers = append(handlers, slog.NewJSONHandler(logFile, &slog.HandlerOptions{}))
+		}
+
+		slog.SetDefault(slog.New(
+			slogmulti.Fanout(handlers...),
 		))
 
 		return nil

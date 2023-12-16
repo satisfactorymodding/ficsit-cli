@@ -20,6 +20,7 @@ require (
 	github.com/pterm/pterm v0.12.71
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/sahilm/fuzzy v0.1.1-0.20230530133925-c48e322e2a8f
+	github.com/samber/slog-multi v1.0.2
 	github.com/satisfactorymodding/ficsit-resolver v0.0.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.1
@@ -72,6 +73,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
+	github.com/samber/lo v1.38.1 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
