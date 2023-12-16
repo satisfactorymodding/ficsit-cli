@@ -60,12 +60,12 @@ var RootCmd = &cobra.Command{
 
 		level := slog.LevelInfo
 		if err := (&level).UnmarshalText([]byte(viper.GetString("log"))); err != nil {
-			return fmt.Errorf("failed ")
+			return fmt.Errorf("failed parsing level: %w", err)
 		}
 
 		slog.SetDefault(slog.New(
 			tint.NewHandler(io.MultiWriter(writers...), &tint.Options{
-				Level:      slog.LevelDebug,
+				Level:      level,
 				AddSource:  true,
 				TimeFormat: time.RFC3339Nano,
 				ReplaceAttr: func(groups []string, attr slog.Attr) slog.Attr {
