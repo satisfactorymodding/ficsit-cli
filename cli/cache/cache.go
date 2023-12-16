@@ -4,14 +4,15 @@ import (
 	"archive/zip"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/puzpuzpuz/xsync/v3"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -52,7 +53,7 @@ func LoadCache() (*xsync.MapOf[string, []File], error) {
 
 	items, err := os.ReadDir(downloadCache)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed reading download cache")
+		return nil, fmt.Errorf("failed reading download cache: %w", err)
 	}
 
 	for _, item := range items {
@@ -65,7 +66,7 @@ func LoadCache() (*xsync.MapOf[string, []File], error) {
 
 		_, err = addFileToCache(item.Name())
 		if err != nil {
-			log.Err(err).Str("file", item.Name()).Msg("failed to add file to cache")
+			slog.Error("failed to add file to cache", slog.String("file", item.Name()), slog.Any("err", err))
 		}
 	}
 	return loadedCache, nil
@@ -74,7 +75,7 @@ func LoadCache() (*xsync.MapOf[string, []File], error) {
 func addFileToCache(filename string) (*File, error) {
 	cacheFile, err := readCacheFile(filename)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read cache file")
+		return nil, fmt.Errorf("failed to read cache file: %w", err)
 	}
 
 	loadedCache.Compute(cacheFile.ModReference, func(oldValue []File, _ bool) ([]File, bool) {
@@ -89,19 +90,19 @@ func readCacheFile(filename string) (*File, error) {
 	path := filepath.Join(downloadCache, filename)
 	stat, err := os.Stat(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to stat file")
+		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
 	zipFile, err := os.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to open file")
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer zipFile.Close()
 
 	size := stat.Size()
 	reader, err := zip.NewReader(zipFile, size)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read zip")
+		return nil, fmt.Errorf("failed to read zip: %w", err)
 	}
 
 	var upluginFile *zip.File
@@ -117,23 +118,23 @@ func readCacheFile(filename string) (*File, error) {
 
 	upluginReader, err := upluginFile.Open()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to open uplugin file")
+		return nil, fmt.Errorf("failed to open uplugin file: %w", err)
 	}
 
 	var uplugin UPlugin
 	data, err := io.ReadAll(upluginReader)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read uplugin file")
+		return nil, fmt.Errorf("failed to read uplugin file: %w", err)
 	}
 	if err := json.Unmarshal(data, &uplugin); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal uplugin file")
+		return nil, fmt.Errorf("failed to unmarshal uplugin file: %w", err)
 	}
 
 	modReference := strings.TrimSuffix(upluginFile.Name, ".uplugin")
 
 	hash, err := getFileHash(filename)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get file hash")
+		return nil, fmt.Errorf("failed to get file hash: %w", err)
 	}
 
 	var iconFile *zip.File
@@ -147,13 +148,13 @@ func readCacheFile(filename string) (*File, error) {
 	if iconFile != nil {
 		iconReader, err := iconFile.Open()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to open icon file")
+			return nil, fmt.Errorf("failed to open icon file: %w", err)
 		}
 		defer iconReader.Close()
 
 		data, err := io.ReadAll(iconReader)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read icon file")
+			return nil, fmt.Errorf("failed to read icon file: %w", err)
 		}
 		iconData := base64.StdEncoding.EncodeToString(data)
 		icon = &iconData

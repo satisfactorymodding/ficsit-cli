@@ -3,7 +3,10 @@ package smr
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"mime/multipart"
 	"net/http"
@@ -12,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -57,7 +58,7 @@ var uploadCmd = &cobra.Command{
 
 		stat, err := os.Stat(filePath)
 		if err != nil {
-			return errors.Wrap(err, "failed to stat file")
+			return fmt.Errorf("failed to stat file: %w", err)
 		}
 
 		global, err := cli.InitCLI(true)
@@ -71,31 +72,31 @@ var uploadCmd = &cobra.Command{
 
 		// TODO Validate .smod file before upload
 
-		logBase := log.With().Str("mod-id", modID).Str("path", filePath).Logger()
-		logBase.Info().Msg("creating a new mod version")
+		logBase := slog.With(slog.String("mod-id", modID), slog.String("path", filePath))
+		logBase.Info("creating a new mod version")
 
 		createdVersion, err := ficsit.CreateVersion(cmd.Context(), global.APIClient, modID)
 		if err != nil {
 			return err
 		}
 
-		logBase = logBase.With().Str("version-id", createdVersion.GetVersionID()).Logger()
-		logBase.Info().Msg("received version id")
+		logBase = logBase.With(slog.String("version-id", createdVersion.GetVersionID()))
+		logBase.Info("received version id")
 
 		// TODO Parallelize chunk uploading
 		chunkCount := int(math.Ceil(float64(stat.Size()) / float64(chunkSize)))
 		for i := 0; i < chunkCount; i++ {
-			chunkLog := logBase.With().Int("chunk", i).Logger()
-			chunkLog.Info().Msg("uploading chunk")
+			chunkLog := logBase.With(slog.Int("chunk", i))
+			chunkLog.Info("uploading chunk")
 
 			f, err := os.Open(filePath)
 			if err != nil {
-				return errors.Wrap(err, "failed to open file")
+				return fmt.Errorf("failed to open file: %w", err)
 			}
 
 			offset := int64(i) * chunkSize
 			if _, err := f.Seek(offset, 0); err != nil {
-				return errors.Wrap(err, "failed to seek to chunk offset")
+				return fmt.Errorf("failed to seek to chunk offset: %w", err)
 			}
 
 			bufferSize := chunkSize
@@ -105,7 +106,7 @@ var uploadCmd = &cobra.Command{
 
 			chunk := make([]byte, bufferSize)
 			if _, err := f.Read(chunk); err != nil {
-				return errors.Wrap(err, "failed to read from chunk offset")
+				return fmt.Errorf("failed to read from chunk offset: %w", err)
 			}
 
 			operationBody, err := json.Marshal(map[string]interface{}{
@@ -118,14 +119,14 @@ var uploadCmd = &cobra.Command{
 				},
 			})
 			if err != nil {
-				return errors.Wrap(err, "failed to serialize operation body")
+				return fmt.Errorf("failed to serialize operation body: %w", err)
 			}
 
 			mapBody, err := json.Marshal(map[string]interface{}{
 				"0": []string{"variables.file"},
 			})
 			if err != nil {
-				return errors.Wrap(err, "failed to serialize map body")
+				return fmt.Errorf("failed to serialize map body: %w", err)
 			}
 
 			body := &bytes.Buffer{}
@@ -133,33 +134,33 @@ var uploadCmd = &cobra.Command{
 
 			operations, err := writer.CreateFormField("operations")
 			if err != nil {
-				return errors.Wrap(err, "failed to create operations field")
+				return fmt.Errorf("failed to create operations field: %w", err)
 			}
 
 			if _, err := operations.Write(operationBody); err != nil {
-				return errors.Wrap(err, "failed to write to operation field")
+				return fmt.Errorf("failed to write to operation field: %w", err)
 			}
 
 			mapField, err := writer.CreateFormField("map")
 			if err != nil {
-				return errors.Wrap(err, "failed to create map field")
+				return fmt.Errorf("failed to create map field: %w", err)
 			}
 
 			if _, err := mapField.Write(mapBody); err != nil {
-				return errors.Wrap(err, "failed to write to map field")
+				return fmt.Errorf("failed to write to map field: %w", err)
 			}
 
 			part, err := writer.CreateFormFile("0", filepath.Base(filePath))
 			if err != nil {
-				return errors.Wrap(err, "failed to create file field")
+				return fmt.Errorf("failed to create file field: %w", err)
 			}
 
 			if _, err := io.Copy(part, bytes.NewReader(chunk)); err != nil {
-				return errors.Wrap(err, "failed to write to file field")
+				return fmt.Errorf("failed to write to file field: %w", err)
 			}
 
 			if err := writer.Close(); err != nil {
-				return errors.Wrap(err, "failed to close body writer")
+				return fmt.Errorf("failed to close body writer: %w", err)
 			}
 
 			r, _ := http.NewRequest("POST", viper.GetString("api-base")+viper.GetString("graphql-api"), body)
@@ -168,12 +169,12 @@ var uploadCmd = &cobra.Command{
 
 			client := &http.Client{}
 			if _, err := client.Do(r); err != nil {
-				return errors.Wrap(err, "failed to execute request")
+				return fmt.Errorf("failed to execute request: %w", err)
 			}
 
 		}
 
-		logBase.Info().Msg("finalizing uploaded version")
+		logBase.Info("finalizing uploaded version")
 
 		finalizeSuccess, err := ficsit.FinalizeCreateVersion(cmd.Context(), global.APIClient, modID, createdVersion.GetVersionID(), ficsit.NewVersion{
 			Changelog: changelog,
@@ -184,16 +185,16 @@ var uploadCmd = &cobra.Command{
 		}
 
 		if !finalizeSuccess.GetSuccess() {
-			logBase.Error().Msg("failed to finalize version upload")
+			logBase.Error("failed to finalize version upload")
 		}
 
 		time.Sleep(time.Second * 1)
 
 		for {
-			logBase.Info().Msg("checking version upload state")
+			logBase.Info("checking version upload state")
 			state, err := ficsit.CheckVersionUploadState(cmd.Context(), global.APIClient, modID, createdVersion.GetVersionID())
 			if err != nil {
-				logBase.Err(err).Msg("failed to upload mod")
+				logBase.Error("failed to upload mod", slog.Any("err", err))
 				return nil
 			}
 
@@ -203,11 +204,11 @@ var uploadCmd = &cobra.Command{
 			}
 
 			if state.GetState().Auto_approved {
-				logBase.Info().Msg("version successfully uploaded and auto-approved")
+				logBase.Info("version successfully uploaded and auto-approved")
 				break
 			}
 
-			logBase.Info().Msg("version successfully uploaded, but has to be scanned for viruses, which may take up to 15 minutes")
+			logBase.Info("version successfully uploaded, but has to be scanned for viruses, which may take up to 15 minutes")
 			break
 		}
 

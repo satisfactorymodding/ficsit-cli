@@ -1,11 +1,10 @@
 package disk
 
 import (
+	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
-
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 type Disk interface {
@@ -49,18 +48,18 @@ type Entry interface {
 func FromPath(path string) (Disk, error) {
 	parsed, err := url.Parse(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse path")
+		return nil, fmt.Errorf("failed to parse path: %w", err)
 	}
 
 	switch parsed.Scheme {
 	case "ftp":
-		log.Info().Str("path", path).Msg("connecting to ftp")
+		slog.Info("connecting to ftp", slog.String("path", path))
 		return newFTP(path)
 	case "sftp":
-		log.Info().Str("path", path).Msg("connecting to sftp")
+		slog.Info("connecting to sftp", slog.String("path", path))
 		return newSFTP(path)
 	}
 
-	log.Info().Str("path", path).Msg("using local disk")
+	slog.Info("using local disk", slog.String("path", path))
 	return newLocal(path)
 }

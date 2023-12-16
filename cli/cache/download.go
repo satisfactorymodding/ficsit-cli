@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,7 +9,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/spf13/viper"
 
@@ -42,7 +42,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0o777); err != nil {
 		if !os.IsExist(err) {
-			return nil, 0, errors.Wrap(err, "failed creating download cache")
+			return nil, 0, fmt.Errorf("failed creating download cache: %w", err)
 		}
 	}
 
@@ -61,7 +61,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 
 		f, err := os.Open(location)
 		if err != nil {
-			return nil, 0, errors.Wrap(err, "failed to open file: "+location)
+			return nil, 0, fmt.Errorf("failed to open file: %s: %w", location, err)
 		}
 
 		return f, group.size, nil
@@ -107,7 +107,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 
 	f, err := os.Open(location)
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "failed to open file: "+location)
+		return nil, 0, fmt.Errorf("failed to open file: %s: %w", location, err)
 	}
 
 	return f, size, nil
@@ -121,13 +121,13 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 		if hash != "" {
 			f, err := os.Open(location)
 			if err != nil {
-				return 0, errors.Wrap(err, "failed to open file: "+location)
+				return 0, fmt.Errorf("failed to open file: %s: %w", location, err)
 			}
 			defer f.Close()
 
 			existingHash, err = utils.SHA256Data(f)
 			if err != nil {
-				return 0, errors.Wrap(err, "could not compute hash for file: "+location)
+				return 0, fmt.Errorf("could not compute hash for file: %s: %w", location, err)
 			}
 		}
 
@@ -136,16 +136,16 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 		}
 
 		if err := os.Remove(location); err != nil {
-			return 0, errors.Wrap(err, "failed to delete file: "+location)
+			return 0, fmt.Errorf("failed to delete file: %s: %w", location, err)
 		}
 	} else if !os.IsNotExist(err) {
-		return 0, errors.Wrap(err, "failed to stat file: "+location)
+		return 0, fmt.Errorf("failed to stat file: %s: %w", location, err)
 	}
 
 	if updates != nil {
 		headResp, err := http.Head(url)
 		if err != nil {
-			return 0, errors.Wrap(err, "failed to head: "+url)
+			return 0, fmt.Errorf("failed to head: %s: %w", url, err)
 		}
 		defer headResp.Body.Close()
 		updates <- utils.GenericProgress{Total: headResp.ContentLength}
@@ -158,13 +158,13 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 
 	out, err := os.Create(location)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed creating file at: "+location)
+		return 0, fmt.Errorf("failed creating file at: %s: %w", location, err)
 	}
 	defer out.Close()
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to fetch: "+url)
+		return 0, fmt.Errorf("failed to fetch: %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
@@ -180,7 +180,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 
 	_, err = io.Copy(out, progresser)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed writing file to disk")
+		return 0, fmt.Errorf("failed writing file to disk: %w", err)
 	}
 
 	if updates != nil {
@@ -189,7 +189,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 
 	_, err = addFileToCache(cacheKey)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to add file to cache")
+		return 0, fmt.Errorf("failed to add file to cache: %w", err)
 	}
 
 	return resp.ContentLength, nil

@@ -1,8 +1,9 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/Khan/genqlient/graphql"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
@@ -35,17 +36,17 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 	if !apiOnly {
 		profiles, err := InitProfiles()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to initialize profiles")
+			return nil, fmt.Errorf("failed to initialize profiles: %w", err)
 		}
 
 		installations, err := InitInstallations()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to initialize installations")
+			return nil, fmt.Errorf("failed to initialize installations: %w", err)
 		}
 
 		_, err = cache.LoadCache()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to load cache")
+			return nil, fmt.Errorf("failed to load cache: %w", err)
 		}
 
 		globalContext = &GlobalContext{
@@ -70,12 +71,12 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 func (g *GlobalContext) ReInit() error {
 	profiles, err := InitProfiles()
 	if err != nil {
-		return errors.Wrap(err, "failed to initialize profiles")
+		return fmt.Errorf("failed to initialize profiles: %w", err)
 	}
 
 	installations, err := InitInstallations()
 	if err != nil {
-		return errors.Wrap(err, "failed to initialize installations")
+		return fmt.Errorf("failed to initialize installations: %w", err)
 	}
 
 	g.Installations = installations
@@ -89,18 +90,18 @@ func (g *GlobalContext) Wipe() error {
 	// Wipe all installations
 	for _, installation := range g.Installations.Installations {
 		if err := installation.Wipe(); err != nil {
-			return errors.Wrap(err, "failed wiping installation")
+			return fmt.Errorf("failed wiping installation: %w", err)
 		}
 
 		if err := g.Installations.DeleteInstallation(installation.Path); err != nil {
-			return errors.Wrap(err, "failed deleting installation")
+			return fmt.Errorf("failed deleting installation: %w", err)
 		}
 	}
 
 	// Wipe all profiles
 	for _, profile := range g.Profiles.Profiles {
 		if err := g.Profiles.DeleteProfile(profile.Name); err != nil {
-			return errors.Wrap(err, "failed deleting profile")
+			return fmt.Errorf("failed deleting profile: %w", err)
 		}
 	}
 
@@ -109,11 +110,11 @@ func (g *GlobalContext) Wipe() error {
 
 func (g *GlobalContext) Save() error {
 	if err := g.Installations.Save(); err != nil {
-		return errors.Wrap(err, "failed to save installations")
+		return fmt.Errorf("failed to save installations: %w", err)
 	}
 
 	if err := g.Profiles.Save(); err != nil {
-		return errors.Wrap(err, "failed to save profiles")
+		return fmt.Errorf("failed to save profiles: %w", err)
 	}
 
 	return nil

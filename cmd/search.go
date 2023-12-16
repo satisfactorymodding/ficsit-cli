@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -58,7 +57,7 @@ var searchCmd = &cobra.Command{
 		case "json":
 			result, err := json.MarshalIndent(modList, "", "  ")
 			if err != nil {
-				return errors.Wrap(err, "failed converting mods to json")
+				return fmt.Errorf("failed converting mods to json: %w", err)
 			}
 			println(string(result))
 		}

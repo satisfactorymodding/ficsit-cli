@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
@@ -21,7 +22,7 @@ func NewLocalProvider() LocalProvider {
 func (p LocalProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit.ModsResponse, error) {
 	cachedMods, err := cache.GetCache()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get cache")
+		return nil, fmt.Errorf("failed to get cache: %w", err)
 	}
 
 	mods := make([]ficsit.ModsModsGetModsModsMod, 0)
@@ -93,7 +94,7 @@ func (p LocalProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit
 func (p LocalProvider) GetMod(_ context.Context, modReference string) (*ficsit.GetModResponse, error) {
 	cachedModFiles, err := cache.GetCacheMod(modReference)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get cache")
+		return nil, fmt.Errorf("failed to get cache: %w", err)
 	}
 
 	if len(cachedModFiles) == 0 {
@@ -129,7 +130,7 @@ func (p LocalProvider) GetMod(_ context.Context, modReference string) (*ficsit.G
 func (p LocalProvider) SMLVersions(_ context.Context) ([]resolver.SMLVersion, error) {
 	cachedSMLFiles, err := cache.GetCacheMod("SML")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get cache")
+		return nil, fmt.Errorf("failed to get cache: %w", err)
 	}
 
 	smlVersions := make([]resolver.SMLVersion, 0)
@@ -148,7 +149,7 @@ func (p LocalProvider) SMLVersions(_ context.Context) ([]resolver.SMLVersion, er
 func (p LocalProvider) ModVersionsWithDependencies(_ context.Context, modID string) ([]resolver.ModVersion, error) {
 	cachedModFiles, err := cache.GetCacheMod(modID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get cache")
+		return nil, fmt.Errorf("failed to get cache: %w", err)
 	}
 
 	versions := make([]resolver.ModVersion, 0)
@@ -166,7 +167,7 @@ func (p LocalProvider) ModVersionsWithDependencies(_ context.Context, modID stri
 func (p LocalProvider) GetModName(_ context.Context, modReference string) (*resolver.ModName, error) {
 	cachedModFiles, err := cache.GetCacheMod(modReference)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get cache")
+		return nil, fmt.Errorf("failed to get cache: %w", err)
 	}
 
 	if len(cachedModFiles) == 0 {

@@ -4,13 +4,12 @@ import (
 	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
-
-	"github.com/pkg/errors"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 )
@@ -51,13 +50,17 @@ func (pt *Progresser) Read(p []byte) (int, error) {
 		return n, io.EOF
 	}
 
-	return n, errors.Wrap(err, "failed to read")
+	if err != nil {
+		return 0, fmt.Errorf("failed to read: %w", err)
+	}
+
+	return n, nil
 }
 
 func SHA256Data(f io.Reader) (string, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
-		return "", errors.Wrap(err, "failed to compute hash")
+		return "", fmt.Errorf("failed to compute hash: %w", err)
 	}
 
 	return hex.EncodeToString(h.Sum(nil)), nil
@@ -68,7 +71,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 	hashBytes, err := d.Read(hashFile)
 	if err != nil {
 		if !d.IsNotExist(err) {
-			return errors.Wrap(err, "failed to read .smm mod hash file")
+			return fmt.Errorf("failed to read .smm mod hash file: %w", err)
 		}
 	} else {
 		if hash == string(hashBytes) {
@@ -78,21 +81,21 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 
 	if err := d.MkDir(location); err != nil {
 		if !d.IsExist(err) {
-			return errors.Wrap(err, "failed to create mod directory: "+location)
+			return fmt.Errorf("failed to create mod directory: %s: %w", location, err)
 		}
 
 		if err := d.Remove(location); err != nil {
-			return errors.Wrap(err, "failed to remove directory: "+location)
+			return fmt.Errorf("failed to remove directory: %s: %w", location, err)
 		}
 
 		if err := d.MkDir(location); err != nil {
-			return errors.Wrap(err, "failed to create mod directory: "+location)
+			return fmt.Errorf("failed to create mod directory: %s: %w", location, err)
 		}
 	}
 
 	reader, err := zip.NewReader(f, size)
 	if err != nil {
-		return errors.Wrap(err, "failed to read file as zip")
+		return fmt.Errorf("failed to read file as zip: %w", err)
 	}
 
 	totalSize := int64(0)
@@ -117,7 +120,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 			outFileLocation := filepath.Join(location, file.Name)
 
 			if err := d.MkDir(filepath.Dir(outFileLocation)); err != nil {
-				return errors.Wrap(err, "failed to create mod directory: "+location)
+				return fmt.Errorf("failed to create mod directory: %s: %w", location, err)
 			}
 
 			var fileUpdates chan GenericProgress
@@ -144,7 +147,7 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 	}
 
 	if err := d.Write(hashFile, []byte(hash)); err != nil {
-		return errors.Wrap(err, "failed to write .smm mod hash file")
+		return fmt.Errorf("failed to write .smm mod hash file: %w", err)
 	}
 
 	if updates != nil {
@@ -161,14 +164,14 @@ func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates c
 
 	outFile, err := d.Open(outFileLocation, os.O_CREATE|os.O_RDWR)
 	if err != nil {
-		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
+		return fmt.Errorf("failed to write to file: %s: %w", outFileLocation, err)
 	}
 
 	defer outFile.Close()
 
 	inFile, err := file.Open()
 	if err != nil {
-		return errors.Wrap(err, "failed to process mod zip")
+		return fmt.Errorf("failed to process mod zip: %w", err)
 	}
 	defer inFile.Close()
 
@@ -179,7 +182,7 @@ func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates c
 	}
 
 	if _, err := io.Copy(outFile, progressInReader); err != nil {
-		return errors.Wrap(err, "failed to write to file: "+outFileLocation)
+		return fmt.Errorf("failed to write to file: %s: %w", outFileLocation, err)
 	}
 
 	return nil

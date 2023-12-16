@@ -2,9 +2,9 @@ package provider
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Khan/genqlient/graphql"
-	"github.com/pkg/errors"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"

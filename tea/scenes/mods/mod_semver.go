@@ -15,12 +15,12 @@ import (
 var _ tea.Model = (*modSemver)(nil)
 
 type modSemver struct {
-	input  textinput.Model
 	root   components.RootModel
 	parent tea.Model
 	error  *components.ErrorComponent
 	mod    utils.Mod
 	title  string
+	input  textinput.Model
 }
 
 func NewModSemver(root components.RootModel, parent tea.Model, mod utils.Mod) tea.Model {
