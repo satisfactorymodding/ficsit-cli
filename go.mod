@@ -15,13 +15,13 @@ require (
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20231206171822-6e7b9b308fe7
 	github.com/jlaffaye/ftp v0.2.0
-	github.com/mircearoata/pubgrub-go v0.3.3
 	github.com/muesli/reflow v0.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.71
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/rs/zerolog v1.31.0
 	github.com/sahilm/fuzzy v0.1.0
+	github.com/satisfactorymodding/ficsit-resolver v0.0.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.0
 	golang.org/x/sync v0.5.0
@@ -62,6 +62,7 @@ require (
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.26 // indirect
+	github.com/mircearoata/pubgrub-go v0.3.3 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

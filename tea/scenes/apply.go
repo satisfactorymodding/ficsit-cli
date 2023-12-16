@@ -248,7 +248,7 @@ func (m apply) View() string {
 	for _, installPath := range installationList {
 		s := m.status[installPath]
 
-		strs = append(strs, lipgloss.NewStyle().Margin(topMargins, 0, bottomMargins, 1).Render(lipgloss.JoinHorizontal(
+		strs = append(strs, lipgloss.NewStyle().Margin(topMargins, 0, bottomMargins).Render(lipgloss.JoinHorizontal(
 			lipgloss.Left,
 			m.overall.ViewAs(s.overallProgress.Percentage()),
 			" - ",
@@ -265,22 +265,22 @@ func (m apply) View() string {
 			for _, modReference := range modReferences {
 				p := s.modProgresses[modReference]
 				if p.complete || s.done {
-					strs = append(strs, lipgloss.NewStyle().Foreground(lipgloss.Color("22")).Render("✓ ")+modReference)
+					strs = append(strs, lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("22")).Render("✓ ")+modReference)
 				} else {
 					if p.downloading {
-						strs = append(strs, lipgloss.JoinHorizontal(
+						strs = append(strs, lipgloss.NewStyle().MarginLeft(1).Render(lipgloss.JoinHorizontal(
 							lipgloss.Left,
 							m.sub.ViewAs(p.downloadProgress.Percentage()),
 							" - ",
 							lipgloss.NewStyle().Render(modReference+" (Downloading)"),
-						))
+						)))
 					} else {
-						strs = append(strs, lipgloss.JoinHorizontal(
+						strs = append(strs, lipgloss.NewStyle().MarginLeft(1).Render(lipgloss.JoinHorizontal(
 							lipgloss.Left,
 							m.sub.ViewAs(p.extractProgress.Percentage()),
 							" - ",
 							lipgloss.NewStyle().Render(modReference+" (Extracting)"),
-						))
+						)))
 					}
 				}
 			}

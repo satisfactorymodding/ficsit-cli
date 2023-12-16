@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/utils"
@@ -43,8 +45,9 @@ type Profiles struct {
 }
 
 type Profile struct {
-	Mods map[string]ProfileMod `json:"mods"`
-	Name string                `json:"name"`
+	Mods            map[string]ProfileMod `json:"mods"`
+	Name            string                `json:"name"`
+	RequiredTargets []resolver.TargetName `json:"required_targets"`
 }
 
 type ProfileMod struct {
@@ -288,7 +291,7 @@ func (p *Profile) HasMod(reference string) bool {
 // An optional lockfile can be passed if one exists.
 //
 // Returns an error if resolution is impossible.
-func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile, gameVersion int) (*LockFile, error) {
+func (p *Profile) Resolve(resolver resolver.DependencyResolver, lockFile *resolver.LockFile, gameVersion int) (*resolver.LockFile, error) {
 	toResolve := make(map[string]string)
 	for modReference, mod := range p.Mods {
 		if mod.Enabled {
@@ -296,7 +299,7 @@ func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile, gameV
 		}
 	}
 
-	resultLockfile, err := resolver.ResolveModDependencies(toResolve, lockFile, gameVersion)
+	resultLockfile, err := resolver.ResolveModDependencies(context.TODO(), toResolve, lockFile, gameVersion, p.RequiredTargets)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed resolving profile dependencies")
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
@@ -257,7 +258,7 @@ func (i *Installation) LockFilePath(ctx *GlobalContext) (string, error) {
 	return filepath.Join(i.BasePath(), platform.LockfilePath, lockFileName), nil
 }
 
-func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
+func (i *Installation) LockFile(ctx *GlobalContext) (*resolver.LockFile, error) {
 	lockfilePath, err := i.LockFilePath(ctx)
 	if err != nil {
 		return nil, err
@@ -268,7 +269,7 @@ func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
 		return nil, err
 	}
 
-	var lockFile *LockFile
+	var lockFile *resolver.LockFile
 	lockFileJSON, err := d.Read(lockfilePath)
 	if err != nil {
 		if !d.IsNotExist(err) {
@@ -283,7 +284,7 @@ func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
 	return lockFile, nil
 }
 
-func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *LockFile) error {
+func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *resolver.LockFile) error {
 	lockfilePath, err := i.LockFilePath(ctx)
 	if err != nil {
 		return err
@@ -327,20 +328,20 @@ func (i *Installation) Wipe() error {
 	return nil
 }
 
-func (i *Installation) ResolveProfile(ctx *GlobalContext) (*LockFile, error) {
+func (i *Installation) ResolveProfile(ctx *GlobalContext) (*resolver.LockFile, error) {
 	lockFile, err := i.LockFile(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	resolver := NewDependencyResolver(ctx.Provider)
+	depResolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
 
 	gameVersion, err := i.GetGameVersion(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to detect game version")
 	}
 
-	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(resolver, lockFile, gameVersion)
+	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(depResolver, lockFile, gameVersion)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not resolve mods")
 	}
@@ -382,7 +383,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		return errors.Wrap(err, "failed to detect platform")
 	}
 
-	lockfile := MakeLockfile()
+	lockfile := resolver.NewLockfile()
 
 	if !i.Vanilla {
 		var err error
@@ -502,7 +503,7 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 		return errors.Wrap(err, "failed to read lock file")
 	}
 
-	resolver := NewDependencyResolver(ctx.Provider)
+	resolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
 
 	gameVersion, err := i.GetGameVersion(ctx)
 	if err != nil {

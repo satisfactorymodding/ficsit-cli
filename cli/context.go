@@ -26,7 +26,7 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 
 	apiClient := ficsit.InitAPI()
 
-	mixedProvider := provider.InitMixedProvider(apiClient)
+	mixedProvider := provider.InitMixedProvider(provider.NewFicsitProvider(apiClient), provider.NewLocalProvider())
 
 	if viper.GetBool("offline") {
 		mixedProvider.Offline = true

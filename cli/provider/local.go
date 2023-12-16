@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
-type localProvider struct{}
+type LocalProvider struct{}
 
-func initLocalProvider() localProvider {
-	return localProvider{}
+func NewLocalProvider() LocalProvider {
+	return LocalProvider{}
 }
 
-func (p localProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit.ModsResponse, error) {
+func (p LocalProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit.ModsResponse, error) {
 	cachedMods, err := cache.GetCache()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cache")
@@ -89,7 +90,7 @@ func (p localProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit
 	}, nil
 }
 
-func (p localProvider) GetMod(_ context.Context, modReference string) (*ficsit.GetModResponse, error) {
+func (p LocalProvider) GetMod(_ context.Context, modReference string) (*ficsit.GetModResponse, error) {
 	cachedModFiles, err := cache.GetCacheMod(modReference)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cache")
@@ -125,79 +126,44 @@ func (p localProvider) GetMod(_ context.Context, modReference string) (*ficsit.G
 	}, nil
 }
 
-func (p localProvider) ModVersions(_ context.Context, modReference string, filter ficsit.VersionFilter) (*ficsit.ModVersionsResponse, error) {
-	cachedModFiles, err := cache.GetCacheMod(modReference)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get cache")
-	}
-
-	if filter.Limit == 0 {
-		filter.Limit = 25
-	}
-
-	versions := make([]ficsit.ModVersionsModVersionsVersion, 0)
-
-	for _, modFile := range cachedModFiles[filter.Offset : filter.Offset+filter.Limit] {
-		versions = append(versions, ficsit.ModVersionsModVersionsVersion{
-			Id:      modReference + ":" + modFile.Plugin.SemVersion,
-			Version: modFile.Plugin.SemVersion,
-		})
-	}
-
-	return &ficsit.ModVersionsResponse{
-		Mod: ficsit.ModVersionsMod{
-			Id:       modReference,
-			Versions: versions,
-		},
-	}, nil
-}
-
-func (p localProvider) SMLVersions(_ context.Context) (*ficsit.SMLVersionsResponse, error) {
+func (p LocalProvider) SMLVersions(_ context.Context) ([]resolver.SMLVersion, error) {
 	cachedSMLFiles, err := cache.GetCacheMod("SML")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cache")
 	}
 
-	smlVersions := make([]ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion, 0)
+	smlVersions := make([]resolver.SMLVersion, 0)
 
 	for _, smlFile := range cachedSMLFiles {
-		smlVersions = append(smlVersions, ficsit.SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion{
-			Id:                   "SML:" + smlFile.Plugin.SemVersion,
-			Version:              smlFile.Plugin.SemVersion,
-			Satisfactory_version: 0, // TODO: where can this be obtained from?
+		smlVersions = append(smlVersions, resolver.SMLVersion{
+			ID:                  "SML:" + smlFile.Plugin.SemVersion,
+			Version:             smlFile.Plugin.SemVersion,
+			SatisfactoryVersion: 0, // TODO: where can this be obtained from?
 		})
 	}
 
-	return &ficsit.SMLVersionsResponse{
-		SmlVersions: ficsit.SMLVersionsSmlVersionsGetSMLVersions{
-			Count:        len(smlVersions),
-			Sml_versions: smlVersions,
-		},
-	}, nil
+	return smlVersions, nil
 }
 
-func (p localProvider) ModVersionsWithDependencies(_ context.Context, modID string) (*ficsit.AllVersionsResponse, error) {
+func (p LocalProvider) ModVersionsWithDependencies(_ context.Context, modID string) ([]resolver.ModVersion, error) {
 	cachedModFiles, err := cache.GetCacheMod(modID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cache")
 	}
 
-	versions := make([]ficsit.ModVersion, 0)
+	versions := make([]resolver.ModVersion, 0)
 
 	for _, modFile := range cachedModFiles {
-		versions = append(versions, ficsit.ModVersion{
+		versions = append(versions, resolver.ModVersion{
 			ID:      modID + ":" + modFile.Plugin.SemVersion,
 			Version: modFile.Plugin.SemVersion,
 		})
 	}
 
-	return &ficsit.AllVersionsResponse{
-		Success: true,
-		Data:    versions,
-	}, nil
+	return versions, nil
 }
 
-func (p localProvider) GetModName(_ context.Context, modReference string) (*ficsit.GetModNameResponse, error) {
+func (p LocalProvider) GetModName(_ context.Context, modReference string) (*resolver.ModName, error) {
 	cachedModFiles, err := cache.GetCacheMod(modReference)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cache")
@@ -207,11 +173,13 @@ func (p localProvider) GetModName(_ context.Context, modReference string) (*fics
 		return nil, errors.New("mod not found")
 	}
 
-	return &ficsit.GetModNameResponse{
-		Mod: ficsit.GetModNameMod{
-			Id:            modReference,
-			Name:          cachedModFiles[0].Plugin.FriendlyName,
-			Mod_reference: modReference,
-		},
+	return &resolver.ModName{
+		ID:           modReference,
+		Name:         cachedModFiles[0].Plugin.FriendlyName,
+		ModReference: modReference,
 	}, nil
+}
+
+func (p LocalProvider) IsOffline() bool {
+	return true
 }

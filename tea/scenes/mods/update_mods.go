@@ -13,8 +13,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/truncate"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
+	"github.com/spf13/viper"
 
-	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
@@ -111,7 +112,7 @@ func (m updateModsList) LoadModData() {
 		return
 	}
 
-	resolver := cli.NewDependencyResolver(m.root.GetProvider())
+	resolver := resolver.NewDependencyResolver(m.root.GetProvider(), viper.GetString("api-base"))
 
 	updatedLockfile, err := currentProfile.Resolve(resolver, nil, gameVersion)
 	if err != nil {
