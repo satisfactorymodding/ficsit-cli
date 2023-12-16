@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/puzpuzpuz/xsync/v3"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/utils"
@@ -50,7 +49,6 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 	location := filepath.Join(downloadCache, cacheKey)
 
 	if loaded {
-		log.Info().Str("key", cacheKey).Msg("I wait")
 		if group.hash != hash {
 			return nil, 0, errors.New("hash mismatch in download group")
 		}
@@ -70,8 +68,6 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 	}
 
 	defer downloadSync.Delete(cacheKey)
-
-	log.Info().Str("key", cacheKey).Msg("I am special")
 
 	upstreamUpdates := make(chan utils.GenericProgress)
 	defer close(upstreamUpdates)
