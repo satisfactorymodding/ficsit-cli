@@ -50,7 +50,11 @@ func (pt *Progresser) Read(p []byte) (int, error) {
 		return n, io.EOF
 	}
 
-	return n, fmt.Errorf("failed to read: %w", err)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read: %w", err)
+	}
+
+	return n, nil
 }
 
 func SHA256Data(f io.Reader) (string, error) {

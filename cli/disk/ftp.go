@@ -80,7 +80,11 @@ func (l *ftpDisk) Read(path string) ([]byte, error) {
 	defer f.Close()
 
 	data, err := io.ReadAll(f)
-	return data, fmt.Errorf("failed to read file: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	return data, nil
 }
 
 func (l *ftpDisk) Write(path string, data []byte) error {

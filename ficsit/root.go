@@ -19,7 +19,11 @@ func (t *AuthedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	rt, err := t.Wrapped.RoundTrip(req)
-	return rt, fmt.Errorf("failed roundtrip: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed roundtrip: %w", err)
+	}
+
+	return rt, nil
 }
 
 func InitAPI() graphql.Client {
