@@ -1,10 +1,10 @@
 package ficsit
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Khan/genqlient/graphql"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
@@ -19,7 +19,7 @@ func (t *AuthedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	rt, err := t.Wrapped.RoundTrip(req)
-	return rt, errors.Wrap(err, "failed roundtrip")
+	return rt, fmt.Errorf("failed roundtrip: %w", err)
 }
 
 func InitAPI() graphql.Client {

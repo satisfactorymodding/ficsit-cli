@@ -1,6 +1,7 @@
 package scenes
 
 import (
+	"log/slog"
 	"strings"
 	"time"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
@@ -114,7 +114,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			ItemTitle: "Apply Changes",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
+					slog.Error(errors.ErrorFailedAddMod, slog.Any("err", err))
 					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 					currentModel.error = errorComponent
 					return currentModel, cmd
@@ -128,7 +128,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			ItemTitle: "Save",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
+					slog.Error(errors.ErrorFailedAddMod, slog.Any("err", err))
 					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 					currentModel.error = errorComponent
 					return currentModel, cmd

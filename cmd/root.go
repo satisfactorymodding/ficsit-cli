@@ -1,16 +1,16 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/lmittmann/tint"
 	"github.com/pterm/pterm"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -31,13 +31,6 @@ var RootCmd = &cobra.Command{
 
 		_ = viper.ReadInConfig()
 
-		level, err := zerolog.ParseLevel(viper.GetString("log"))
-		if err != nil {
-			panic(err)
-		}
-
-		zerolog.SetGlobalLevel(level)
-
 		writers := make([]io.Writer, 0)
 		if viper.GetBool("pretty") {
 			pterm.EnableStyling()
@@ -46,22 +39,48 @@ var RootCmd = &cobra.Command{
 		}
 
 		if !viper.GetBool("quiet") {
-			writers = append(writers, zerolog.ConsoleWriter{
-				Out:        os.Stdout,
-				TimeFormat: time.RFC3339,
-			})
+			writers = append(writers, os.Stdout)
 		}
 
 		if viper.GetString("log-file") != "" {
 			logFile, err := os.OpenFile(viper.GetString("log-file"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o777)
 			if err != nil {
-				return errors.Wrap(err, "failed to open log file")
+				return fmt.Errorf("failed to open log file: %w", err)
 			}
 
 			writers = append(writers, logFile)
 		}
 
-		log.Logger = zerolog.New(io.MultiWriter(writers...)).With().Timestamp().Logger()
+		const (
+			ansiReset         = "\033[0m"
+			ansiBold          = "\033[1m"
+			ansiWhite         = "\033[38m"
+			ansiBrightMagenta = "\033[95m"
+		)
+
+		level := slog.LevelInfo
+		if err := (&level).UnmarshalText([]byte(viper.GetString("log"))); err != nil {
+			return fmt.Errorf("failed ")
+		}
+
+		slog.SetDefault(slog.New(
+			tint.NewHandler(io.MultiWriter(writers...), &tint.Options{
+				Level:      slog.LevelDebug,
+				AddSource:  true,
+				TimeFormat: time.RFC3339Nano,
+				ReplaceAttr: func(groups []string, attr slog.Attr) slog.Attr {
+					if attr.Key == slog.LevelKey {
+						level := attr.Value.Any().(slog.Level)
+						if level == slog.LevelDebug {
+							attr.Value = slog.StringValue(ansiBrightMagenta + "DBG" + ansiReset)
+						}
+					} else if attr.Key == slog.MessageKey {
+						attr.Value = slog.StringValue(ansiBold + ansiWhite + fmt.Sprint(attr.Value.Any()) + ansiReset)
+					}
+					return attr
+				},
+			}),
+		))
 
 		return nil
 	},

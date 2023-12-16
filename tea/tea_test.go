@@ -1,6 +1,7 @@
 package tea
 
 import (
+	"errors"
 	"io"
 	"os"
 	"runtime"
@@ -11,7 +12,6 @@ import (
 	"github.com/MarvinJWendt/testza"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/teatest"
-	"github.com/pkg/errors"
 
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 	"github.com/satisfactorymodding/ficsit-cli/cli"

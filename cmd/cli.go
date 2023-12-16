@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"github.com/rs/zerolog/log"
+	"log/slog"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -13,10 +14,11 @@ var cliCmd = &cobra.Command{
 	Use:   "cli",
 	Short: "Start interactive CLI (default)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		log.Info().
-			Str("version", viper.GetString("version")).
-			Str("commit", viper.GetString("commit")).
-			Msg("interactive cli initialized")
+		slog.Info(
+			"interactive cli initialized",
+			slog.String("version", viper.GetString("version")),
+			slog.String("commit", viper.GetString("commit")),
+		)
 
 		global, err := cli.InitCLI(false)
 		if err != nil {

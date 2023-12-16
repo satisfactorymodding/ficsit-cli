@@ -2,12 +2,12 @@ package cli
 
 import (
 	"context"
+	"log/slog"
 	"math"
 	"os"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
-	"github.com/rs/zerolog/log"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
 	"github.com/spf13/viper"
 
@@ -24,9 +24,9 @@ func installWatcher() chan<- InstallUpdate {
 		for i := range c {
 			if i.Progress.Total == i.Progress.Completed {
 				if i.Type != InstallUpdateTypeOverall {
-					log.Info().Str("mod_reference", i.Item.Mod).Str("version", i.Item.Version).Str("type", string(i.Type)).Msg("progress completed")
+					slog.Info("progress completed", slog.String("mod_reference", i.Item.Mod), slog.String("version", i.Item.Version), slog.Any("type", i.Type))
 				} else {
-					log.Info().Msg("overall completed")
+					slog.Info("overall completed")
 				}
 			}
 		}

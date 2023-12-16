@@ -2,6 +2,7 @@ package mods
 
 import (
 	"context"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -15,7 +16,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/rs/zerolog/log"
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
@@ -192,13 +192,13 @@ func (m modInfo) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			markdownDescription, err := converter.ConvertString(mod.Full_description)
 			if err != nil {
-				log.Error().Err(err).Msg("failed to convert html to markdown")
+				slog.Error("failed to convert html to markdown", slog.Any("err", err))
 				markdownDescription = mod.Full_description
 			}
 
 			description, err := glamour.Render(markdownDescription, "dark")
 			if err != nil {
-				log.Error().Err(err).Msg("failed to render markdown")
+				slog.Error("failed to render markdown", slog.Any("err", err))
 				description = mod.Full_description
 			}
 
