@@ -94,7 +94,7 @@ func Execute(version string, commit string) {
 	cobra.MousetrapHelpText = ""
 
 	cli := len(os.Args) >= 2 && os.Args[1] == "cli"
-	if (len(os.Args) <= 1 || os.Args[1] != "help") && (err != nil || cmd == RootCmd) {
+	if (len(os.Args) <= 1 || (os.Args[1] != "help" && os.Args[1] != "--help" && os.Args[1] != "-h")) && (err != nil || cmd == RootCmd) {
 		args := append([]string{"cli"}, os.Args[1:]...)
 		RootCmd.SetArgs(args)
 		cli = true
@@ -109,7 +109,8 @@ func Execute(version string, commit string) {
 	viper.Set("commit", commit)
 
 	if err := RootCmd.Execute(); err != nil {
-		panic(err)
+		slog.Error(err.Error())
+		os.Exit(1)
 	}
 }
 

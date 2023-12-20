@@ -34,10 +34,12 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 		}
 	})
 
-	_, _ = downloadSync.Compute(cacheKey, func(oldValue *downloadGroup, loaded bool) (*downloadGroup, bool) {
-		oldValue.updates = append(oldValue.updates, updates)
-		return oldValue, false
-	})
+	if updates != nil {
+		_, _ = downloadSync.Compute(cacheKey, func(oldValue *downloadGroup, loaded bool) (*downloadGroup, bool) {
+			oldValue.updates = append(oldValue.updates, updates)
+			return oldValue, false
+		})
+	}
 
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if err := os.MkdirAll(downloadCache, 0o777); err != nil {

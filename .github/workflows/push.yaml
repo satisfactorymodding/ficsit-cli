@@ -5,7 +5,11 @@ on: [push, pull_request]
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -25,6 +29,11 @@ jobs:
         run: go build -v -o ficsit-cli .
         env:
           CGO_ENABLED: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.os }}
+          path: ficsit-cli
 
   lint:
     name: Lint

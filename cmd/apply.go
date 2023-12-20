@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"log/slog"
+	"os"
+	"sync"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 )
@@ -15,6 +18,8 @@ var applyCmd = &cobra.Command{
 			return err
 		}
 
+		var wg sync.WaitGroup
+		errored := false
 		for _, installation := range global.Installations.Installations {
 			if len(args) > 0 {
 				found := false
@@ -31,9 +36,21 @@ var applyCmd = &cobra.Command{
 				}
 			}
 
-			if err := installation.Install(global, nil); err != nil {
-				return err
-			}
+			wg.Add(1)
+
+			go func(installation *cli.Installation) {
+				defer wg.Done()
+				if err := installation.Install(global, nil); err != nil {
+					errored = true
+					slog.Error("installation failed", slog.Any("err", err))
+				}
+			}(installation)
+		}
+
+		wg.Wait()
+
+		if errored {
+			os.Exit(1)
 		}
 
 		return nil
