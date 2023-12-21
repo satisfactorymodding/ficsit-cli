@@ -536,11 +536,14 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 func downloadAndExtractMod(modReference string, version string, link string, hash string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) error {
 	var downloadUpdates chan utils.GenericProgress
 
+	var wg sync.WaitGroup
 	if updates != nil {
 		// Forward the inner updates as InstallUpdates
 		downloadUpdates = make(chan utils.GenericProgress)
 
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for up := range downloadUpdates {
 				updates <- InstallUpdate{
 					Item: InstallUpdateItem{
@@ -564,7 +567,6 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 
 	var extractUpdates chan utils.GenericProgress
 
-	var wg sync.WaitGroup
 	if updates != nil {
 		// Forward the inner updates as InstallUpdates
 		extractUpdates = make(chan utils.GenericProgress)
