@@ -88,7 +88,7 @@ jobs:
 
       - name: Change directory permissions
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: chmod -R 777 ${{ github.workspace }}/SatisfactoryDedicatedServer
+        run: mkdir -p ${{ github.workspace }}/SatisfactoryDedicatedServer/FactoryGame/Mods && chmod -R 777 ${{ github.workspace }}/SatisfactoryDedicatedServer
 
       - name: List directory (windows)
         if: ${{ matrix.os == 'windows-latest' }}
