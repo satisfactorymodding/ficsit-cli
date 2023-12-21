@@ -2,12 +2,12 @@ package disk
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -66,15 +66,19 @@ func newSFTP(path string) (Disk, error) {
 	}, nil
 }
 
-func (l sftpDisk) Exists(path string) error { //nolint
+func (l sftpDisk) Exists(path string) (bool, error) { //nolint
 	slog.Debug("checking if file exists", slog.String("path", path), slog.String("schema", "sftp"))
 
-	_, err := l.client.Stat(path)
+	s, err := l.client.Stat(path)
 	if err != nil {
-		return fmt.Errorf("failed to check if file exists: %w", err)
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("failed to check if file exists: %w", err)
 	}
 
-	return nil
+	return s != nil, nil
 }
 
 func (l sftpDisk) Read(path string) ([]byte, error) {
@@ -150,14 +154,6 @@ func (l sftpDisk) ReadDir(path string) ([]Entry, error) {
 	}
 
 	return entries, nil
-}
-
-func (l sftpDisk) IsNotExist(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "file does not exist")
-}
-
-func (l sftpDisk) IsExist(_ error) bool {
-	return false
 }
 
 func (l sftpDisk) Open(path string, _ int) (io.WriteCloser, error) {

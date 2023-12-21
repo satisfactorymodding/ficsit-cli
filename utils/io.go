@@ -68,22 +68,29 @@ func SHA256Data(f io.Reader) (string, error) {
 
 func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan<- GenericProgress, d disk.Disk) error {
 	hashFile := filepath.Join(location, ".smm")
-	hashBytes, err := d.Read(hashFile)
+
+	exists, err := d.Exists(hashFile)
 	if err != nil {
-		if !d.IsNotExist(err) {
+		return err
+	}
+
+	if exists {
+		hashBytes, err := d.Read(hashFile)
+		if err != nil {
 			return fmt.Errorf("failed to read .smm mod hash file: %w", err)
 		}
-	} else {
+
 		if hash == string(hashBytes) {
 			return nil
 		}
 	}
 
-	if err := d.MkDir(location); err != nil {
-		if !d.IsExist(err) {
-			return fmt.Errorf("failed to create mod directory: %s: %w", location, err)
-		}
+	exists, err = d.Exists(location)
+	if err != nil {
+		return err
+	}
 
+	if exists {
 		if err := d.Remove(location); err != nil {
 			return fmt.Errorf("failed to remove directory: %s: %w", location, err)
 		}

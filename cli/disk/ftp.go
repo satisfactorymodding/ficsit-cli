@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -57,17 +58,28 @@ func newFTP(path string) (Disk, error) {
 	}, nil
 }
 
-func (l *ftpDisk) Exists(path string) error {
+func (l *ftpDisk) Exists(path string) (bool, error) {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
 	slog.Debug("checking if file exists", slog.String("path", path), slog.String("schema", "ftp"))
-	_, err := l.client.FileSize(path)
+
+	dir, file := filepath.Split(path)
+
+	list, err := l.client.List(dir)
 	if err != nil {
-		return fmt.Errorf("failed to check if file exists: %w", err)
+		return false, fmt.Errorf("failed listing directory: %w", err)
 	}
 
-	return nil
+	found := false
+	for _, entry := range list {
+		if entry.Name == file {
+			found = true
+			break
+		}
+	}
+
+	return found, nil
 }
 
 func (l *ftpDisk) Read(path string) ([]byte, error) {
@@ -191,14 +203,6 @@ func (l *ftpDisk) ReadDirLock(path string, lock bool) ([]Entry, error) {
 	}
 
 	return entries, nil
-}
-
-func (l *ftpDisk) IsNotExist(err error) bool {
-	return strings.Contains(err.Error(), "Could not get file") || strings.Contains(err.Error(), "Failed to open file")
-}
-
-func (l *ftpDisk) IsExist(err error) bool {
-	return strings.Contains(err.Error(), "Create directory operation failed")
 }
 
 func (l *ftpDisk) Open(path string, _ int) (io.WriteCloser, error) {

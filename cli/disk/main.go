@@ -9,7 +9,7 @@ import (
 
 type Disk interface {
 	// Exists checks if the provided file or directory exists
-	Exists(path string) error
+	Exists(path string) (bool, error)
 
 	// Read returns the entire file as a byte buffer
 	//
@@ -29,12 +29,6 @@ type Disk interface {
 	//
 	// Returns error if provided path is not a directory
 	ReadDir(path string) ([]Entry, error)
-
-	// IsNotExist returns true if provided error is a not-exist type error
-	IsNotExist(err error) bool
-
-	// IsExist returns true if provided error is a does-exist type error
-	IsExist(err error) bool
 
 	// Open opens provided path for writing
 	Open(path string, flag int) (io.WriteCloser, error)
