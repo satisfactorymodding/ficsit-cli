@@ -19,7 +19,7 @@ func TestInstallationsInit(t *testing.T) {
 	testza.AssertNotNil(t, installations)
 }
 
-func TestAddInstallation(t *testing.T) {
+func TestAddLocalInstallation(t *testing.T) {
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 
@@ -50,4 +50,79 @@ func TestAddInstallation(t *testing.T) {
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
 	}
+
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
+}
+
+func TestAddFTPInstallation(t *testing.T) {
+	ctx, err := InitCLI(false)
+	testza.AssertNoError(t, err)
+
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
+
+	err = ctx.ReInit()
+	testza.AssertNoError(t, err)
+
+	ctx.Provider = MockProvider{}
+
+	profileName := "InstallationTest"
+	profile, err := ctx.Profiles.AddProfile(profileName)
+	testza.AssertNoError(t, err)
+	testza.AssertNoError(t, profile.AddMod("AreaActions", "1.6.5"))
+	testza.AssertNoError(t, profile.AddMod("RefinedPower", "3.2.10"))
+
+	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
+	if serverLocation != "" {
+		installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/server", profileName)
+		testza.AssertNoError(t, err)
+		testza.AssertNotNil(t, installation)
+
+		err = installation.Install(ctx, installWatcher())
+		testza.AssertNoError(t, err)
+
+		installation.Vanilla = true
+		err = installation.Install(ctx, installWatcher())
+		testza.AssertNoError(t, err)
+	}
+
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
+}
+
+func TestAddSFTPInstallation(t *testing.T) {
+	ctx, err := InitCLI(false)
+	testza.AssertNoError(t, err)
+
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
+
+	err = ctx.ReInit()
+	testza.AssertNoError(t, err)
+
+	ctx.Provider = MockProvider{}
+
+	profileName := "InstallationTest"
+	profile, err := ctx.Profiles.AddProfile(profileName)
+	testza.AssertNoError(t, err)
+	testza.AssertNoError(t, profile.AddMod("AreaActions", "1.6.5"))
+	testza.AssertNoError(t, profile.AddMod("RefinedPower", "3.2.10"))
+
+	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
+	if serverLocation != "" {
+		installation, err := ctx.Installations.AddInstallation(ctx, "sftp://user:pass@localhost:2222/home/user/server", profileName)
+		testza.AssertNoError(t, err)
+		testza.AssertNotNil(t, installation)
+
+		err = installation.Install(ctx, installWatcher())
+		testza.AssertNoError(t, err)
+
+		installation.Vanilla = true
+		err = installation.Install(ctx, installWatcher())
+		testza.AssertNoError(t, err)
+	}
+
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
 }

@@ -39,7 +39,7 @@ func newFTP(path string) (Disk, error) {
 		return nil, fmt.Errorf("failed to parse ftp url: %w", err)
 	}
 
-	c, err := ftp.Dial(u.Host, ftp.DialWithTimeout(time.Second*5))
+	c, err := ftp.Dial(u.Host, ftp.DialWithTimeout(time.Second*5), ftp.DialWithForceListHidden(true))
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial host %s: %w", u.Host, err)
 	}
@@ -63,7 +63,11 @@ func (l *ftpDisk) Exists(path string) error {
 
 	slog.Debug("checking if file exists", slog.String("path", path), slog.String("schema", "ftp"))
 	_, err := l.client.FileSize(path)
-	return fmt.Errorf("failed to check if file exists: %w", err)
+	if err != nil {
+		return fmt.Errorf("failed to check if file exists: %w", err)
+	}
+
+	return nil
 }
 
 func (l *ftpDisk) Read(path string) ([]byte, error) {
@@ -103,9 +107,17 @@ func (l *ftpDisk) Remove(path string) error {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
+	slog.Debug("going to root directory", slog.String("schema", "ftp"))
+	err := l.client.ChangeDir("/")
+	if err != nil {
+		return fmt.Errorf("failed to change directory: %w", err)
+	}
+
 	slog.Debug("deleting path", slog.String("path", path), slog.String("schema", "ftp"))
 	if err := l.client.Delete(path); err != nil {
-		return fmt.Errorf("failed to delete path: %w", err)
+		if err := l.client.RemoveDirRecur(path); err != nil {
+			return fmt.Errorf("failed to delete path: %w", err)
+		}
 	}
 
 	return nil
@@ -128,6 +140,8 @@ func (l *ftpDisk) MkDir(path string) error {
 			return err
 		}
 
+		currentDir, _ := l.client.CurrentDir()
+
 		foundDir := false
 		for _, entry := range dir {
 			if entry.IsDir() && entry.Name() == s {
@@ -137,13 +151,13 @@ func (l *ftpDisk) MkDir(path string) error {
 		}
 
 		if !foundDir {
-			slog.Debug("making directory", slog.String("dir", s), slog.String("schema", "ftp"))
+			slog.Debug("making directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
 			if err := l.client.MakeDir(s); err != nil {
 				return fmt.Errorf("failed to make directory: %w", err)
 			}
 		}
 
-		slog.Debug("entering directory", slog.String("dir", s), slog.String("schema", "ftp"))
+		slog.Debug("entering directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
 		if err := l.client.ChangeDir(s); err != nil {
 			return fmt.Errorf("failed to enter directory: %w", err)
 		}

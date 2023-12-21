@@ -129,3 +129,4 @@ dist/
 schema.graphql
 *.log
 .direnv
+/SatisfactoryDedicatedServer

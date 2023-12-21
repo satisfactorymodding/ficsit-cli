@@ -17,6 +17,7 @@ require (
 	github.com/jlaffaye/ftp v0.2.0
 	github.com/lmittmann/tint v1.0.3
 	github.com/muesli/reflow v0.3.0
+	github.com/pkg/sftp v1.13.6
 	github.com/pterm/pterm v0.12.71
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/sahilm/fuzzy v0.1.1-0.20230530133925-c48e322e2a8f
@@ -24,6 +25,7 @@ require (
 	github.com/satisfactorymodding/ficsit-resolver v0.0.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.1
+	golang.org/x/crypto v0.16.0
 	golang.org/x/sync v0.5.0
 )
 
@@ -54,6 +56,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect

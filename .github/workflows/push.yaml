@@ -90,6 +90,9 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: tree /F
 
+      - name: Boot ftp and sftp
+        run: docker-compose -f docker-compose-test.yml up -d
+
       - name: Download GQL schema
         run: "npx graphqurl https://api.ficsit.dev/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 

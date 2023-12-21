@@ -490,6 +490,8 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		return fmt.Errorf("failed to install mods: %w", err)
 	}
 
+	slog.Info("installation completed", slog.String("path", i.Path))
+
 	return nil
 }
 
