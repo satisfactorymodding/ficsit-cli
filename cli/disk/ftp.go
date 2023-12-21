@@ -64,16 +64,14 @@ func (l *ftpDisk) Exists(path string) (bool, error) {
 
 	slog.Debug("checking if file exists", slog.String("path", path), slog.String("schema", "ftp"))
 
-	dir, file := filepath.Split(path)
-
-	list, err := l.client.List(dir)
+	list, err := l.client.List(filepath.Dir(path))
 	if err != nil {
 		return false, fmt.Errorf("failed listing directory: %w", err)
 	}
 
 	found := false
 	for _, entry := range list {
-		if entry.Name == file {
+		if entry.Name == filepath.Base(path) {
 			found = true
 			break
 		}

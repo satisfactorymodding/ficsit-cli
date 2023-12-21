@@ -67,14 +67,6 @@ func (l localDisk) ReadDir(path string) ([]Entry, error) {
 	return entries, nil
 }
 
-func (l localDisk) IsNotExist(err error) bool {
-	return os.IsNotExist(err)
-}
-
-func (l localDisk) IsExist(err error) bool {
-	return os.IsExist(err)
-}
-
 func (l localDisk) Open(path string, flag int) (io.WriteCloser, error) {
 	return os.OpenFile(path, flag, 0777) //nolint
 }
