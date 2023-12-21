@@ -82,13 +82,13 @@ jobs:
       - name: Install Satisfactory Dedicated Server
         run: steamcmd +login anonymous +force_install_dir ${{ github.workspace }}/SatisfactoryDedicatedServer +app_update 1690800 validate +quit
 
-      - name: List directory (linux)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: ls -lR
-
       - name: Change directory permissions
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: mkdir -p ${{ github.workspace }}/SatisfactoryDedicatedServer/FactoryGame/Mods && chmod -R 777 ${{ github.workspace }}/SatisfactoryDedicatedServer
+
+      - name: List directory (linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: ls -lR
 
       - name: List directory (windows)
         if: ${{ matrix.os == 'windows-latest' }}
