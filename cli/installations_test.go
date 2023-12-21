@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
@@ -56,6 +57,11 @@ func TestAddLocalInstallation(t *testing.T) {
 }
 
 func TestAddFTPInstallation(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Not supported
+		return
+	}
+
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 
@@ -92,6 +98,11 @@ func TestAddFTPInstallation(t *testing.T) {
 }
 
 func TestAddSFTPInstallation(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Not supported
+		return
+	}
+
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 

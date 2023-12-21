@@ -86,11 +86,16 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: ls -lR
 
+      - name: Change directory permissions
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: chmod -R 777 ${{ github.workspace }}/SatisfactoryDedicatedServer
+
       - name: List directory (windows)
         if: ${{ matrix.os == 'windows-latest' }}
         run: tree /F
 
       - name: Boot ftp and sftp
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: docker-compose -f docker-compose-test.yml up -d
 
       - name: Download GQL schema
