@@ -494,15 +494,15 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		})
 	}
 
+	if err := errg.Wait(); err != nil {
+		return fmt.Errorf("failed to install mods: %w", err)
+	}
+
 	if updates != nil {
 		go func() {
 			channelUsers.Wait()
 			close(updates)
 		}()
-	}
-
-	if err := errg.Wait(); err != nil {
-		return fmt.Errorf("failed to install mods: %w", err)
 	}
 
 	slog.Info("installation completed", slog.String("path", i.Path))
