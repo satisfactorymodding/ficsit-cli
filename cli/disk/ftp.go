@@ -3,7 +3,6 @@ package disk
 import (
 	"bytes"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"io"
 	"log/slog"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jlaffaye/ftp"
 )
 
@@ -108,9 +108,8 @@ func (l *ftpDisk) Write(path string, data []byte) error {
 
 	slog.Debug("writing to file", slog.String("path", path), slog.String("schema", "ftp"))
 	if err := l.client.Stor(path, bytes.NewReader(data)); err != nil {
-
-		lock, _ := l.ReadDirLock(filepath.Dir(path), false)
-		spew.Dump(lock)
+		d, _ := l.ReadDirLock(filepath.Dir(path), false)
+		slog.Debug("failed dir listing", slog.String("data", spew.Sdump(d)))
 
 		return fmt.Errorf("failed to write file: %w", err)
 	}
