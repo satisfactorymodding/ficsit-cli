@@ -326,6 +326,8 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *resolver.Lock
 }
 
 func (i *Installation) Wipe() error {
+	slog.Info("wiping installation", slog.String("path", i.Path))
+
 	d, err := i.GetDisk()
 	if err != nil {
 		return err

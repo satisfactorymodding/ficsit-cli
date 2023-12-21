@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/Khan/genqlient/graphql"
 	"github.com/spf13/viper"
@@ -87,6 +88,8 @@ func (g *GlobalContext) ReInit() error {
 
 // Wipe will remove any trace of ficsit anywhere
 func (g *GlobalContext) Wipe() error {
+	slog.Info("wiping global context")
+
 	// Wipe all installations
 	for _, installation := range g.Installations.Installations {
 		if err := installation.Wipe(); err != nil {
