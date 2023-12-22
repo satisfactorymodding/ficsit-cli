@@ -20,7 +20,6 @@ func (gp GenericProgress) Percentage() float64 {
 var _ io.Writer = (*Progresser)(nil)
 
 type Progresser struct {
-	io.Reader
 	Updates chan<- GenericProgress
 	Total   int64
 	Running int64
@@ -32,7 +31,7 @@ func (pt *Progresser) Write(p []byte) (int, error) {
 	if pt.Updates != nil {
 		select {
 		case pt.Updates <- GenericProgress{Completed: pt.Running, Total: pt.Total}:
-			slog.Debug("sent dl", slog.Int64("running", pt.Running), slog.Int64("total", pt.Total))
+			slog.Debug("sent progress", slog.Int64("running", pt.Running), slog.Int64("total", pt.Total))
 		default:
 		}
 	}

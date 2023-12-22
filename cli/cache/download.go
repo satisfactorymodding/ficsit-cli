@@ -175,12 +175,11 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 	}
 
 	progresser := &utils.Progresser{
-		Reader:  resp.Body,
 		Total:   resp.ContentLength,
 		Updates: updates,
 	}
 
-	_, err = io.Copy(out, progresser)
+	_, err = io.Copy(io.MultiWriter(out, progresser), resp.Body)
 	if err != nil {
 		return 0, fmt.Errorf("failed writing file to disk: %w", err)
 	}
