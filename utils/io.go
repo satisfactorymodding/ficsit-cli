@@ -14,49 +14,6 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 )
 
-type GenericProgress struct {
-	Completed int64
-	Total     int64
-}
-
-func (gp GenericProgress) Percentage() float64 {
-	if gp.Total == 0 {
-		return 0
-	}
-	return float64(gp.Completed) / float64(gp.Total)
-}
-
-type Progresser struct {
-	io.Reader
-	Updates chan<- GenericProgress
-	Total   int64
-	Running int64
-}
-
-func (pt *Progresser) Read(p []byte) (int, error) {
-	n, err := pt.Reader.Read(p)
-	pt.Running += int64(n)
-
-	if err == nil {
-		if pt.Updates != nil {
-			select {
-			case pt.Updates <- GenericProgress{Completed: pt.Running, Total: pt.Total}:
-			default:
-			}
-		}
-	}
-
-	if err == io.EOF {
-		return n, io.EOF
-	}
-
-	if err != nil {
-		return 0, fmt.Errorf("failed to read: %w", err)
-	}
-
-	return n, nil
-}
-
 func SHA256Data(f io.Reader) (string, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -182,13 +139,13 @@ func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates c
 	}
 	defer inFile.Close()
 
-	progressInReader := &Progresser{
+	progressInWriter := &Progresser{
 		Reader:  inFile,
 		Total:   int64(file.UncompressedSize64),
 		Updates: updates,
 	}
 
-	if _, err := io.Copy(outFile, progressInReader); err != nil {
+	if _, err := io.Copy(io.MultiWriter(outFile, progressInWriter), inFile); err != nil {
 		return fmt.Errorf("failed to write to file: %s: %w", outFileLocation, err)
 	}
 
