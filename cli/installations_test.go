@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/MarvinJWendt/testza"
 
@@ -42,6 +43,7 @@ func TestAddLocalInstallation(t *testing.T) {
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
+		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
 
 		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
@@ -58,6 +60,7 @@ func TestAddLocalInstallation(t *testing.T) {
 		installation.Vanilla = true
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
+		time.Sleep(time.Second)
 	}
 
 	err = ctx.Wipe()
@@ -89,6 +92,7 @@ func TestAddFTPInstallation(t *testing.T) {
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
+		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
 
 		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
@@ -109,6 +113,7 @@ func TestAddFTPInstallation(t *testing.T) {
 		installation.Vanilla = true
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
+		time.Sleep(time.Second)
 	}
 
 	err = ctx.Wipe()
@@ -140,6 +145,7 @@ func TestAddSFTPInstallation(t *testing.T) {
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
+		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
 
 		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
@@ -156,6 +162,7 @@ func TestAddSFTPInstallation(t *testing.T) {
 		installation.Vanilla = true
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
+		time.Sleep(time.Second)
 	}
 
 	err = ctx.Wipe()
