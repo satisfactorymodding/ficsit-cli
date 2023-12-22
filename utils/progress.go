@@ -2,6 +2,7 @@ package utils
 
 import (
 	"io"
+	"log/slog"
 )
 
 type GenericProgress struct {
@@ -31,6 +32,7 @@ func (pt *Progresser) Write(p []byte) (int, error) {
 	if pt.Updates != nil {
 		select {
 		case pt.Updates <- GenericProgress{Completed: pt.Running, Total: pt.Total}:
+			slog.Debug("sent dl", slog.Int64("running", pt.Running), slog.Int64("total", pt.Total))
 		default:
 		}
 	}
