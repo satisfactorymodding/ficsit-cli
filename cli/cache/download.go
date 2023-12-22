@@ -185,6 +185,8 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 		return 0, fmt.Errorf("failed writing file to disk: %w", err)
 	}
 
+	_ = out.Sync()
+
 	if updates != nil {
 		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
