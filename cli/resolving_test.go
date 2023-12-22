@@ -24,7 +24,7 @@ func installWatcher() chan<- InstallUpdate {
 		for i := range c {
 			if i.Progress.Total == i.Progress.Completed {
 				if i.Type != InstallUpdateTypeOverall {
-					slog.Info("progress completed", slog.String("mod_reference", i.Item.Mod), slog.String("version", i.Item.Version), slog.Any("type", i.Type))
+					//slog.Info("progress completed", slog.String("mod_reference", i.Item.Mod), slog.String("version", i.Item.Version), slog.Any("type", i.Type))
 				} else {
 					slog.Info("overall completed")
 				}
