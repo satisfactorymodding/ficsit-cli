@@ -102,6 +102,10 @@ func TestAddFTPInstallation(t *testing.T) {
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
 
+		dir, err = os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
+		testza.AssertNoError(t, err)
+		spew.Dump(dir)
+
 		installation.Vanilla = true
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
