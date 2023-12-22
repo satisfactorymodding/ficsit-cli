@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -40,6 +41,8 @@ func TestAddLocalInstallation(t *testing.T) {
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
+		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
+
 		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
@@ -81,6 +84,8 @@ func TestAddFTPInstallation(t *testing.T) {
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
+		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
+
 		installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/server", profileName)
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
@@ -122,6 +127,8 @@ func TestAddSFTPInstallation(t *testing.T) {
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
+		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
+
 		installation, err := ctx.Installations.AddInstallation(ctx, "sftp://user:pass@localhost:2222/home/user/server", profileName)
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
