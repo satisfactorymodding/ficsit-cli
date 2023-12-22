@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/davecgh/go-spew/spew"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -42,6 +43,10 @@ func TestAddLocalInstallation(t *testing.T) {
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
+
+		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
+		testza.AssertNoError(t, err)
+		spew.Dump(dir)
 
 		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
 		testza.AssertNoError(t, err)
@@ -86,6 +91,10 @@ func TestAddFTPInstallation(t *testing.T) {
 	if serverLocation != "" {
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
 
+		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
+		testza.AssertNoError(t, err)
+		spew.Dump(dir)
+
 		installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/server", profileName)
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
@@ -128,6 +137,10 @@ func TestAddSFTPInstallation(t *testing.T) {
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
+
+		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
+		testza.AssertNoError(t, err)
+		spew.Dump(dir)
 
 		installation, err := ctx.Installations.AddInstallation(ctx, "sftp://user:pass@localhost:2222/home/user/server", profileName)
 		testza.AssertNoError(t, err)
