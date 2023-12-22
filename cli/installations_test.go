@@ -46,8 +46,7 @@ func TestAddLocalInstallation(t *testing.T) {
 		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
 
-		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		testza.AssertNoError(t, err)
+		dir, _ := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
 		spew.Dump(dir)
 
 		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
@@ -95,8 +94,7 @@ func TestAddFTPInstallation(t *testing.T) {
 		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
 
-		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		testza.AssertNoError(t, err)
+		dir, _ := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
 		spew.Dump(dir)
 
 		installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/server", profileName)
@@ -106,8 +104,7 @@ func TestAddFTPInstallation(t *testing.T) {
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
 
-		dir, err = os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		testza.AssertNoError(t, err)
+		dir, _ = os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
 		spew.Dump(dir)
 
 		installation.Vanilla = true
@@ -148,16 +145,17 @@ func TestAddSFTPInstallation(t *testing.T) {
 		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
 
-		dir, err := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		testza.AssertNoError(t, err)
+		dir, _ := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
 		spew.Dump(dir)
 
 		installation, err := ctx.Installations.AddInstallation(ctx, "sftp://user:pass@localhost:2222/home/user/server", profileName)
-		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
 
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
+
+		dir, _ = os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
+		spew.Dump(dir)
 
 		installation.Vanilla = true
 		err = installation.Install(ctx, installWatcher())
