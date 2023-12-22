@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,6 +11,15 @@ import (
 
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
+
+// NOTE:
+//
+// This code contains sleep.
+// This is because github actions are special.
+// They don't properly sync to disk.
+// And Go is faster than their disk.
+// So tests are flaky :)
+// DO NOT REMOVE THE SLEEP!
 
 func init() {
 	cfg.SetDefaults()
@@ -45,9 +53,7 @@ func TestAddLocalInstallation(t *testing.T) {
 	if serverLocation != "" {
 		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
-
-		dir, _ := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		spew.Dump(dir)
+		time.Sleep(time.Second)
 
 		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
 		testza.AssertNoError(t, err)
@@ -93,9 +99,7 @@ func TestAddFTPInstallation(t *testing.T) {
 	if serverLocation != "" {
 		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
-
-		dir, _ := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		spew.Dump(dir)
+		time.Sleep(time.Second)
 
 		installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/server", profileName)
 		testza.AssertNoError(t, err)
@@ -103,9 +107,6 @@ func TestAddFTPInstallation(t *testing.T) {
 
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
-
-		dir, _ = os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		spew.Dump(dir)
 
 		installation.Vanilla = true
 		err = installation.Install(ctx, installWatcher())
@@ -144,18 +145,14 @@ func TestAddSFTPInstallation(t *testing.T) {
 	if serverLocation != "" {
 		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
-
-		dir, _ := os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		spew.Dump(dir)
+		time.Sleep(time.Second)
 
 		installation, err := ctx.Installations.AddInstallation(ctx, "sftp://user:pass@localhost:2222/home/user/server", profileName)
+		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
 
 		err = installation.Install(ctx, installWatcher())
 		testza.AssertNoError(t, err)
-
-		dir, _ = os.ReadDir(filepath.Join(serverLocation, "FactoryGame", "Mods"))
-		spew.Dump(dir)
 
 		installation.Vanilla = true
 		err = installation.Install(ctx, installWatcher())
