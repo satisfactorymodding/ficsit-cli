@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"log/slog"
 	"math"
 	"os"
 	"testing"
@@ -16,22 +15,6 @@ import (
 
 func init() {
 	cfg.SetDefaults()
-}
-
-func installWatcher() chan<- InstallUpdate {
-	c := make(chan InstallUpdate)
-	go func() {
-		for i := range c {
-			if i.Progress.Total == i.Progress.Completed {
-				if i.Type != InstallUpdateTypeOverall {
-					//slog.Info("progress completed", slog.String("mod_reference", i.Item.Mod), slog.String("version", i.Item.Version), slog.Any("type", i.Type))
-				} else {
-					slog.Info("overall completed")
-				}
-			}
-		}
-	}()
-	return c
 }
 
 func TestUpdateMods(t *testing.T) {
@@ -67,7 +50,7 @@ func TestUpdateMods(t *testing.T) {
 		err = installation.WriteLockFile(ctx, oldLockfile)
 		testza.AssertNoError(t, err)
 
-		err = installation.Install(ctx, installWatcher())
+		err = installation.Install(ctx, nil)
 		testza.AssertNoError(t, err)
 
 		lockFile, err := installation.LockFile(ctx)
@@ -85,7 +68,7 @@ func TestUpdateMods(t *testing.T) {
 		testza.AssertEqual(t, 2, len(lockFile.Mods))
 		testza.AssertEqual(t, "0.10.0", (lockFile.Mods)["FicsitRemoteMonitoring"].Version)
 
-		err = installation.Install(ctx, installWatcher())
+		err = installation.Install(ctx, nil)
 		testza.AssertNoError(t, err)
 	}
 }

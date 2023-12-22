@@ -59,11 +59,11 @@ func TestAddLocalInstallation(t *testing.T) {
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
 
-		err = installation.Install(ctx, installWatcher())
+		err = installation.Install(ctx, nil)
 		testza.AssertNoError(t, err)
 
 		installation.Vanilla = true
-		err = installation.Install(ctx, installWatcher())
+		err = installation.Install(ctx, nil)
 		testza.AssertNoError(t, err)
 		time.Sleep(time.Second)
 	}
@@ -105,11 +105,11 @@ func TestAddFTPInstallation(t *testing.T) {
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
 
-		err = installation.Install(ctx, installWatcher())
+		err = installation.Install(ctx, nil)
 		testza.AssertNoError(t, err)
 
 		installation.Vanilla = true
-		err = installation.Install(ctx, installWatcher())
+		err = installation.Install(ctx, nil)
 		testza.AssertNoError(t, err)
 		time.Sleep(time.Second)
 	}
@@ -151,11 +151,11 @@ func TestAddSFTPInstallation(t *testing.T) {
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
 
-		err = installation.Install(ctx, installWatcher())
+		err = installation.Install(ctx, nil)
 		testza.AssertNoError(t, err)
 
 		installation.Vanilla = true
-		err = installation.Install(ctx, installWatcher())
+		err = installation.Install(ctx, nil)
 		testza.AssertNoError(t, err)
 		time.Sleep(time.Second)
 	}
