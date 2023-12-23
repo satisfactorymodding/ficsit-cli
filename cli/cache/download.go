@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/spf13/viper"
 
@@ -99,12 +101,28 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 		}
 	}()
 
-	size, err := downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
-	if err != nil {
-		group.err = err
-		close(group.wait)
-		return nil, 0, fmt.Errorf("internal download error: %w", err)
-	}
+	var size int64
+
+	err := retry.Do(func() error {
+		var err error
+		size, err = downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
+		if err != nil {
+			group.err = err
+			close(group.wait)
+			return fmt.Errorf("internal download error: %w", err)
+		}
+
+		return nil
+	},
+		retry.Attempts(5),
+		retry.Delay(time.Second),
+		retry.DelayType(retry.FixedDelay),
+		retry.OnRetry(func(n uint, err error) {
+			if n > 0 {
+				slog.Info("retrying download", slog.Uint64("n", uint64(n)))
+			}
+		}),
+	)
 
 	close(upstreamWaiter)
 	wg.Wait()
