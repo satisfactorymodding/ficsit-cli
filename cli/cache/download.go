@@ -157,7 +157,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 		}
 		defer headResp.Body.Close()
 		slog.Debug("sending start", slog.Int64("length", headResp.ContentLength), slog.String("cacheKey", cacheKey))
-		updates <- utils.GenericProgress{Total: headResp.ContentLength}
+		//updates <- utils.GenericProgress{Total: headResp.ContentLength}
 	}
 
 	if downloadSemaphore != nil {
@@ -195,7 +195,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 
 	if updates != nil {
 		slog.Debug("sending end", slog.Int64("length", resp.ContentLength), slog.String("cacheKey", cacheKey))
-		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
+		//updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
 
 	_, err = addFileToCache(cacheKey)
