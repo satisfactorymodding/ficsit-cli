@@ -116,14 +116,14 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 		retry.DelayType(retry.FixedDelay),
 		retry.OnRetry(func(n uint, err error) {
 			if n > 0 {
-				slog.Info("retrying download", slog.Uint64("n", uint64(n)))
+				slog.Info("retrying download", slog.Uint64("n", uint64(n)), slog.String("cacheKey", cacheKey))
 			}
 		}),
 	)
 	if err != nil {
 		group.err = err
 		close(group.wait)
-		return nil, 0, err
+		return nil, 0, err // nolint
 	}
 
 	close(upstreamWaiter)
