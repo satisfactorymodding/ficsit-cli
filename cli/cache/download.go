@@ -84,6 +84,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 
 	outer:
 		for {
+			slog.Debug("LOOP")
 			select {
 			case update := <-upstreamUpdates:
 				slog.Debug("forking", slog.Int64("running", update.Completed), slog.Int64("total", update.Total))
@@ -91,6 +92,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 					u <- update
 				}
 			case <-upstreamWaiter:
+				slog.Debug("I AM FREE")
 				break outer
 			}
 		}
