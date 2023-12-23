@@ -98,6 +98,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 		}
 	}()
 
+	slog.Debug("starting download", slog.String("url", url), slog.String("location", location))
 	size, err := downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
 	if err != nil {
 		group.err = err
@@ -154,6 +155,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 			return 0, fmt.Errorf("failed to head: %s: %w", url, err)
 		}
 		defer headResp.Body.Close()
+		slog.Debug("sending start", slog.Int64("length", headResp.ContentLength))
 		updates <- utils.GenericProgress{Total: headResp.ContentLength}
 	}
 
@@ -191,6 +193,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 	_ = out.Sync()
 
 	if updates != nil {
+		slog.Debug("sending end", slog.Int64("length", resp.ContentLength))
 		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
 
