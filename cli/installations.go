@@ -562,7 +562,6 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		go func() {
 			defer wg.Done()
 			for up := range downloadUpdates {
-				slog.Debug("passthrough", slog.Int64("running", up.Completed), slog.Int64("total", up.Total))
 				updates <- InstallUpdate{
 					Item: InstallUpdateItem{
 						Mod:     modReference,
