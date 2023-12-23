@@ -86,12 +86,12 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 			slog.Debug("LOOP")
 			select {
 			case update := <-upstreamUpdates:
-				slog.Debug("forking", slog.Int64("running", update.Completed), slog.Int64("total", update.Total))
+				slog.Debug("forking", slog.Int64("running", update.Completed), slog.Int64("total", update.Total), slog.String("cacheKey", cacheKey))
 				for _, u := range group.updates {
 					u <- update
 				}
 			case <-upstreamWaiter:
-				slog.Debug("I AM FREE")
+				slog.Debug("I AM FREE", slog.String("cacheKey", cacheKey))
 				break outer
 			}
 		}
@@ -156,7 +156,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 			return 0, fmt.Errorf("failed to head: %s: %w", url, err)
 		}
 		defer headResp.Body.Close()
-		slog.Debug("sending start", slog.Int64("length", headResp.ContentLength))
+		slog.Debug("sending start", slog.Int64("length", headResp.ContentLength), slog.String("cacheKey", cacheKey))
 		updates <- utils.GenericProgress{Total: headResp.ContentLength}
 	}
 
@@ -194,7 +194,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 	_ = out.Sync()
 
 	if updates != nil {
-		slog.Debug("sending end", slog.Int64("length", resp.ContentLength))
+		slog.Debug("sending end", slog.Int64("length", resp.ContentLength), slog.String("cacheKey", cacheKey))
 		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
 
@@ -203,6 +203,6 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 		return 0, fmt.Errorf("failed to add file to cache: %w", err)
 	}
 
-	slog.Debug("FUNCTION END")
+	slog.Debug("FUNCTION END", slog.String("cacheKey", cacheKey))
 	return resp.ContentLength, nil
 }
