@@ -107,11 +107,8 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 		var err error
 		size, err = downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
 		if err != nil {
-			group.err = err
-			close(group.wait)
 			return fmt.Errorf("internal download error: %w", err)
 		}
-
 		return nil
 	},
 		retry.Attempts(5),
@@ -123,6 +120,11 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 			}
 		}),
 	)
+	if err != nil {
+		group.err = err
+		close(group.wait)
+		return nil, 0, err
+	}
 
 	close(upstreamWaiter)
 	wg.Wait()
