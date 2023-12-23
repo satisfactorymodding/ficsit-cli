@@ -60,7 +60,7 @@ func newSFTP(path string) (Disk, error) {
 		return nil, fmt.Errorf("failed to create sftp client: %w", err)
 	}
 
-	slog.Info("logged into sftp", slog.String("url", path))
+	slog.Info("logged into sftp")
 
 	return sftpDisk{
 		path:   path,

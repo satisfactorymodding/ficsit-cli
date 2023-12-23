@@ -48,7 +48,7 @@ func newFTP(path string) (Disk, error) {
 		}
 	}
 
-	slog.Info("logged into ftp", slog.String("url", path), slog.Bool("hidden-files", !failedHidden))
+	slog.Info("logged into ftp", slog.Bool("hidden-files", !failedHidden))
 
 	return &ftpDisk{
 		path:   u.Path,
@@ -81,14 +81,47 @@ func (l *ftpDisk) Exists(path string) (bool, error) {
 
 	slog.Debug("checking if file exists", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
-	list, err := l.client.List(clean(filepath.Dir(path)))
+	slog.Debug("going to root directory", slog.String("schema", "ftp"))
+	err := l.client.ChangeDir("/")
+	if err != nil {
+		return false, fmt.Errorf("failed to change directory: %w", err)
+	}
+
+	split := strings.Split(clean(path)[1:], "/")
+	for _, s := range split[:len(split)-1] {
+		dir, err := l.ReadDirLock("", false)
+		if err != nil {
+			return false, err
+		}
+
+		currentDir, _ := l.client.CurrentDir()
+
+		foundDir := false
+		for _, entry := range dir {
+			if entry.IsDir() && entry.Name() == s {
+				foundDir = true
+				break
+			}
+		}
+
+		if !foundDir {
+			return false, nil
+		}
+
+		slog.Debug("entering directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
+		if err := l.client.ChangeDir(s); err != nil {
+			return false, fmt.Errorf("failed to enter directory: %w", err)
+		}
+	}
+
+	dir, err := l.ReadDirLock("", false)
 	if err != nil {
 		return false, fmt.Errorf("failed listing directory: %w", err)
 	}
 
 	found := false
-	for _, entry := range list {
-		if entry.Name == clean(filepath.Base(path)) {
+	for _, entry := range dir {
+		if entry.Name() == clean(filepath.Base(path)) {
 			found = true
 			break
 		}
