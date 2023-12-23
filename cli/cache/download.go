@@ -211,8 +211,6 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 
 	_ = out.Sync()
 
-	time.Sleep(time.Second)
-
 	if updates != nil {
 		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
