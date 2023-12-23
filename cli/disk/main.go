@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"path/filepath"
 )
 
 type Disk interface {
@@ -56,4 +57,9 @@ func FromPath(path string) (Disk, error) {
 
 	slog.Info("using local disk", slog.String("path", path))
 	return newLocal(path)
+}
+
+// clean returns a unix-style path
+func clean(path string) string {
+	return filepath.ToSlash(filepath.Clean(path))
 }

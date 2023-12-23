@@ -79,18 +79,16 @@ func (l *ftpDisk) Exists(path string) (bool, error) {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("checking if file exists", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
-	slog.Debug("checking if file exists", slog.String("path", cleanPath), slog.String("schema", "ftp"))
-
-	list, err := l.client.List(filepath.Dir(cleanPath))
+	list, err := l.client.List(clean(filepath.Dir(path)))
 	if err != nil {
 		return false, fmt.Errorf("failed listing directory: %w", err)
 	}
 
 	found := false
 	for _, entry := range list {
-		if entry.Name == filepath.Base(cleanPath) {
+		if entry.Name == clean(filepath.Base(path)) {
 			found = true
 			break
 		}
@@ -103,11 +101,9 @@ func (l *ftpDisk) Read(path string) ([]byte, error) {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("reading file", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
-	slog.Debug("reading file", slog.String("path", cleanPath), slog.String("schema", "ftp"))
-
-	f, err := l.client.Retr(cleanPath)
+	f, err := l.client.Retr(clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve path: %w", err)
 	}
@@ -126,10 +122,8 @@ func (l *ftpDisk) Write(path string, data []byte) error {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
-
-	slog.Debug("writing to file", slog.String("path", cleanPath), slog.String("schema", "ftp"))
-	if err := l.client.Stor(cleanPath, bytes.NewReader(data)); err != nil {
+	slog.Debug("writing to file", slog.String("path", clean(path)), slog.String("schema", "ftp"))
+	if err := l.client.Stor(clean(path), bytes.NewReader(data)); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -140,17 +134,15 @@ func (l *ftpDisk) Remove(path string) error {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
-
 	slog.Debug("going to root directory", slog.String("schema", "ftp"))
 	err := l.client.ChangeDir("/")
 	if err != nil {
 		return fmt.Errorf("failed to change directory: %w", err)
 	}
 
-	slog.Debug("deleting path", slog.String("path", cleanPath), slog.String("schema", "ftp"))
-	if err := l.client.Delete(cleanPath); err != nil {
-		if err := l.client.RemoveDirRecur(cleanPath); err != nil {
+	slog.Debug("deleting path", slog.String("path", clean(path)), slog.String("schema", "ftp"))
+	if err := l.client.Delete(clean(path)); err != nil {
+		if err := l.client.RemoveDirRecur(clean(path)); err != nil {
 			return fmt.Errorf("failed to delete path: %w", err)
 		}
 	}
@@ -162,15 +154,13 @@ func (l *ftpDisk) MkDir(path string) error {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
-
 	slog.Debug("going to root directory", slog.String("schema", "ftp"))
 	err := l.client.ChangeDir("/")
 	if err != nil {
 		return fmt.Errorf("failed to change directory: %w", err)
 	}
 
-	split := strings.Split(cleanPath[1:], "/")
+	split := strings.Split(clean(path)[1:], "/")
 	for _, s := range split {
 		dir, err := l.ReadDirLock("", false)
 		if err != nil {
@@ -213,11 +203,9 @@ func (l *ftpDisk) ReadDirLock(path string, lock bool) ([]Entry, error) {
 		defer l.stepLock.Unlock()
 	}
 
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("reading directory", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
-	slog.Debug("reading directory", slog.String("path", cleanPath), slog.String("schema", "ftp"))
-
-	dir, err := l.client.List(cleanPath)
+	dir, err := l.client.List(clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files in directory: %w", err)
 	}
@@ -235,19 +223,17 @@ func (l *ftpDisk) ReadDirLock(path string, lock bool) ([]Entry, error) {
 func (l *ftpDisk) Open(path string, _ int) (io.WriteCloser, error) {
 	reader, writer := io.Pipe()
 
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
-
-	slog.Debug("opening for writing", slog.String("path", cleanPath), slog.String("schema", "ftp"))
+	slog.Debug("opening for writing", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
 	go func() {
 		l.stepLock.Lock()
 		defer l.stepLock.Unlock()
 
-		err := l.client.Stor(cleanPath, reader)
+		err := l.client.Stor(clean(path), reader)
 		if err != nil {
 			slog.Error("failed to store file", slog.Any("err", err))
 		}
-		slog.Debug("write success", slog.String("path", cleanPath), slog.String("schema", "ftp"))
+		slog.Debug("write success", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 	}()
 
 	return writer, nil

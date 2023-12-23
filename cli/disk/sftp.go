@@ -8,8 +8,6 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -71,11 +69,9 @@ func newSFTP(path string) (Disk, error) {
 }
 
 func (l sftpDisk) Exists(path string) (bool, error) {
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("checking if file exists", slog.String("path", clean(path)), slog.String("schema", "sftp"))
 
-	slog.Debug("checking if file exists", slog.String("path", cleanPath), slog.String("schema", "sftp"))
-
-	s, err := l.client.Stat(cleanPath)
+	s, err := l.client.Stat(clean(path))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return false, nil
@@ -88,11 +84,9 @@ func (l sftpDisk) Exists(path string) (bool, error) {
 }
 
 func (l sftpDisk) Read(path string) ([]byte, error) {
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("reading file", slog.String("path", clean(path)), slog.String("schema", "sftp"))
 
-	slog.Debug("reading file", slog.String("path", cleanPath), slog.String("schema", "sftp"))
-
-	f, err := l.client.Open(cleanPath)
+	f, err := l.client.Open(clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve path: %w", err)
 	}
@@ -108,11 +102,9 @@ func (l sftpDisk) Read(path string) ([]byte, error) {
 }
 
 func (l sftpDisk) Write(path string, data []byte) error {
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("writing to file", slog.String("path", clean(path)), slog.String("schema", "sftp"))
 
-	slog.Debug("writing to file", slog.String("path", cleanPath), slog.String("schema", "sftp"))
-
-	file, err := l.client.Create(cleanPath)
+	file, err := l.client.Create(clean(path))
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
@@ -127,11 +119,9 @@ func (l sftpDisk) Write(path string, data []byte) error {
 }
 
 func (l sftpDisk) Remove(path string) error {
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
-
-	slog.Debug("deleting path", slog.String("path", cleanPath), slog.String("schema", "sftp"))
-	if err := l.client.Remove(cleanPath); err != nil {
-		if err := l.client.RemoveAll(cleanPath); err != nil {
+	slog.Debug("deleting path", slog.String("path", clean(path)), slog.String("schema", "sftp"))
+	if err := l.client.Remove(clean(path)); err != nil {
+		if err := l.client.RemoveAll(clean(path)); err != nil {
 			return fmt.Errorf("failed to delete path: %w", err)
 		}
 	}
@@ -140,11 +130,9 @@ func (l sftpDisk) Remove(path string) error {
 }
 
 func (l sftpDisk) MkDir(path string) error {
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("making directory", slog.String("path", clean(path)), slog.String("schema", "sftp"))
 
-	slog.Debug("making directory", slog.String("path", cleanPath), slog.String("schema", "sftp"))
-
-	if err := l.client.MkdirAll(cleanPath); err != nil {
+	if err := l.client.MkdirAll(clean(path)); err != nil {
 		return fmt.Errorf("failed to make directory: %w", err)
 	}
 
@@ -152,11 +140,9 @@ func (l sftpDisk) MkDir(path string) error {
 }
 
 func (l sftpDisk) ReadDir(path string) ([]Entry, error) {
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("reading directory", slog.String("path", clean(path)), slog.String("schema", "sftp"))
 
-	slog.Debug("reading directory", slog.String("path", cleanPath), slog.String("schema", "sftp"))
-
-	dir, err := l.client.ReadDir(cleanPath)
+	dir, err := l.client.ReadDir(clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files in directory: %w", err)
 	}
@@ -172,11 +158,9 @@ func (l sftpDisk) ReadDir(path string) ([]Entry, error) {
 }
 
 func (l sftpDisk) Open(path string, _ int) (io.WriteCloser, error) {
-	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+	slog.Debug("opening for writing", slog.String("path", clean(path)), slog.String("schema", "sftp"))
 
-	slog.Debug("opening for writing", slog.String("path", cleanPath), slog.String("schema", "sftp"))
-
-	f, err := l.client.Create(cleanPath)
+	f, err := l.client.Create(clean(path))
 	if err != nil {
 		slog.Error("failed to open file", slog.Any("err", err))
 	}
