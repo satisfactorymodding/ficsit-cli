@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -85,6 +86,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 		for {
 			select {
 			case update := <-upstreamUpdates:
+				slog.Debug("forking", slog.Int64("running", update.Completed), slog.Int64("total", update.Total))
 				for _, u := range group.updates {
 					u <- update
 				}
