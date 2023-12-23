@@ -140,7 +140,6 @@ func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates c
 	defer inFile.Close()
 
 	progressInWriter := &Progresser{
-		Reader:  inFile,
 		Total:   int64(file.UncompressedSize64),
 		Updates: updates,
 	}
