@@ -84,22 +84,26 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 
 	outer:
 		for {
-			slog.Debug("LOOP")
 			select {
-			case update := <-upstreamUpdates:
+			case update, ok := <-upstreamUpdates:
+				if !ok {
+					break outer
+				}
+
 				slog.Debug("forking", slog.Int64("running", update.Completed), slog.Int64("total", update.Total), slog.String("cacheKey", cacheKey))
 				for _, u := range group.updates {
 					u <- update
 				}
 			case <-upstreamWaiter:
-				slog.Debug("I AM FREE", slog.String("cacheKey", cacheKey))
 				break outer
 			}
 		}
+
+		slog.Debug("I AM FREE", slog.String("cacheKey", cacheKey))
 	}()
 
 	slog.Debug("starting download", slog.String("url", url), slog.String("location", location))
-	size, err := downloadInternal(cacheKey, location, hash, url, nil, downloadSemaphore)
+	size, err := downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
 	if err != nil {
 		group.err = err
 		close(group.wait)
@@ -180,12 +184,12 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 		return 0, fmt.Errorf("bad status: %s on url: %s", resp.Status, url)
 	}
 
-	//progresser := &utils.Progresser{
-	//	Total:   resp.ContentLength,
-	//	Updates: updates,
-	//}
+	progresser := &utils.Progresser{
+		Total:   resp.ContentLength,
+		Updates: updates,
+	}
 
-	_, err = io.Copy(io.MultiWriter(out), resp.Body)
+	_, err = io.Copy(io.MultiWriter(out, progresser), resp.Body)
 	if err != nil {
 		return 0, fmt.Errorf("failed writing file to disk: %w", err)
 	}
@@ -194,7 +198,7 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 
 	if updates != nil {
 		slog.Debug("sending end", slog.Int64("length", resp.ContentLength), slog.String("cacheKey", cacheKey))
-		//updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
+		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
 
 	_, err = addFileToCache(cacheKey)
