@@ -40,17 +40,15 @@ func newFTP(path string) (Disk, error) {
 		return nil, fmt.Errorf("failed to parse ftp url: %w", err)
 	}
 
-	c, err := ftp.Dial(u.Host, ftp.DialWithTimeout(time.Second*5), ftp.DialWithForceListHidden(true))
-	if err != nil {
-		return nil, fmt.Errorf("failed to dial host %s: %w", u.Host, err)
+	c, failedHidden, _ := testFTP(u, ftp.DialWithTimeout(time.Second*5), ftp.DialWithForceListHidden(true))
+	if failedHidden {
+		c, _, err = testFTP(u, ftp.DialWithTimeout(time.Second*5))
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	password, _ := u.User.Password()
-	if err := c.Login(u.User.Username(), password); err != nil {
-		return nil, fmt.Errorf("failed to login: %w", err)
-	}
-
-	slog.Debug("logged into ftp")
+	slog.Info("logged into ftp", slog.String("url", path), slog.Bool("hidden-files", !failedHidden))
 
 	return &ftpDisk{
 		path:   u.Path,
@@ -58,20 +56,41 @@ func newFTP(path string) (Disk, error) {
 	}, nil
 }
 
+func testFTP(u *url.URL, options ...ftp.DialOption) (*ftp.ServerConn, bool, error) {
+	c, err := ftp.Dial(u.Host, options...)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to dial host %s: %w", u.Host, err)
+	}
+
+	password, _ := u.User.Password()
+	if err := c.Login(u.User.Username(), password); err != nil {
+		return nil, false, fmt.Errorf("failed to login: %w", err)
+	}
+
+	_, err = c.List("/")
+	if err != nil {
+		return nil, true, fmt.Errorf("failed listing dir: %w", err)
+	}
+
+	return c, false, nil
+}
+
 func (l *ftpDisk) Exists(path string) (bool, error) {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
-	slog.Debug("checking if file exists", slog.String("path", path), slog.String("schema", "ftp"))
+	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
 
-	list, err := l.client.List(filepath.Dir(path))
+	slog.Debug("checking if file exists", slog.String("path", cleanPath), slog.String("schema", "ftp"))
+
+	list, err := l.client.List(filepath.Dir(cleanPath))
 	if err != nil {
 		return false, fmt.Errorf("failed listing directory: %w", err)
 	}
 
 	found := false
 	for _, entry := range list {
-		if entry.Name == filepath.Base(path) {
+		if entry.Name == filepath.Base(cleanPath) {
 			found = true
 			break
 		}
@@ -84,9 +103,11 @@ func (l *ftpDisk) Read(path string) ([]byte, error) {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
-	slog.Debug("reading file", slog.String("path", path), slog.String("schema", "ftp"))
+	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
 
-	f, err := l.client.Retr(path)
+	slog.Debug("reading file", slog.String("path", cleanPath), slog.String("schema", "ftp"))
+
+	f, err := l.client.Retr(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve path: %w", err)
 	}
@@ -105,8 +126,10 @@ func (l *ftpDisk) Write(path string, data []byte) error {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
-	slog.Debug("writing to file", slog.String("path", path), slog.String("schema", "ftp"))
-	if err := l.client.Stor(path, bytes.NewReader(data)); err != nil {
+	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+
+	slog.Debug("writing to file", slog.String("path", cleanPath), slog.String("schema", "ftp"))
+	if err := l.client.Stor(cleanPath, bytes.NewReader(data)); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -117,15 +140,17 @@ func (l *ftpDisk) Remove(path string) error {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
+	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+
 	slog.Debug("going to root directory", slog.String("schema", "ftp"))
 	err := l.client.ChangeDir("/")
 	if err != nil {
 		return fmt.Errorf("failed to change directory: %w", err)
 	}
 
-	slog.Debug("deleting path", slog.String("path", path), slog.String("schema", "ftp"))
-	if err := l.client.Delete(path); err != nil {
-		if err := l.client.RemoveDirRecur(path); err != nil {
+	slog.Debug("deleting path", slog.String("path", cleanPath), slog.String("schema", "ftp"))
+	if err := l.client.Delete(cleanPath); err != nil {
+		if err := l.client.RemoveDirRecur(cleanPath); err != nil {
 			return fmt.Errorf("failed to delete path: %w", err)
 		}
 	}
@@ -137,13 +162,15 @@ func (l *ftpDisk) MkDir(path string) error {
 	l.stepLock.Lock()
 	defer l.stepLock.Unlock()
 
+	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+
 	slog.Debug("going to root directory", slog.String("schema", "ftp"))
 	err := l.client.ChangeDir("/")
 	if err != nil {
 		return fmt.Errorf("failed to change directory: %w", err)
 	}
 
-	split := strings.Split(path[1:], "/")
+	split := strings.Split(cleanPath[1:], "/")
 	for _, s := range split {
 		dir, err := l.ReadDirLock("", false)
 		if err != nil {
@@ -186,9 +213,11 @@ func (l *ftpDisk) ReadDirLock(path string, lock bool) ([]Entry, error) {
 		defer l.stepLock.Unlock()
 	}
 
-	slog.Debug("reading directory", slog.String("path", path), slog.String("schema", "ftp"))
+	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
 
-	dir, err := l.client.List(path)
+	slog.Debug("reading directory", slog.String("path", cleanPath), slog.String("schema", "ftp"))
+
+	dir, err := l.client.List(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files in directory: %w", err)
 	}
@@ -206,17 +235,19 @@ func (l *ftpDisk) ReadDirLock(path string, lock bool) ([]Entry, error) {
 func (l *ftpDisk) Open(path string, _ int) (io.WriteCloser, error) {
 	reader, writer := io.Pipe()
 
-	slog.Debug("opening for writing", slog.String("path", path), slog.String("schema", "ftp"))
+	cleanPath := strings.ReplaceAll(filepath.Clean(path), "\\", "/")
+
+	slog.Debug("opening for writing", slog.String("path", cleanPath), slog.String("schema", "ftp"))
 
 	go func() {
 		l.stepLock.Lock()
 		defer l.stepLock.Unlock()
 
-		err := l.client.Stor(path, reader)
+		err := l.client.Stor(cleanPath, reader)
 		if err != nil {
 			slog.Error("failed to store file", slog.Any("err", err))
 		}
-		slog.Debug("write success", slog.String("path", path), slog.String("schema", "ftp"))
+		slog.Debug("write success", slog.String("path", cleanPath), slog.String("schema", "ftp"))
 	}()
 
 	return writer, nil
