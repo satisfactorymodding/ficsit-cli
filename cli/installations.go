@@ -501,6 +501,16 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 	}
 
 	if updates != nil {
+		if i.Vanilla {
+			updates <- InstallUpdate{
+				Type: InstallUpdateTypeOverall,
+				Progress: utils.GenericProgress{
+					Completed: 1,
+					Total:     1,
+				},
+			}
+		}
+
 		go func() {
 			channelUsers.Wait()
 			close(updates)
