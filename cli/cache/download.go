@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/spf13/viper"
@@ -97,16 +97,13 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 				break outer
 			}
 		}
-
-		slog.Debug("I AM FREE", slog.String("cacheKey", cacheKey))
 	}()
 
-	slog.Debug("starting download", slog.String("url", url), slog.String("location", location))
 	size, err := downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
 	if err != nil {
 		group.err = err
 		close(group.wait)
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("internal download error: %w", err)
 	}
 
 	close(upstreamWaiter)
@@ -158,7 +155,6 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 			return 0, fmt.Errorf("failed to head: %s: %w", url, err)
 		}
 		defer headResp.Body.Close()
-		slog.Debug("sending start", slog.Int64("length", headResp.ContentLength), slog.String("cacheKey", cacheKey))
 		updates <- utils.GenericProgress{Total: headResp.ContentLength}
 	}
 
@@ -195,8 +191,9 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 
 	_ = out.Sync()
 
+	time.Sleep(time.Second)
+
 	if updates != nil {
-		slog.Debug("sending end", slog.Int64("length", resp.ContentLength), slog.String("cacheKey", cacheKey))
 		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
 	}
 
@@ -205,6 +202,5 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 		return 0, fmt.Errorf("failed to add file to cache: %w", err)
 	}
 
-	slog.Debug("FUNCTION END", slog.String("cacheKey", cacheKey))
 	return resp.ContentLength, nil
 }
