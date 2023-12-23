@@ -73,6 +73,7 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 	defer downloadSync.Delete(cacheKey)
 
 	upstreamUpdates := make(chan utils.GenericProgress)
+	defer close(upstreamUpdates)
 
 	upstreamWaiter := make(chan bool)
 
@@ -120,8 +121,6 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 }
 
 func downloadInternal(cacheKey string, location string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (int64, error) {
-	defer close(updates)
-
 	stat, err := os.Stat(location)
 	if err == nil {
 		existingHash := ""
