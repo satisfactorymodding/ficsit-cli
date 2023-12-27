@@ -2,24 +2,28 @@ package disk
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/url"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/jackc/puddle/v2"
 	"github.com/jlaffaye/ftp"
 )
+
+// TODO Make configurable
+const connectionCount = 5
 
 var _ Disk = (*ftpDisk)(nil)
 
 type ftpDisk struct {
-	client   *ftp.ServerConn
-	path     string
-	stepLock sync.Mutex
+	pool *puddle.Pool[*ftp.ServerConn]
+	path string
 }
 
 type ftpEntry struct {
@@ -40,19 +44,31 @@ func newFTP(path string) (Disk, error) {
 		return nil, fmt.Errorf("failed to parse ftp url: %w", err)
 	}
 
-	c, failedHidden, _ := testFTP(u, ftp.DialWithTimeout(time.Second*5), ftp.DialWithForceListHidden(true))
-	if failedHidden {
-		c, _, err = testFTP(u, ftp.DialWithTimeout(time.Second*5))
-		if err != nil {
-			return nil, err
-		}
+	pool, err := puddle.NewPool(&puddle.Config[*ftp.ServerConn]{
+		Constructor: func(ctx context.Context) (*ftp.ServerConn, error) {
+			c, failedHidden, err := testFTP(u, ftp.DialWithTimeout(time.Second*5), ftp.DialWithForceListHidden(true))
+			if failedHidden {
+				c, _, err = testFTP(u, ftp.DialWithTimeout(time.Second*5))
+				if err != nil {
+					return nil, err
+				}
+			} else if err != nil {
+				return nil, err
+			}
+
+			slog.Info("logged into ftp", slog.Bool("hidden-files", !failedHidden))
+
+			return c, nil
+		},
+		MaxSize: connectionCount,
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	slog.Info("logged into ftp", slog.Bool("hidden-files", !failedHidden))
-
 	return &ftpDisk{
-		path:   u.Path,
-		client: c,
+		path: u.Path,
+		pool: pool,
 	}, nil
 }
 
@@ -76,25 +92,23 @@ func testFTP(u *url.URL, options ...ftp.DialOption) (*ftp.ServerConn, bool, erro
 }
 
 func (l *ftpDisk) Exists(path string) (bool, error) {
-	l.stepLock.Lock()
-	defer l.stepLock.Unlock()
+	res, err := l.acquire()
+	if err != nil {
+		return false, err
+	}
+
+	defer res.Release()
 
 	slog.Debug("checking if file exists", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
-	slog.Debug("going to root directory", slog.String("schema", "ftp"))
-	err := l.client.ChangeDir("/")
-	if err != nil {
-		return false, fmt.Errorf("failed to change directory: %w", err)
-	}
-
 	split := strings.Split(clean(path)[1:], "/")
 	for _, s := range split[:len(split)-1] {
-		dir, err := l.ReadDirLock("", false)
+		dir, err := l.readDirLock(res, "")
 		if err != nil {
 			return false, err
 		}
 
-		currentDir, _ := l.client.CurrentDir()
+		currentDir, _ := res.Value().CurrentDir()
 
 		foundDir := false
 		for _, entry := range dir {
@@ -109,12 +123,12 @@ func (l *ftpDisk) Exists(path string) (bool, error) {
 		}
 
 		slog.Debug("entering directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
-		if err := l.client.ChangeDir(s); err != nil {
+		if err := res.Value().ChangeDir(s); err != nil {
 			return false, fmt.Errorf("failed to enter directory: %w", err)
 		}
 	}
 
-	dir, err := l.ReadDirLock("", false)
+	dir, err := l.readDirLock(res, "")
 	if err != nil {
 		return false, fmt.Errorf("failed listing directory: %w", err)
 	}
@@ -131,12 +145,16 @@ func (l *ftpDisk) Exists(path string) (bool, error) {
 }
 
 func (l *ftpDisk) Read(path string) ([]byte, error) {
-	l.stepLock.Lock()
-	defer l.stepLock.Unlock()
+	res, err := l.acquire()
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Release()
 
 	slog.Debug("reading file", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
-	f, err := l.client.Retr(clean(path))
+	f, err := res.Value().Retr(clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve path: %w", err)
 	}
@@ -152,11 +170,15 @@ func (l *ftpDisk) Read(path string) ([]byte, error) {
 }
 
 func (l *ftpDisk) Write(path string, data []byte) error {
-	l.stepLock.Lock()
-	defer l.stepLock.Unlock()
+	res, err := l.acquire()
+	if err != nil {
+		return err
+	}
+
+	defer res.Release()
 
 	slog.Debug("writing to file", slog.String("path", clean(path)), slog.String("schema", "ftp"))
-	if err := l.client.Stor(clean(path), bytes.NewReader(data)); err != nil {
+	if err := res.Value().Stor(clean(path), bytes.NewReader(data)); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -164,18 +186,16 @@ func (l *ftpDisk) Write(path string, data []byte) error {
 }
 
 func (l *ftpDisk) Remove(path string) error {
-	l.stepLock.Lock()
-	defer l.stepLock.Unlock()
-
-	slog.Debug("going to root directory", slog.String("schema", "ftp"))
-	err := l.client.ChangeDir("/")
+	res, err := l.acquire()
 	if err != nil {
-		return fmt.Errorf("failed to change directory: %w", err)
+		return err
 	}
 
+	defer res.Release()
+
 	slog.Debug("deleting path", slog.String("path", clean(path)), slog.String("schema", "ftp"))
-	if err := l.client.Delete(clean(path)); err != nil {
-		if err := l.client.RemoveDirRecur(clean(path)); err != nil {
+	if err := res.Value().Delete(clean(path)); err != nil {
+		if err := res.Value().RemoveDirRecur(clean(path)); err != nil {
 			return fmt.Errorf("failed to delete path: %w", err)
 		}
 	}
@@ -184,23 +204,21 @@ func (l *ftpDisk) Remove(path string) error {
 }
 
 func (l *ftpDisk) MkDir(path string) error {
-	l.stepLock.Lock()
-	defer l.stepLock.Unlock()
-
-	slog.Debug("going to root directory", slog.String("schema", "ftp"))
-	err := l.client.ChangeDir("/")
+	res, err := l.acquire()
 	if err != nil {
-		return fmt.Errorf("failed to change directory: %w", err)
+		return err
 	}
+
+	defer res.Release()
 
 	split := strings.Split(clean(path)[1:], "/")
 	for _, s := range split {
-		dir, err := l.ReadDirLock("", false)
+		dir, err := l.readDirLock(res, "")
 		if err != nil {
 			return err
 		}
 
-		currentDir, _ := l.client.CurrentDir()
+		currentDir, _ := res.Value().CurrentDir()
 
 		foundDir := false
 		for _, entry := range dir {
@@ -212,13 +230,13 @@ func (l *ftpDisk) MkDir(path string) error {
 
 		if !foundDir {
 			slog.Debug("making directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
-			if err := l.client.MakeDir(s); err != nil {
+			if err := res.Value().MakeDir(s); err != nil {
 				return fmt.Errorf("failed to make directory: %w", err)
 			}
 		}
 
 		slog.Debug("entering directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
-		if err := l.client.ChangeDir(s); err != nil {
+		if err := res.Value().ChangeDir(s); err != nil {
 			return fmt.Errorf("failed to enter directory: %w", err)
 		}
 	}
@@ -227,18 +245,20 @@ func (l *ftpDisk) MkDir(path string) error {
 }
 
 func (l *ftpDisk) ReadDir(path string) ([]Entry, error) {
-	return l.ReadDirLock(path, true)
-}
-
-func (l *ftpDisk) ReadDirLock(path string, lock bool) ([]Entry, error) {
-	if lock {
-		l.stepLock.Lock()
-		defer l.stepLock.Unlock()
+	res, err := l.acquire()
+	if err != nil {
+		return nil, err
 	}
 
+	defer res.Release()
+
+	return l.readDirLock(res, path)
+}
+
+func (l *ftpDisk) readDirLock(res *puddle.Resource[*ftp.ServerConn], path string) ([]Entry, error) {
 	slog.Debug("reading directory", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
-	dir, err := l.client.List(clean(path))
+	dir, err := res.Value().List(clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files in directory: %w", err)
 	}
@@ -254,15 +274,19 @@ func (l *ftpDisk) ReadDirLock(path string, lock bool) ([]Entry, error) {
 }
 
 func (l *ftpDisk) Open(path string, _ int) (io.WriteCloser, error) {
+	res, err := l.acquire()
+	if err != nil {
+		return nil, err
+	}
+
 	reader, writer := io.Pipe()
 
 	slog.Debug("opening for writing", slog.String("path", clean(path)), slog.String("schema", "ftp"))
 
 	go func() {
-		l.stepLock.Lock()
-		defer l.stepLock.Unlock()
+		defer res.Release()
 
-		err := l.client.Stor(clean(path), reader)
+		err := res.Value().Stor(clean(path), reader)
 		if err != nil {
 			slog.Error("failed to store file", slog.Any("err", err))
 		}
@@ -270,4 +294,28 @@ func (l *ftpDisk) Open(path string, _ int) (io.WriteCloser, error) {
 	}()
 
 	return writer, nil
+}
+
+func (l *ftpDisk) goHome(res *puddle.Resource[*ftp.ServerConn]) error {
+	slog.Debug("going to root directory", slog.String("schema", "ftp"))
+
+	err := res.Value().ChangeDir("/")
+	if err != nil {
+		return fmt.Errorf("failed to change directory: %w", err)
+	}
+
+	return nil
+}
+
+func (l *ftpDisk) acquire() (*puddle.Resource[*ftp.ServerConn], error) {
+	res, err := l.pool.Acquire(context.TODO())
+	if err != nil {
+		return nil, fmt.Errorf("failed acquiring connection: %w", err)
+	}
+
+	if err := l.goHome(res); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

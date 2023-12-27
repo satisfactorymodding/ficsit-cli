@@ -15,7 +15,7 @@ require (
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20231215171016-7ba2b450712d
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+	github.com/jackc/puddle/v2 v2.2.1
 	github.com/jlaffaye/ftp v0.2.0
 	github.com/lmittmann/tint v1.0.3
 	github.com/muesli/reflow v0.3.0
@@ -48,6 +48,7 @@ require (
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
