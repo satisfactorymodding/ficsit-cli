@@ -48,10 +48,10 @@ func FromPath(path string) (Disk, error) {
 
 	switch parsed.Scheme {
 	case "ftp":
-		slog.Info("connecting to ftp", slog.String("path", path))
+		slog.Info("connecting to ftp")
 		return newFTP(path)
 	case "sftp":
-		slog.Info("connecting to sftp", slog.String("path", path))
+		slog.Info("connecting to sftp")
 		return newSFTP(path)
 	}
 
