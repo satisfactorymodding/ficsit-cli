@@ -142,7 +142,7 @@ func (v *GetModMod) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal GetModMod.Created_at: %w", err)
+					"unable to unmarshal GetModMod.Created_at: %w", err)
 			}
 		}
 	}
@@ -200,7 +200,7 @@ func (v *GetModMod) __premarshalJSON() (*__premarshalGetModMod, error) {
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal GetModMod.Created_at: %w", err)
+				"unable to marshal GetModMod.Created_at: %w", err)
 		}
 	}
 	return &retval, nil
@@ -564,7 +564,7 @@ func (v *ModsModsGetModsModsMod) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal ModsModsGetModsModsMod.Last_version_date: %w", err)
+					"unable to unmarshal ModsModsGetModsModsMod.Last_version_date: %w", err)
 			}
 		}
 	}
@@ -577,7 +577,7 @@ func (v *ModsModsGetModsModsMod) UnmarshalJSON(b []byte) error {
 				src, dst)
 			if err != nil {
 				return fmt.Errorf(
-					"Unable to unmarshal ModsModsGetModsModsMod.Created_at: %w", err)
+					"unable to unmarshal ModsModsGetModsModsMod.Created_at: %w", err)
 			}
 		}
 	}
@@ -627,7 +627,7 @@ func (v *ModsModsGetModsModsMod) __premarshalJSON() (*__premarshalModsModsGetMod
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal ModsModsGetModsModsMod.Last_version_date: %w", err)
+				"unable to marshal ModsModsGetModsModsMod.Last_version_date: %w", err)
 		}
 	}
 	{
@@ -639,7 +639,7 @@ func (v *ModsModsGetModsModsMod) __premarshalJSON() (*__premarshalModsModsGetMod
 			&src)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"Unable to marshal ModsModsGetModsModsMod.Created_at: %w", err)
+				"unable to marshal ModsModsGetModsModsMod.Created_at: %w", err)
 		}
 	}
 	retval.Views = v.Views
@@ -744,9 +744,9 @@ func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVer
 type TargetName string
 
 const (
-	TargetNameLinuxserver   TargetName = "LinuxServer"
 	TargetNameWindows       TargetName = "Windows"
 	TargetNameWindowsserver TargetName = "WindowsServer"
+	TargetNameLinuxserver   TargetName = "LinuxServer"
 )
 
 type VersionFields string
@@ -780,6 +780,9 @@ func (v *VersionFilter) GetOrder() Order { return v.Order }
 
 // GetSearch returns VersionFilter.Search, and is useful for accessing the field via an interface.
 func (v *VersionFilter) GetSearch() string { return v.Search }
+
+// GetIds returns VersionFilter.Ids, and is useful for accessing the field via an interface.
+func (v *VersionFilter) GetIds() []string { return v.Ids }
 
 // VersionMod includes the requested fields of the GraphQL type Mod.
 type VersionMod struct {
@@ -921,15 +924,8 @@ func (v *__VersionInput) GetModId() string { return v.ModId }
 // GetVersion returns __VersionInput.Version, and is useful for accessing the field via an interface.
 func (v *__VersionInput) GetVersion() string { return v.Version }
 
-func CheckVersionUploadState(
-	ctx context.Context,
-	client graphql.Client,
-	modId string,
-	versionId string,
-) (*CheckVersionUploadStateResponse, error) {
-	req := &graphql.Request{
-		OpName: "CheckVersionUploadState",
-		Query: `
+// The query or mutation executed by CheckVersionUploadState.
+const CheckVersionUploadState_Operation = `
 query CheckVersionUploadState ($modId: ModID!, $versionId: VersionID!) {
 	state: checkVersionUploadState(modId: $modId, versionId: $versionId) {
 		auto_approved
@@ -938,7 +934,17 @@ query CheckVersionUploadState ($modId: ModID!, $versionId: VersionID!) {
 		}
 	}
 }
-`,
+`
+
+func CheckVersionUploadState(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+	versionId string,
+) (*CheckVersionUploadStateResponse, error) {
+	req := &graphql.Request{
+		OpName: "CheckVersionUploadState",
+		Query:  CheckVersionUploadState_Operation,
 		Variables: &__CheckVersionUploadStateInput{
 			ModId:     modId,
 			VersionId: versionId,
@@ -958,6 +964,13 @@ query CheckVersionUploadState ($modId: ModID!, $versionId: VersionID!) {
 	return &data, err
 }
 
+// The query or mutation executed by CreateVersion.
+const CreateVersion_Operation = `
+mutation CreateVersion ($modId: ModID!) {
+	versionID: createVersion(modId: $modId)
+}
+`
+
 func CreateVersion(
 	ctx context.Context,
 	client graphql.Client,
@@ -965,11 +978,7 @@ func CreateVersion(
 ) (*CreateVersionResponse, error) {
 	req := &graphql.Request{
 		OpName: "CreateVersion",
-		Query: `
-mutation CreateVersion ($modId: ModID!) {
-	versionID: createVersion(modId: $modId)
-}
-`,
+		Query:  CreateVersion_Operation,
 		Variables: &__CreateVersionInput{
 			ModId: modId,
 		},
@@ -988,6 +997,13 @@ mutation CreateVersion ($modId: ModID!) {
 	return &data, err
 }
 
+// The query or mutation executed by FinalizeCreateVersion.
+const FinalizeCreateVersion_Operation = `
+mutation FinalizeCreateVersion ($modId: ModID!, $versionId: VersionID!, $version: NewVersion!) {
+	success: finalizeCreateVersion(modId: $modId, versionId: $versionId, version: $version)
+}
+`
+
 func FinalizeCreateVersion(
 	ctx context.Context,
 	client graphql.Client,
@@ -997,11 +1013,7 @@ func FinalizeCreateVersion(
 ) (*FinalizeCreateVersionResponse, error) {
 	req := &graphql.Request{
 		OpName: "FinalizeCreateVersion",
-		Query: `
-mutation FinalizeCreateVersion ($modId: ModID!, $versionId: VersionID!, $version: NewVersion!) {
-	success: finalizeCreateVersion(modId: $modId, versionId: $versionId, version: $version)
-}
-`,
+		Query:  FinalizeCreateVersion_Operation,
 		Variables: &__FinalizeCreateVersionInput{
 			ModId:     modId,
 			VersionId: versionId,
@@ -1022,14 +1034,8 @@ mutation FinalizeCreateVersion ($modId: ModID!, $versionId: VersionID!, $version
 	return &data, err
 }
 
-func GetMod(
-	ctx context.Context,
-	client graphql.Client,
-	modId string,
-) (*GetModResponse, error) {
-	req := &graphql.Request{
-		OpName: "GetMod",
-		Query: `
+// The query or mutation executed by GetMod.
+const GetMod_Operation = `
 query GetMod ($modId: String!) {
 	mod: getModByIdOrReference(modIdOrReference: $modId) {
 		id
@@ -1058,7 +1064,16 @@ query GetMod ($modId: String!) {
 		created_at
 	}
 }
-`,
+`
+
+func GetMod(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+) (*GetModResponse, error) {
+	req := &graphql.Request{
+		OpName: "GetMod",
+		Query:  GetMod_Operation,
 		Variables: &__GetModInput{
 			ModId: modId,
 		},
@@ -1077,14 +1092,8 @@ query GetMod ($modId: String!) {
 	return &data, err
 }
 
-func GetModName(
-	ctx context.Context,
-	client graphql.Client,
-	modId string,
-) (*GetModNameResponse, error) {
-	req := &graphql.Request{
-		OpName: "GetModName",
-		Query: `
+// The query or mutation executed by GetModName.
+const GetModName_Operation = `
 query GetModName ($modId: String!) {
 	mod: getModByIdOrReference(modIdOrReference: $modId) {
 		id
@@ -1092,7 +1101,16 @@ query GetModName ($modId: String!) {
 		name
 	}
 }
-`,
+`
+
+func GetModName(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+) (*GetModNameResponse, error) {
+	req := &graphql.Request{
+		OpName: "GetModName",
+		Query:  GetModName_Operation,
 		Variables: &__GetModNameInput{
 			ModId: modId,
 		},
@@ -1111,15 +1129,8 @@ query GetModName ($modId: String!) {
 	return &data, err
 }
 
-func ModVersions(
-	ctx context.Context,
-	client graphql.Client,
-	modId string,
-	filter VersionFilter,
-) (*ModVersionsResponse, error) {
-	req := &graphql.Request{
-		OpName: "ModVersions",
-		Query: `
+// The query or mutation executed by ModVersions.
+const ModVersions_Operation = `
 query ModVersions ($modId: String!, $filter: VersionFilter) {
 	mod: getModByIdOrReference(modIdOrReference: $modId) {
 		id
@@ -1129,7 +1140,17 @@ query ModVersions ($modId: String!, $filter: VersionFilter) {
 		}
 	}
 }
-`,
+`
+
+func ModVersions(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+	filter VersionFilter,
+) (*ModVersionsResponse, error) {
+	req := &graphql.Request{
+		OpName: "ModVersions",
+		Query:  ModVersions_Operation,
 		Variables: &__ModVersionsInput{
 			ModId:  modId,
 			Filter: filter,
@@ -1149,14 +1170,8 @@ query ModVersions ($modId: String!, $filter: VersionFilter) {
 	return &data, err
 }
 
-func ModVersionsWithDependencies(
-	ctx context.Context,
-	client graphql.Client,
-	modId string,
-) (*ModVersionsWithDependenciesResponse, error) {
-	req := &graphql.Request{
-		OpName: "ModVersionsWithDependencies",
-		Query: `
+// The query or mutation executed by ModVersionsWithDependencies.
+const ModVersionsWithDependencies_Operation = `
 query ModVersionsWithDependencies ($modId: String!) {
 	mod: getModByIdOrReference(modIdOrReference: $modId) {
 		id
@@ -1178,7 +1193,16 @@ query ModVersionsWithDependencies ($modId: String!) {
 		}
 	}
 }
-`,
+`
+
+func ModVersionsWithDependencies(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+) (*ModVersionsWithDependenciesResponse, error) {
+	req := &graphql.Request{
+		OpName: "ModVersionsWithDependencies",
+		Query:  ModVersionsWithDependencies_Operation,
 		Variables: &__ModVersionsWithDependenciesInput{
 			ModId: modId,
 		},
@@ -1197,14 +1221,8 @@ query ModVersionsWithDependencies ($modId: String!) {
 	return &data, err
 }
 
-func Mods(
-	ctx context.Context,
-	client graphql.Client,
-	filter ModFilter,
-) (*ModsResponse, error) {
-	req := &graphql.Request{
-		OpName: "Mods",
-		Query: `
+// The query or mutation executed by Mods.
+const Mods_Operation = `
 query Mods ($filter: ModFilter) {
 	mods: getMods(filter: $filter) {
 		count
@@ -1221,7 +1239,16 @@ query Mods ($filter: ModFilter) {
 		}
 	}
 }
-`,
+`
+
+func Mods(
+	ctx context.Context,
+	client graphql.Client,
+	filter ModFilter,
+) (*ModsResponse, error) {
+	req := &graphql.Request{
+		OpName: "Mods",
+		Query:  Mods_Operation,
 		Variables: &__ModsInput{
 			Filter: filter,
 		},
@@ -1240,13 +1267,8 @@ query Mods ($filter: ModFilter) {
 	return &data, err
 }
 
-func SMLVersions(
-	ctx context.Context,
-	client graphql.Client,
-) (*SMLVersionsResponse, error) {
-	req := &graphql.Request{
-		OpName: "SMLVersions",
-		Query: `
+// The query or mutation executed by SMLVersions.
+const SMLVersions_Operation = `
 query SMLVersions {
 	smlVersions: getSMLVersions(filter: {limit:100}) {
 		count
@@ -1261,7 +1283,15 @@ query SMLVersions {
 		}
 	}
 }
-`,
+`
+
+func SMLVersions(
+	ctx context.Context,
+	client graphql.Client,
+) (*SMLVersionsResponse, error) {
+	req := &graphql.Request{
+		OpName: "SMLVersions",
+		Query:  SMLVersions_Operation,
 	}
 	var err error
 
@@ -1277,15 +1307,8 @@ query SMLVersions {
 	return &data, err
 }
 
-func Version(
-	ctx context.Context,
-	client graphql.Client,
-	modId string,
-	version string,
-) (*VersionResponse, error) {
-	req := &graphql.Request{
-		OpName: "Version",
-		Query: `
+// The query or mutation executed by Version.
+const Version_Operation = `
 query Version ($modId: String!, $version: String!) {
 	mod: getModByIdOrReference(modIdOrReference: $modId) {
 		id
@@ -1297,7 +1320,17 @@ query Version ($modId: String!, $version: String!) {
 		}
 	}
 }
-`,
+`
+
+func Version(
+	ctx context.Context,
+	client graphql.Client,
+	modId string,
+	version string,
+) (*VersionResponse, error) {
+	req := &graphql.Request{
+		OpName: "Version",
+		Query:  Version_Operation,
 		Variables: &__VersionInput{
 			ModId:   modId,
 			Version: version,

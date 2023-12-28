@@ -218,32 +218,6 @@ func (m modInfo) renderModInfo() string {
 	sidebar += "\n"
 	sidebar += utils.LabelStyle.Render("Authors:") + "\n"
 
-  converter := md.NewConverter("", true, nil)
-  converter.AddRules(md.Rule{
-    Filter: []string{"#text"},
-    Replacement: func(content string, selec *goquery.Selection, options *md.Options) *string {
-      text := selec.Text()
-      return &text
-    },
-  })
-
-  markdownDescription, err := converter.ConvertString(mod.Full_description)
-  if err != nil {
-    slog.Error("failed to convert html to markdown", slog.Any("err", err))
-    markdownDescription = mod.Full_description
-  }
-
-  description, err := glamour.Render(markdownDescription, "dark")
-  if err != nil {
-    slog.Error("failed to render markdown", slog.Any("err", err))
-    description = mod.Full_description
-  }
-
-	for _, author := range mod.Authors {
-		sidebar += "\n"
-		sidebar += utils.LabelStyle.Render(author.User.Username) + " - " + author.Role
-	}
-
 	converter := md.NewConverter("", true, nil)
 	converter.AddRules(md.Rule{
 		Filter: []string{"#text"},
@@ -252,6 +226,11 @@ func (m modInfo) renderModInfo() string {
 			return &text
 		},
 	})
+
+	for _, author := range mod.Authors {
+		sidebar += "\n"
+		sidebar += utils.LabelStyle.Render(author.User.Username) + " - " + author.Role
+	}
 
 	description := ""
 	if m.compatViewMode {
@@ -284,13 +263,13 @@ func (m modInfo) renderDescriptionText(text string, converter *md.Converter) str
 
 	markdownDescription, err := converter.ConvertString(text)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to convert html to markdown")
+		slog.Error("failed to convert html to markdown", slog.Any("err", err))
 		markdownDescription = text
 	}
 
 	description, err := glamour.Render(markdownDescription, "dark")
 	if err != nil {
-		log.Error().Err(err).Msg("failed to render markdown")
+		slog.Error("failed to render markdown", slog.Any("err", err))
 		description = text
 	}
 
