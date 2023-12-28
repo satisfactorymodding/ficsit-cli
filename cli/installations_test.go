@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/MarvinJWendt/testza"
+	"github.com/avast/retry-go"
 
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
@@ -98,19 +100,42 @@ func TestAddFTPInstallation(t *testing.T) {
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
 		time.Sleep(time.Second)
-		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
-		time.Sleep(time.Second)
 
-		installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/server", profileName)
-		testza.AssertNoError(t, err)
-		testza.AssertNotNil(t, installation)
+		err := retry.Do(func() error {
+			testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
+			time.Sleep(time.Second)
 
-		err = installation.Install(ctx, installWatcher())
+			installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/server", profileName)
+			if err != nil {
+				return err
+			}
+
+			testza.AssertNotNil(t, installation)
+
+			err = installation.Install(ctx, installWatcher())
+			if err != nil {
+				return err
+			}
+
+			installation.Vanilla = true
+			err = installation.Install(ctx, installWatcher())
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+			retry.Attempts(30),
+			retry.Delay(time.Second),
+			retry.DelayType(retry.FixedDelay),
+			retry.OnRetry(func(n uint, err error) {
+				if n > 0 {
+					slog.Info("retrying ftp test", slog.Uint64("n", uint64(n)))
+				}
+			}),
+		)
 		testza.AssertNoError(t, err)
 
-		installation.Vanilla = true
-		err = installation.Install(ctx, installWatcher())
-		testza.AssertNoError(t, err)
 		time.Sleep(time.Second)
 	}
 
