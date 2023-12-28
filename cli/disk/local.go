@@ -1,6 +1,8 @@
 package disk
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 )
@@ -19,9 +21,18 @@ func newLocal(path string) (Disk, error) {
 	return localDisk{path: path}, nil
 }
 
-func (l localDisk) Exists(path string) error {
+func (l localDisk) Exists(path string) (bool, error) {
 	_, err := os.Stat(path)
-	return err //nolint
+
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("failed checking file existence: %w", err)
+	}
+
+	return true, nil
 }
 
 func (l localDisk) Read(path string) ([]byte, error) {
@@ -54,14 +65,6 @@ func (l localDisk) ReadDir(path string) ([]Entry, error) {
 	}
 
 	return entries, nil
-}
-
-func (l localDisk) IsNotExist(err error) bool {
-	return os.IsNotExist(err)
-}
-
-func (l localDisk) IsExist(err error) bool {
-	return os.IsExist(err)
 }
 
 func (l localDisk) Open(path string, flag int) (io.WriteCloser, error) {

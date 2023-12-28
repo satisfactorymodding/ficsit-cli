@@ -1,22 +1,37 @@
 package disk
 
 import (
+	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
-
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
+	"path/filepath"
 )
 
 type Disk interface {
-	Exists(path string) error
+	// Exists checks if the provided file or directory exists
+	Exists(path string) (bool, error)
+
+	// Read returns the entire file as a byte buffer
+	//
+	// Returns error if provided path is not a file
 	Read(path string) ([]byte, error)
+
+	// Write writes provided byte buffer to the path
 	Write(path string, data []byte) error
+
+	// Remove deletes the provided file or directory recursively
 	Remove(path string) error
+
+	// MkDir creates the provided directory recursively
 	MkDir(path string) error
+
+	// ReadDir returns all entries within the directory
+	//
+	// Returns error if provided path is not a directory
 	ReadDir(path string) ([]Entry, error)
-	IsNotExist(err error) bool
-	IsExist(err error) bool
+
+	// Open opens provided path for writing
 	Open(path string, flag int) (io.WriteCloser, error)
 }
 
@@ -28,18 +43,23 @@ type Entry interface {
 func FromPath(path string) (Disk, error) {
 	parsed, err := url.Parse(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse path")
+		return nil, fmt.Errorf("failed to parse path: %w", err)
 	}
 
 	switch parsed.Scheme {
 	case "ftp":
-		log.Info().Str("path", path).Msg("connecting to ftp")
+		slog.Info("connecting to ftp")
 		return newFTP(path)
 	case "sftp":
-		log.Info().Str("path", path).Msg("connecting to sftp")
+		slog.Info("connecting to sftp")
 		return newSFTP(path)
 	}
 
-	log.Info().Str("path", path).Msg("using local disk")
+	slog.Info("using local disk", slog.String("path", path))
 	return newLocal(path)
+}
+
+// clean returns a unix-style path
+func clean(path string) string {
+	return filepath.ToSlash(filepath.Clean(path))
 }

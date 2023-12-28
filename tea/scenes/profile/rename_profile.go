@@ -17,12 +17,12 @@ import (
 var _ tea.Model = (*renameProfile)(nil)
 
 type renameProfile struct {
-	input   textinput.Model
 	root    components.RootModel
 	parent  tea.Model
 	error   *components.ErrorComponent
 	title   string
 	oldName string
+	input   textinput.Model
 }
 
 func NewRenameProfile(root components.RootModel, parent tea.Model, profileData *cli.Profile) tea.Model {

@@ -1,57 +1,91 @@
 package cli
 
 import (
+	"context"
+	"log/slog"
 	"math"
+	"os"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
+	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
 
-func TestProfileResolution(t *testing.T) {
+func init() {
+	cfg.SetDefaults()
+}
+
+func installWatcher() chan<- InstallUpdate {
+	c := make(chan InstallUpdate)
+	go func() {
+		for i := range c {
+			if i.Progress.Total == i.Progress.Completed {
+				if i.Type != InstallUpdateTypeOverall {
+					slog.Info("progress completed", slog.String("mod_reference", i.Item.Mod), slog.String("version", i.Item.Version), slog.Any("type", i.Type))
+				} else {
+					slog.Info("overall completed")
+				}
+			}
+		}
+	}()
+	return c
+}
+
+func TestUpdateMods(t *testing.T) {
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)
 
-	resolver := NewDependencyResolver(ctx.APIClient)
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
 
-	resolved, err := (&Profile{
-		Name: DefaultProfileName,
-		Mods: map[string]ProfileMod{
-			"RefinedPower": {
-				Version: "3.0.9",
-				Enabled: true,
-			},
-		},
-	}).Resolve(resolver, nil, math.MaxInt)
+	ctx.Provider = MockProvider{}
+
+	depResolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
+
+	oldLockfile, err := depResolver.ResolveModDependencies(context.Background(), map[string]string{
+		"FicsitRemoteMonitoring": "0.9.8",
+	}, nil, math.MaxInt, nil)
 
 	testza.AssertNoError(t, err)
-	testza.AssertNotNil(t, resolved)
-	testza.AssertLen(t, resolved, 4)
+	testza.AssertNotNil(t, oldLockfile)
+	testza.AssertLen(t, oldLockfile.Mods, 2)
 
-	_, err = (&Profile{
-		Name: DefaultProfileName,
-		Mods: map[string]ProfileMod{
-			"RefinedPower": {
-				Version: "3.0.9",
-				Enabled: true,
-			},
-			"RefinedRDLib": {
-				Version: "1.0.6",
-				Enabled: true,
-			},
-		},
-	}).Resolve(resolver, nil, math.MaxInt)
+	profileName := "UpdateTest"
+	profile, err := ctx.Profiles.AddProfile(profileName)
+	testza.AssertNoError(t, err)
+	testza.AssertNoError(t, profile.AddMod("FicsitRemoteMonitoring", "<=0.10.0"))
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed resolving dependencies. requires different versions of RefinedRDLib", err.Error())
+	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
+	if serverLocation != "" {
+		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
+		testza.AssertNoError(t, err)
+		testza.AssertNotNil(t, installation)
 
-	_, err = (&Profile{
-		Name: DefaultProfileName,
-		Mods: map[string]ProfileMod{
-			"ThisModDoesNotExist$$$": {
-				Version: ">0.0.0",
-				Enabled: true,
-			},
-		},
-	}).Resolve(resolver, nil, math.MaxInt)
+		err = installation.WriteLockFile(ctx, oldLockfile)
+		testza.AssertNoError(t, err)
 
-	testza.AssertEqual(t, "failed resolving profile dependencies: failed resolving dependency: ThisModDoesNotExist$$$", err.Error())
+		err = installation.Install(ctx, installWatcher())
+		testza.AssertNoError(t, err)
+
+		lockFile, err := installation.LockFile(ctx)
+		testza.AssertNoError(t, err)
+
+		testza.AssertEqual(t, 2, len(lockFile.Mods))
+		testza.AssertEqual(t, "0.9.8", (lockFile.Mods)["FicsitRemoteMonitoring"].Version)
+
+		err = installation.UpdateMods(ctx, []string{"FicsitRemoteMonitoring"})
+		testza.AssertNoError(t, err)
+
+		lockFile, err = installation.LockFile(ctx)
+		testza.AssertNoError(t, err)
+
+		testza.AssertEqual(t, 2, len(lockFile.Mods))
+		testza.AssertEqual(t, "0.10.0", (lockFile.Mods)["FicsitRemoteMonitoring"].Version)
+
+		err = installation.Install(ctx, installWatcher())
+		testza.AssertNoError(t, err)
+	}
 }

@@ -5,4 +5,5 @@ const (
 	KeyEnter    = "enter"
 	KeyEscape   = "esc"
 	KeyTab      = "tab"
+	KeyQ        = "q"
 )

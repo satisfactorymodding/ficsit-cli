@@ -1,14 +1,16 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/utils"
@@ -43,8 +45,9 @@ type Profiles struct {
 }
 
 type Profile struct {
-	Mods map[string]ProfileMod `json:"mods"`
-	Name string                `json:"name"`
+	Mods            map[string]ProfileMod `json:"mods"`
+	Name            string                `json:"name"`
+	RequiredTargets []resolver.TargetName `json:"required_targets"`
 }
 
 type ProfileMod struct {
@@ -59,18 +62,18 @@ func InitProfiles() (*Profiles, error) {
 	_, err := os.Stat(profilesFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return nil, errors.Wrap(err, "failed to stat profiles file")
+			return nil, fmt.Errorf("failed to stat profiles file: %w", err)
 		}
 
 		_, err := os.Stat(localDir)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				return nil, errors.Wrap(err, "failed to read cache directory")
+				return nil, fmt.Errorf("failed to read cache directory: %w", err)
 			}
 
 			err = os.MkdirAll(localDir, 0o755)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to create cache directory")
+				return nil, fmt.Errorf("failed to create cache directory: %w", err)
 			}
 		}
 
@@ -91,13 +94,13 @@ func InitProfiles() (*Profiles, error) {
 						if err == nil {
 							manifestBytes, err := os.ReadFile(manifestFile)
 							if err != nil {
-								log.Err(err).Str("file", manifestFile).Msg("Failed to read file, not importing profile")
+								slog.Error("Failed to read file, not importing profile", slog.Any("err", err), slog.String("file", manifestFile))
 								continue
 							}
 
 							var smmProfile smmProfileFile
 							if err := json.Unmarshal(manifestBytes, &smmProfile); err != nil {
-								log.Err(err).Str("file", manifestFile).Msg("Failed to parse file, not importing profile")
+								slog.Error("Failed to parse file, not importing profile", slog.Any("err", err), slog.String("file", manifestFile))
 								continue
 							}
 
@@ -131,18 +134,18 @@ func InitProfiles() (*Profiles, error) {
 		}
 
 		if err := bootstrapProfiles.Save(); err != nil {
-			return nil, errors.Wrap(err, "failed to save empty profiles")
+			return nil, fmt.Errorf("failed to save empty profiles: %w", err)
 		}
 	}
 
 	profilesData, err := os.ReadFile(profilesFile)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read profiles")
+		return nil, fmt.Errorf("failed to read profiles: %w", err)
 	}
 
 	var profiles Profiles
 	if err := json.Unmarshal(profilesData, &profiles); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal profiles")
+		return nil, fmt.Errorf("failed to unmarshal profiles: %w", err)
 	}
 
 	if profiles.Version >= nextProfilesVersion {
@@ -166,21 +169,21 @@ func InitProfiles() (*Profiles, error) {
 // Save the profiles to the profiles file.
 func (p *Profiles) Save() error {
 	if viper.GetBool("dry-run") {
-		log.Info().Msg("dry-run: skipping profile saving")
+		slog.Info("dry-run: skipping profile saving")
 		return nil
 	}
 
 	profilesFile := filepath.Join(viper.GetString("local-dir"), viper.GetString("profiles-file"))
 
-	log.Info().Str("path", profilesFile).Msg("saving profiles")
+	slog.Info("saving profiles", slog.String("path", profilesFile))
 
 	profilesJSON, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal profiles")
+		return fmt.Errorf("failed to marshal profiles: %w", err)
 	}
 
 	if err := os.WriteFile(profilesFile, profilesJSON, 0o755); err != nil {
-		return errors.Wrap(err, "failed to write profiles")
+		return fmt.Errorf("failed to write profiles: %w", err)
 	}
 
 	return nil
@@ -288,7 +291,7 @@ func (p *Profile) HasMod(reference string) bool {
 // An optional lockfile can be passed if one exists.
 //
 // Returns an error if resolution is impossible.
-func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile, gameVersion int) (LockFile, error) {
+func (p *Profile) Resolve(resolver resolver.DependencyResolver, lockFile *resolver.LockFile, gameVersion int) (*resolver.LockFile, error) {
 	toResolve := make(map[string]string)
 	for modReference, mod := range p.Mods {
 		if mod.Enabled {
@@ -296,9 +299,9 @@ func (p *Profile) Resolve(resolver DependencyResolver, lockFile *LockFile, gameV
 		}
 	}
 
-	resultLockfile, err := resolver.ResolveModDependencies(toResolve, lockFile, gameVersion)
+	resultLockfile, err := resolver.ResolveModDependencies(context.TODO(), toResolve, lockFile, gameVersion, p.RequiredTargets)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed resolving profile dependencies")
+		return nil, fmt.Errorf("failed resolving profile dependencies: %w", err)
 	}
 
 	return resultLockfile, nil

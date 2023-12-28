@@ -1,6 +1,9 @@
 package scenes
 
 import (
+	"sort"
+	"sync"
+
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -9,142 +12,116 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
-	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
+	teaUtils "github.com/satisfactorymodding/ficsit-cli/tea/utils"
+	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
 
 var _ tea.Model = (*apply)(nil)
 
-type update struct {
-	installName    string
-	modName        string
-	completed      []string
-	installTotal   int
-	installCurrent int
-	modTotal       int
-	modCurrent     int
-	done           bool
+type modProgress struct {
+	downloadProgress utils.GenericProgress
+	extractProgress  utils.GenericProgress
+	downloading      bool
+	complete         bool
+}
+
+type status struct {
+	modProgresses   map[string]modProgress
+	installName     string
+	overallProgress utils.GenericProgress
+	done            bool
 }
 
 type apply struct {
 	root          components.RootModel
 	parent        tea.Model
 	error         *components.ErrorComponent
-	updateChannel chan update
+	updateChannel chan applyUpdate
+	doneChannel   chan bool
 	errorChannel  chan error
 	cancelChannel chan bool
 	title         string
-	status        update
+	status        map[string]status
 	overall       progress.Model
 	sub           progress.Model
 	cancelled     bool
+	done          bool
+}
+
+type applyUpdate struct {
+	Installation *cli.Installation
+	Update       cli.InstallUpdate
+	Done         bool
 }
 
 func NewApply(root components.RootModel, parent tea.Model) tea.Model {
 	overall := progress.New(progress.WithSolidFill("118"))
 	sub := progress.New(progress.WithSolidFill("202"))
 
-	updateChannel := make(chan update)
+	updateChannel := make(chan applyUpdate)
+	doneChannel := make(chan bool, 1)
 	errorChannel := make(chan error)
 	cancelChannel := make(chan bool, 1)
 
 	model := &apply{
-		root:    root,
-		parent:  parent,
-		title:   utils.NonListTitleStyle.MarginTop(1).MarginBottom(1).Render("Applying Changes"),
-		overall: overall,
-		sub:     sub,
-		status: update{
-			completed: []string{},
-
-			installName:    "",
-			installTotal:   100,
-			installCurrent: 0,
-
-			modName:    "",
-			modTotal:   100,
-			modCurrent: 0,
-
-			done: false,
-		},
+		root:          root,
+		parent:        parent,
+		title:         teaUtils.NonListTitleStyle.MarginTop(1).MarginBottom(1).Render("Applying Changes"),
+		overall:       overall,
+		sub:           sub,
+		status:        make(map[string]status),
 		updateChannel: updateChannel,
+		doneChannel:   doneChannel,
 		errorChannel:  errorChannel,
 		cancelChannel: cancelChannel,
-		cancelled:     false,
 	}
 
-	go func() {
-		result := &update{
-			completed: make([]string, 0),
+	var wg sync.WaitGroup
 
-			installName:    "",
-			installTotal:   100,
-			installCurrent: 0,
+	for _, installation := range root.GetGlobal().Installations.Installations {
+		wg.Add(1)
 
-			modName:    "",
-			modTotal:   100,
-			modCurrent: 0,
-
-			done: false,
+		model.status[installation.Path] = status{
+			modProgresses:   make(map[string]modProgress),
+			installName:     installation.Path,
+			overallProgress: utils.GenericProgress{},
 		}
-		updateChannel <- *result
 
-		for _, installation := range root.GetGlobal().Installations.Installations {
-			result.installName = installation.Path
-			updateChannel <- *result
+		go func(installation *cli.Installation) {
+			defer wg.Done()
 
-			installChannel := make(chan cli.InstallUpdate)
-
+			installUpdateChannel := make(chan cli.InstallUpdate)
 			go func() {
-				for data := range installChannel {
-					result.installName = installation.Path
-					result.installCurrent = int(data.OverallProgress * 100)
-
-					if data.DownloadProgress < 1 {
-						result.modName = "Downloading: " + data.ModName
-						result.modCurrent = int(data.DownloadProgress * 100)
-					} else {
-						result.modName = "Extracting: " + data.ModName
-						result.modCurrent = int(data.ExtractProgress * 100)
+				for update := range installUpdateChannel {
+					updateChannel <- applyUpdate{
+						Installation: installation,
+						Update:       update,
 					}
-
-					updateChannel <- *result
 				}
 			}()
 
-			if err := installation.Install(root.GetGlobal(), installChannel); err != nil {
+			if err := installation.Install(root.GetGlobal(), installUpdateChannel); err != nil {
 				errorChannel <- err
 				return
 			}
 
-			close(installChannel)
-
-			result.modName = ""
-			result.installTotal = 100
-			result.completed = append(result.completed, installation.Path)
-			updateChannel <- *result
-
-			stop := false
-			select {
-			case <-cancelChannel:
-				stop = true
-			default:
+			updateChannel <- applyUpdate{
+				Installation: installation,
+				Done:         true,
 			}
+		}(installation)
+	}
 
-			if stop {
-				break
-			}
-		}
-
-		result.done = true
-		result.installName = ""
-		updateChannel <- *result
+	go func() {
+		wg.Wait()
+		doneChannel <- true
 	}()
 
 	return model
 }
 
 func (m apply) Init() tea.Cmd {
-	return utils.Ticker()
+	return teaUtils.Ticker()
 }
 
 func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -153,15 +130,33 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch keypress := msg.String(); keypress {
 		case keys.KeyControlC:
 			return m, tea.Quit
+		case keys.KeyQ:
+			fallthrough
 		case keys.KeyEscape:
-			m.cancelled = true
-			m.cancelChannel <- true
-			return m, nil
-		case keys.KeyEnter:
-			if m.status.done {
+			if m.done {
 				if m.parent != nil {
 					return m.parent, m.parent.Init()
 				}
+				return m, tea.Quit
+			}
+
+			m.cancelled = true
+
+			if m.error != nil {
+				if m.parent != nil {
+					return m.parent, m.parent.Init()
+				}
+				return m, tea.Quit
+			}
+
+			m.cancelChannel <- true
+			return m, nil
+		case keys.KeyEnter:
+			if m.done || m.error != nil {
+				if m.parent != nil {
+					return m.parent, m.parent.Init()
+				}
+				return m, tea.Quit
 			}
 			return m, nil
 		}
@@ -169,10 +164,40 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.root.SetSize(msg)
 	case components.ErrorComponentTimeoutMsg:
 		m.error = nil
-	case utils.TickMsg:
+	case teaUtils.TickMsg:
 		select {
-		case newStatus := <-m.updateChannel:
-			m.status = newStatus
+		case <-m.doneChannel:
+			m.done = true
+			break
+		case update := <-m.updateChannel:
+			s := m.status[update.Installation.Path]
+
+			if update.Done {
+				s.done = true
+			} else {
+				switch update.Update.Type {
+				case cli.InstallUpdateTypeOverall:
+					s.overallProgress = update.Update.Progress
+				case cli.InstallUpdateTypeModDownload:
+					s.modProgresses[update.Update.Item.Mod] = modProgress{
+						downloadProgress: update.Update.Progress,
+						downloading:      true,
+						complete:         false,
+					}
+				case cli.InstallUpdateTypeModExtract:
+					s.modProgresses[update.Update.Item.Mod] = modProgress{
+						extractProgress: update.Update.Progress,
+						downloading:     false,
+						complete:        false,
+					}
+				case cli.InstallUpdateTypeModComplete:
+					s.modProgresses[update.Update.Item.Mod] = modProgress{
+						complete: true,
+					}
+				}
+			}
+
+			m.status[update.Installation.Path] = s
 			break
 		case err := <-m.errorChannel:
 			wrappedErrMessage := wrap.String(err.Error(), int(float64(m.root.Size().Width)*0.8))
@@ -183,7 +208,7 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Skip if nothing there
 			break
 		}
-		return m, utils.Ticker()
+		return m, teaUtils.Ticker()
 	}
 
 	return m, nil
@@ -191,30 +216,82 @@ func (m apply) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m apply) View() string {
 	strs := make([]string, 0)
-	for _, s := range m.status.completed {
-		strs = append(strs, lipgloss.NewStyle().Foreground(lipgloss.Color("22")).Render("✓ ")+s)
+
+	installationList := make([]string, len(m.status))
+	i := 0
+	for key := range m.status {
+		installationList[i] = key
+		i++
 	}
 
-	if m.status.installName != "" {
-		marginTop := 0
-		if len(m.status.completed) > 0 {
-			marginTop = 1
+	sort.Strings(installationList)
+
+	totalHeight := 3 + 3                     // Header + Footer
+	totalHeight += len(installationList) * 2 // Bottom Margin + Overall progress per-install
+
+	bottomMargins := 1
+	if m.root.Size().Height < totalHeight {
+		bottomMargins = 0
+	}
+
+	totalHeight += len(installationList) // Top margin
+
+	topMargins := 1
+	if m.root.Size().Height < totalHeight {
+		topMargins = 0
+	}
+
+	for _, installPath := range installationList {
+		totalHeight += len(m.status[installPath].modProgresses)
+	}
+
+	for _, installPath := range installationList {
+		s := m.status[installPath]
+
+		strs = append(strs, lipgloss.NewStyle().Margin(topMargins, 0, bottomMargins).Render(lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			m.overall.ViewAs(s.overallProgress.Percentage()),
+			" - ",
+			lipgloss.NewStyle().Render(installPath),
+		)))
+
+		modReferences := make([]string, 0)
+		for k := range s.modProgresses {
+			modReferences = append(modReferences, k)
 		}
+		sort.Strings(modReferences)
 
-		strs = append(strs, lipgloss.NewStyle().MarginTop(marginTop).Render(m.status.installName))
-		strs = append(strs, m.overall.ViewAs(float64(m.status.installCurrent)/float64(m.status.installTotal)))
+		if m.root.Size().Height > totalHeight {
+			for _, modReference := range modReferences {
+				p := s.modProgresses[modReference]
+				if p.complete || s.done {
+					strs = append(strs, lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("22")).Render("✓ ")+modReference)
+				} else {
+					if p.downloading {
+						strs = append(strs, lipgloss.NewStyle().MarginLeft(1).Render(lipgloss.JoinHorizontal(
+							lipgloss.Left,
+							m.sub.ViewAs(p.downloadProgress.Percentage()),
+							" - ",
+							lipgloss.NewStyle().Render(modReference+" (Downloading)"),
+						)))
+					} else {
+						strs = append(strs, lipgloss.NewStyle().MarginLeft(1).Render(lipgloss.JoinHorizontal(
+							lipgloss.Left,
+							m.sub.ViewAs(p.extractProgress.Percentage()),
+							" - ",
+							lipgloss.NewStyle().Render(modReference+" (Extracting)"),
+						)))
+					}
+				}
+			}
+		}
 	}
 
-	if m.status.modName != "" {
-		strs = append(strs, lipgloss.NewStyle().MarginTop(1).Render(m.status.modName))
-		strs = append(strs, m.sub.ViewAs(float64(m.status.modCurrent)/float64(m.status.modTotal)))
-	}
-
-	if m.status.done {
+	if m.done {
 		if m.cancelled {
-			strs = append(strs, utils.LabelStyle.Copy().Foreground(lipgloss.Color("196")).Padding(0).Margin(1).Render("Cancelled! Press Enter to return"))
+			strs = append(strs, teaUtils.LabelStyle.Copy().Foreground(lipgloss.Color("196")).Padding(0).Margin(1).Render("Cancelled! Press Enter to return"))
 		} else {
-			strs = append(strs, utils.LabelStyle.Copy().Padding(0).Margin(1).Render("Done! Press Enter to return"))
+			strs = append(strs, teaUtils.LabelStyle.Copy().Padding(0).Margin(1).Render("Done! Press Enter to return"))
 		}
 	}
 

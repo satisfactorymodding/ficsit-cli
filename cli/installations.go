@@ -2,7 +2,9 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -10,10 +12,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 	"github.com/satisfactorymodding/ficsit-cli/utils"
 )
@@ -37,6 +40,7 @@ type Installation struct {
 	DiskInstance disk.Disk `json:"-"`
 	Path         string    `json:"path"`
 	Profile      string    `json:"profile"`
+	Vanilla      bool      `json:"vanilla"`
 }
 
 func InitInstallations() (*Installations, error) {
@@ -46,18 +50,18 @@ func InitInstallations() (*Installations, error) {
 	_, err := os.Stat(installationsFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return nil, errors.Wrap(err, "failed to stat installations file")
+			return nil, fmt.Errorf("failed to stat installations file: %w", err)
 		}
 
 		_, err := os.Stat(localDir)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				return nil, errors.Wrap(err, "failed to read cache directory")
+				return nil, fmt.Errorf("failed to read cache directory: %w", err)
 			}
 
 			err = os.MkdirAll(localDir, 0o755)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to create cache directory")
+				return nil, fmt.Errorf("failed to create cache directory: %w", err)
 			}
 		}
 
@@ -66,18 +70,18 @@ func InitInstallations() (*Installations, error) {
 		}
 
 		if err := emptyInstallations.Save(); err != nil {
-			return nil, errors.Wrap(err, "failed to save empty installations")
+			return nil, fmt.Errorf("failed to save empty installations: %w", err)
 		}
 	}
 
 	installationsData, err := os.ReadFile(installationsFile)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read installations")
+		return nil, fmt.Errorf("failed to read installations: %w", err)
 	}
 
 	var installations Installations
 	if err := json.Unmarshal(installationsData, &installations); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal installations")
+		return nil, fmt.Errorf("failed to unmarshal installations: %w", err)
 	}
 
 	if installations.Version >= nextInstallationsVersion {
@@ -89,21 +93,21 @@ func InitInstallations() (*Installations, error) {
 
 func (i *Installations) Save() error {
 	if viper.GetBool("dry-run") {
-		log.Info().Msg("dry-run: skipping installation saving")
+		slog.Info("dry-run: skipping installation saving")
 		return nil
 	}
 
 	installationsFile := filepath.Join(viper.GetString("local-dir"), viper.GetString("installations-file"))
 
-	log.Info().Str("path", installationsFile).Msg("saving installations")
+	slog.Info("saving installations", slog.String("path", installationsFile))
 
 	installationsJSON, err := json.MarshalIndent(i, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal installations")
+		return fmt.Errorf("failed to marshal installations: %w", err)
 	}
 
 	if err := os.WriteFile(installationsFile, installationsJSON, 0o755); err != nil {
-		return errors.Wrap(err, "failed to write installations")
+		return fmt.Errorf("failed to write installations: %w", err)
 	}
 
 	return nil
@@ -112,7 +116,7 @@ func (i *Installations) Save() error {
 func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, profile string) (*Installation, error) {
 	parsed, err := url.Parse(installPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse path")
+		return nil, fmt.Errorf("failed to parse path: %w", err)
 	}
 
 	absolutePath := installPath
@@ -120,17 +124,18 @@ func (i *Installations) AddInstallation(ctx *GlobalContext, installPath string, 
 		absolutePath, err = filepath.Abs(installPath)
 
 		if err != nil {
-			return nil, errors.Wrap(err, "could not resolve absolute path of: "+installPath)
+			return nil, fmt.Errorf("could not resolve absolute path of: %s: %w", installPath, err)
 		}
 	}
 
 	installation := &Installation{
 		Path:    absolutePath,
 		Profile: profile,
+		Vanilla: false,
 	}
 
 	if err := installation.Validate(ctx); err != nil {
-		return nil, errors.Wrap(err, "failed to validate installation")
+		return nil, fmt.Errorf("failed to validate installation: %w", err)
 	}
 
 	found := false
@@ -198,28 +203,28 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 
 	foundExecutable := false
 
-	err = d.Exists(filepath.Join(i.BasePath(), "FactoryGame.exe"))
-	if err != nil {
-		if !d.IsNotExist(err) {
-			return errors.Wrap(err, "failed reading FactoryGame.exe")
+	exists, err := d.Exists(filepath.Join(i.BasePath(), "FactoryGame.exe"))
+	if !exists {
+		if err != nil {
+			return fmt.Errorf("failed reading FactoryGame.exe: %w", err)
 		}
 	} else {
 		foundExecutable = true
 	}
 
-	err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.sh"))
-	if err != nil {
-		if !d.IsNotExist(err) {
-			return errors.Wrap(err, "failed reading FactoryServer.sh")
+	exists, err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.sh"))
+	if !exists {
+		if err != nil {
+			return fmt.Errorf("failed reading FactoryServer.sh: %w", err)
 		}
 	} else {
 		foundExecutable = true
 	}
 
-	err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.exe"))
-	if err != nil {
-		if !d.IsNotExist(err) {
-			return errors.Wrap(err, "failed reading FactoryServer.exe")
+	exists, err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.exe"))
+	if !exists {
+		if err != nil {
+			return fmt.Errorf("failed reading FactoryServer.exe: %w", err)
 		}
 	} else {
 		foundExecutable = true
@@ -253,7 +258,7 @@ func (i *Installation) LockFilePath(ctx *GlobalContext) (string, error) {
 	return filepath.Join(i.BasePath(), platform.LockfilePath, lockFileName), nil
 }
 
-func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
+func (i *Installation) LockFile(ctx *GlobalContext) (*resolver.LockFile, error) {
 	lockfilePath, err := i.LockFilePath(ctx)
 	if err != nil {
 		return nil, err
@@ -264,30 +269,32 @@ func (i *Installation) LockFile(ctx *GlobalContext) (*LockFile, error) {
 		return nil, err
 	}
 
-	var lockFile *LockFile
+	exists, err := d.Exists(lockfilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, nil
+	}
+
+	var lockFile *resolver.LockFile
 	lockFileJSON, err := d.Read(lockfilePath)
 	if err != nil {
-		if !d.IsNotExist(err) {
-			return nil, errors.Wrap(err, "failed reading lockfile")
-		}
-	} else {
-		if err := json.Unmarshal(lockFileJSON, &lockFile); err != nil {
-			return nil, errors.Wrap(err, "failed parsing lockfile")
-		}
+		return nil, fmt.Errorf("failed reading lockfile: %w", err)
+	}
+
+	if err := json.Unmarshal(lockFileJSON, &lockFile); err != nil {
+		return nil, fmt.Errorf("failed parsing lockfile: %w", err)
 	}
 
 	return lockFile, nil
 }
 
-func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) error {
+func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *resolver.LockFile) error {
 	lockfilePath, err := i.LockFilePath(ctx)
 	if err != nil {
 		return err
-	}
-
-	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize lockfile json")
 	}
 
 	d, err := i.GetDisk()
@@ -295,40 +302,108 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile LockFile) erro
 		return err
 	}
 
+	lockfileDir := filepath.Dir(lockfilePath)
+	if exists, err := d.Exists(lockfileDir); !exists {
+		if err != nil {
+			return err
+		}
+
+		if err := d.MkDir(lockfileDir); err != nil {
+			return fmt.Errorf("failed creating lockfile directory: %w", err)
+		}
+	}
+
+	marshaledLockfile, err := json.MarshalIndent(lockfile, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to serialize lockfile json: %w", err)
+	}
+
 	if err := d.Write(lockfilePath, marshaledLockfile); err != nil {
-		return errors.Wrap(err, "failed writing lockfile")
+		return fmt.Errorf("failed writing lockfile: %w", err)
 	}
 
 	return nil
 }
 
-type InstallUpdate struct {
-	ModName          string
-	OverallProgress  float64
-	DownloadProgress float64
-	ExtractProgress  float64
-}
+func (i *Installation) Wipe() error {
+	slog.Info("wiping installation", slog.String("path", i.Path))
 
-func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) error {
-	if err := i.Validate(ctx); err != nil {
-		return errors.Wrap(err, "failed to validate installation")
-	}
-
-	lockFile, err := i.LockFile(ctx)
+	d, err := i.GetDisk()
 	if err != nil {
 		return err
 	}
 
-	resolver := NewDependencyResolver(ctx.APIClient)
+	modsDirectory := filepath.Join(i.BasePath(), "FactoryGame", "Mods")
+	if err := d.Remove(modsDirectory); err != nil {
+		return fmt.Errorf("failed removing Mods directory: %w", err)
+	}
+
+	return nil
+}
+
+func (i *Installation) ResolveProfile(ctx *GlobalContext) (*resolver.LockFile, error) {
+	lockFile, err := i.LockFile(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	depResolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
 
 	gameVersion, err := i.GetGameVersion(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to detect game version")
+		return nil, fmt.Errorf("failed to detect game version: %w", err)
 	}
 
-	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(resolver, lockFile, gameVersion)
+	lockfile, err := ctx.Profiles.Profiles[i.Profile].Resolve(depResolver, lockFile, gameVersion)
 	if err != nil {
-		return errors.Wrap(err, "could not resolve mods")
+		return nil, fmt.Errorf("could not resolve mods: %w", err)
+	}
+
+	if err := i.WriteLockFile(ctx, lockfile); err != nil {
+		return nil, fmt.Errorf("failed to write lockfile: %w", err)
+	}
+
+	return lockfile, nil
+}
+
+type InstallUpdateType string
+
+var (
+	InstallUpdateTypeOverall     InstallUpdateType = "overall"
+	InstallUpdateTypeModDownload InstallUpdateType = "download"
+	InstallUpdateTypeModExtract  InstallUpdateType = "extract"
+	InstallUpdateTypeModComplete InstallUpdateType = "complete"
+)
+
+type InstallUpdate struct {
+	Type     InstallUpdateType
+	Item     InstallUpdateItem
+	Progress utils.GenericProgress
+}
+
+type InstallUpdateItem struct {
+	Mod     string
+	Version string
+}
+
+func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate) error {
+	if err := i.Validate(ctx); err != nil {
+		return fmt.Errorf("failed to validate installation: %w", err)
+	}
+
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to detect platform: %w", err)
+	}
+
+	lockfile := resolver.NewLockfile()
+
+	if !i.Vanilla {
+		var err error
+		lockfile, err = i.ResolveProfile(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to resolve lockfile: %w", err)
+		}
 	}
 
 	d, err := i.GetDisk()
@@ -338,106 +413,226 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan InstallUpdate) e
 
 	modsDirectory := filepath.Join(i.BasePath(), "FactoryGame", "Mods")
 	if err := d.MkDir(modsDirectory); err != nil {
-		return errors.Wrap(err, "failed creating Mods directory")
+		return fmt.Errorf("failed creating Mods directory: %w", err)
 	}
 
 	dir, err := d.ReadDir(modsDirectory)
 	if err != nil {
-		return errors.Wrap(err, "failed to read mods directory")
+		return fmt.Errorf("failed to read mods directory: %w", err)
 	}
 
 	for _, entry := range dir {
 		if entry.IsDir() {
-			if _, ok := lockfile[entry.Name()]; !ok {
+			if _, ok := lockfile.Mods[entry.Name()]; !ok {
 				modDir := filepath.Join(modsDirectory, entry.Name())
-				err := d.Exists(filepath.Join(modDir, ".smm"))
-				if err == nil {
-					log.Info().Str("mod_reference", entry.Name()).Msg("deleting mod")
+				exists, err := d.Exists(filepath.Join(modDir, ".smm"))
+				if err != nil {
+					return err
+				}
+
+				if exists {
+					slog.Info("deleting mod", slog.String("mod_reference", entry.Name()))
 					if err := d.Remove(modDir); err != nil {
-						return errors.Wrap(err, "failed to delete mod directory")
+						return fmt.Errorf("failed to delete mod directory: %w", err)
 					}
 				}
 			}
 		}
 	}
 
-	downloading := true
-	completed := 0
+	slog.Info("starting installation", slog.Int("concurrency", viper.GetInt("concurrent-downloads")), slog.String("path", i.Path))
 
-	var genericUpdates chan utils.GenericUpdate
+	errg := errgroup.Group{}
+	channelUsers := sync.WaitGroup{}
+	downloadSemaphore := make(chan int, viper.GetInt("concurrent-downloads"))
+	defer close(downloadSemaphore)
+
+	var modComplete chan int
 	if updates != nil {
-		var wg sync.WaitGroup
-		wg.Add(1)
-		defer wg.Wait()
+		channelUsers.Add(1)
+		modComplete = make(chan int)
+		defer close(modComplete)
+		go func() {
+			defer channelUsers.Done()
+			completed := 0
+			for range modComplete {
+				completed++
+				overallUpdate := InstallUpdate{
+					Type: InstallUpdateTypeOverall,
+					Progress: utils.GenericProgress{
+						Completed: int64(completed),
+						Total:     int64(len(lockfile.Mods)),
+					},
+				}
+				updates <- overallUpdate
+			}
+		}()
+	}
 
-		genericUpdates = make(chan utils.GenericUpdate)
-		defer close(genericUpdates)
+	for modReference, version := range lockfile.Mods {
+		channelUsers.Add(1)
+		modReference := modReference
+		version := version
+		errg.Go(func() error {
+			defer channelUsers.Done()
+
+			target, ok := version.Targets[platform.TargetName]
+			if !ok {
+				return fmt.Errorf("%s@%s not available for %s", modReference, version.Version, platform.TargetName)
+			}
+
+			// Only install if a link is provided, otherwise assume mod is already installed
+			if target.Link != "" {
+				err := downloadAndExtractMod(modReference, version.Version, target.Link, target.Hash, modsDirectory, updates, downloadSemaphore, d)
+				if err != nil {
+					return fmt.Errorf("failed to install %s@%s: %w", modReference, version.Version, err)
+				}
+			}
+
+			if modComplete != nil {
+				modComplete <- 1
+			}
+			return nil
+		})
+	}
+
+	if err := errg.Wait(); err != nil {
+		return fmt.Errorf("failed to install mods: %w", err)
+	}
+
+	if updates != nil {
+		if i.Vanilla {
+			updates <- InstallUpdate{
+				Type: InstallUpdateTypeOverall,
+				Progress: utils.GenericProgress{
+					Completed: 1,
+					Total:     1,
+				},
+			}
+		}
 
 		go func() {
+			channelUsers.Wait()
+			close(updates)
+		}()
+	}
+
+	slog.Info("installation completed", slog.String("path", i.Path))
+
+	return nil
+}
+
+func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
+	if err := i.Validate(ctx); err != nil {
+		return fmt.Errorf("failed to validate installation: %w", err)
+	}
+
+	lockFile, err := i.LockFile(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read lock file: %w", err)
+	}
+
+	resolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
+
+	gameVersion, err := i.GetGameVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to detect game version: %w", err)
+	}
+
+	profile := ctx.Profiles.GetProfile(i.Profile)
+	if profile == nil {
+		return errors.New("could not find profile " + i.Profile)
+	}
+
+	for _, modReference := range mods {
+		lockFile = lockFile.Remove(modReference)
+	}
+
+	newLockFile, err := profile.Resolve(resolver, lockFile, gameVersion)
+	if err != nil {
+		return fmt.Errorf("failed to resolve dependencies: %w", err)
+	}
+
+	if err := i.WriteLockFile(ctx, newLockFile); err != nil {
+		return fmt.Errorf("failed to write lock file: %w", err)
+	}
+
+	return nil
+}
+
+func downloadAndExtractMod(modReference string, version string, link string, hash string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) error {
+	var downloadUpdates chan utils.GenericProgress
+
+	var wg sync.WaitGroup
+	if updates != nil {
+		// Forward the inner updates as InstallUpdates
+		downloadUpdates = make(chan utils.GenericProgress)
+
+		wg.Add(1)
+		go func() {
 			defer wg.Done()
-
-			update := InstallUpdate{
-				OverallProgress:  float64(completed) / float64(len(lockfile)),
-				DownloadProgress: 0,
-				ExtractProgress:  0,
-			}
-
-			select {
-			case updates <- update:
-			default:
-			}
-
-			for up := range genericUpdates {
-				if downloading {
-					update.DownloadProgress = up.Progress
-				} else {
-					update.DownloadProgress = 1
-					update.ExtractProgress = up.Progress
-				}
-
-				if up.ModReference != nil {
-					update.ModName = *up.ModReference
-				}
-
-				update.OverallProgress = float64(completed) / float64(len(lockfile))
-
-				select {
-				case updates <- update:
-				default:
+			for up := range downloadUpdates {
+				updates <- InstallUpdate{
+					Item: InstallUpdateItem{
+						Mod:     modReference,
+						Version: version,
+					},
+					Type:     InstallUpdateTypeModDownload,
+					Progress: up,
 				}
 			}
 		}()
 	}
 
-	for modReference, version := range lockfile {
-		// Only install if a link is provided, otherwise assume mod is already installed
-		if version.Link != "" {
-			downloading = true
+	slog.Info("downloading mod", slog.String("mod_reference", modReference), slog.String("version", version), slog.String("link", link))
+	reader, size, err := cache.DownloadOrCache(modReference+"_"+version+".zip", hash, link, downloadUpdates, downloadSemaphore)
+	if err != nil {
+		return fmt.Errorf("failed to download %s from: %s: %w", modReference, link, err)
+	}
 
-			if genericUpdates != nil {
-				genericUpdates <- utils.GenericUpdate{ModReference: &modReference}
+	defer reader.Close()
+
+	var extractUpdates chan utils.GenericProgress
+
+	if updates != nil {
+		// Forward the inner updates as InstallUpdates
+		extractUpdates = make(chan utils.GenericProgress)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for up := range extractUpdates {
+				updates <- InstallUpdate{
+					Item: InstallUpdateItem{
+						Mod:     modReference,
+						Version: version,
+					},
+					Type:     InstallUpdateTypeModExtract,
+					Progress: up,
+				}
 			}
+		}()
+	}
 
-			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("downloading mod")
-			reader, size, err := utils.DownloadOrCache(modReference+"_"+version.Version+".zip", version.Hash, version.Link, genericUpdates)
-			if err != nil {
-				return errors.Wrap(err, "failed to download "+modReference+" from: "+version.Link)
-			}
+	slog.Info("extracting mod", slog.String("mod_reference", modReference), slog.String("version", version), slog.String("link", link))
+	if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), hash, extractUpdates, d); err != nil {
+		return fmt.Errorf("could not extract %s: %w", modReference, err)
+	}
 
-			downloading = false
+	if updates != nil {
+		close(downloadUpdates)
+		close(extractUpdates)
 
-			log.Info().Str("mod_reference", modReference).Str("version", version.Version).Str("link", version.Link).Msg("extracting mod")
-			if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), version.Hash, genericUpdates, d); err != nil {
-				return errors.Wrap(err, "could not extract "+modReference)
-			}
+		updates <- InstallUpdate{
+			Type: InstallUpdateTypeModComplete,
+			Item: InstallUpdateItem{
+				Mod:     modReference,
+				Version: version,
+			},
 		}
-
-		completed++
 	}
 
-	if err := i.WriteLockFile(ctx, lockfile); err != nil {
-		return err
-	}
+	wg.Wait()
 
 	return nil
 }
@@ -474,7 +669,7 @@ type gameVersionFile struct {
 
 func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
 	if err := i.Validate(ctx); err != nil {
-		return 0, errors.Wrap(err, "failed to validate installation")
+		return 0, fmt.Errorf("failed to validate installation: %w", err)
 	}
 
 	platform, err := i.GetPlatform(ctx)
@@ -488,17 +683,23 @@ func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
 	}
 
 	fullPath := filepath.Join(i.BasePath(), platform.VersionPath)
+	exists, err := d.Exists(fullPath)
+	if err != nil {
+		return 0, err
+	}
+
+	if !exists {
+		return 0, errors.New("game version file does not exist")
+	}
+
 	file, err := d.Read(fullPath)
 	if err != nil {
-		if d.IsNotExist(err) {
-			return 0, errors.Wrap(err, "could not find game version file")
-		}
-		return 0, errors.Wrap(err, "failed reading version file")
+		return 0, fmt.Errorf("failed reading version file: %w", err)
 	}
 
 	var versionData gameVersionFile
 	if err := json.Unmarshal(file, &versionData); err != nil {
-		return 0, errors.Wrap(err, "failed to parse version file json")
+		return 0, fmt.Errorf("failed to parse version file json: %w", err)
 	}
 
 	return versionData.Changelist, nil
@@ -506,7 +707,7 @@ func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
 
 func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 	if err := i.Validate(ctx); err != nil {
-		return nil, errors.Wrap(err, "failed to validate installation")
+		return nil, fmt.Errorf("failed to validate installation: %w", err)
 	}
 
 	d, err := i.GetDisk()
@@ -516,13 +717,12 @@ func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 
 	for _, platform := range platforms {
 		fullPath := filepath.Join(i.BasePath(), platform.VersionPath)
-		err := d.Exists(fullPath)
-		if err != nil {
-			if d.IsNotExist(err) {
-				continue
-			} else {
-				return nil, errors.Wrap(err, "failed detecting version file")
+		exists, err := d.Exists(fullPath)
+		if !exists {
+			if err != nil {
+				return nil, fmt.Errorf("failed detecting version file: %w", err)
 			}
+			continue
 		}
 		return &platform, nil
 	}

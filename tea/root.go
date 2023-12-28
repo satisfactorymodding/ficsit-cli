@@ -1,20 +1,24 @@
 package tea
 
 import (
+	"fmt"
+
 	"github.com/Khan/genqlient/graphql"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/pkg/errors"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
+	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
+	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes"
 )
 
 type rootModel struct {
 	headerComponent    tea.Model
-	dependencyResolver cli.DependencyResolver
 	global             *cli.GlobalContext
+	dependencyResolver resolver.DependencyResolver
 	currentSize        tea.WindowSizeMsg
 }
 
@@ -25,7 +29,7 @@ func newModel(global *cli.GlobalContext) *rootModel {
 			Width:  20,
 			Height: 14,
 		},
-		dependencyResolver: cli.NewDependencyResolver(global.APIClient),
+		dependencyResolver: resolver.NewDependencyResolver(global.Provider, viper.GetString("api-base")),
 	}
 
 	m.headerComponent = components.NewHeaderComponent(m)
@@ -42,7 +46,7 @@ func (m *rootModel) SetCurrentProfile(profile *cli.Profile) error {
 
 	if m.GetCurrentInstallation() != nil {
 		if err := m.GetCurrentInstallation().SetProfile(m.global, profile.Name); err != nil {
-			return errors.Wrap(err, "failed setting profile on installation")
+			return fmt.Errorf("failed setting profile on installation: %w", err)
 		}
 	}
 
@@ -61,6 +65,10 @@ func (m *rootModel) SetCurrentInstallation(installation *cli.Installation) error
 
 func (m *rootModel) GetAPIClient() graphql.Client {
 	return m.global.APIClient
+}
+
+func (m *rootModel) GetProvider() provider.Provider {
+	return m.global.Provider
 }
 
 func (m *rootModel) Size() tea.WindowSizeMsg {
@@ -84,8 +92,8 @@ func (m *rootModel) GetGlobal() *cli.GlobalContext {
 }
 
 func RunTea(global *cli.GlobalContext) error {
-	if err := tea.NewProgram(scenes.NewMainMenu(newModel(global)), tea.WithAltScreen(), tea.WithMouseCellMotion()).Start(); err != nil {
-		return errors.Wrap(err, "internal tea error")
+	if _, err := tea.NewProgram(scenes.NewMainMenu(newModel(global)), tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
+		return fmt.Errorf("internal tea error: %w", err)
 	}
 	return nil
 }

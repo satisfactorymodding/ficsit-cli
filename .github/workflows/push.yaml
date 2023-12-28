@@ -5,18 +5,22 @@ on: [push, pull_request]
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21.4
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
       - name: Download GQL schema
-        run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
+        run: "npx graphqurl https://api.ficsit.dev/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 
       - name: Go Generate
         run: go generate -tags tools -x ./...
@@ -26,6 +30,11 @@ jobs:
         env:
           CGO_ENABLED: 1
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-${{ matrix.os }}
+          path: ficsit-cli
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -33,13 +42,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21.4
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
       - name: Download GQL schema
-        run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
+        run: "npx graphqurl https://api.ficsit.dev/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 
       - name: Go Generate
         run: go generate -tags tools -x ./...
@@ -47,7 +56,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.51
+          version: v1.55.2
           skip-pkg-cache: true
           skip-build-cache: true
 
@@ -62,7 +71,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.18
+          go-version: 1.21.4
 
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
@@ -73,6 +82,10 @@ jobs:
       - name: Install Satisfactory Dedicated Server
         run: steamcmd +login anonymous +force_install_dir ${{ github.workspace }}/SatisfactoryDedicatedServer +app_update 1690800 validate +quit
 
+      - name: Change directory permissions
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: mkdir -p ${{ github.workspace }}/SatisfactoryDedicatedServer/FactoryGame/Mods && chmod -R 777 ${{ github.workspace }}/SatisfactoryDedicatedServer
+
       - name: List directory (linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: ls -lR
@@ -81,13 +94,17 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: tree /F
 
+      - name: Boot ftp and sftp
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: docker-compose -f docker-compose-test.yml up -d
+
       - name: Download GQL schema
-        run: "npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
+        run: "npx graphqurl https://api.ficsit.dev/v2/query --introspect -H 'content-type: application/json' > schema.graphql"
 
       - name: Go Generate
         run: go generate -tags tools -x ./...
 
       - name: Test
-        run: go test ./...
+        run: go test -race -v ./...
         env:
           SF_DEDICATED_SERVER: ${{ github.workspace }}/SatisfactoryDedicatedServer

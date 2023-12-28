@@ -1,0 +1,31 @@
+version: '2'
+
+services:
+  ftp:
+    image: fauria/vsftpd:latest
+    ports:
+      - "2020:20"
+      - "2121:21"
+      - "21100-21110:21100-21110"
+    volumes:
+      - ./SatisfactoryDedicatedServer:/home/vsftpd/user/server
+    environment:
+      - FTP_USER=user
+      - FTP_PASS=pass
+      - PASV_ADDRESS=127.0.0.1
+      - PASV_MIN_PORT=21100
+      - PASV_MAX_PORT=21110
+      - LOG_STDOUT=true
+
+  ssh:
+    image: lscr.io/linuxserver/openssh-server:latest
+    ports:
+      - "2222:2222"
+    volumes:
+      - ./SatisfactoryDedicatedServer:/home/user/server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - PASSWORD_ACCESS=true
+      - USER_PASSWORD=pass
+      - USER_NAME=user

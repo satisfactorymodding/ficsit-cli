@@ -1,6 +1,7 @@
 package scenes
 
 import (
+	"log/slog"
 	"strings"
 	"time"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
@@ -74,6 +74,15 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			},
 		},
 		utils.SimpleItem[mainMenu]{
+			ItemTitle: "Toggle Vanilla",
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
+				if currentModel.root.GetCurrentInstallation() != nil {
+					currentModel.root.GetCurrentInstallation().Vanilla = !currentModel.root.GetCurrentInstallation().Vanilla
+				}
+				return currentModel, nil
+			},
+		},
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Profiles",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				newModel := profile.NewProfiles(root, currentModel)
@@ -95,10 +104,17 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			},
 		},
 		utils.SimpleItem[mainMenu]{
+			ItemTitle: "Update Mods",
+			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
+				newModel := mods.NewUpdateMods(root, currentModel)
+				return newModel, newModel.Init()
+			},
+		},
+		utils.SimpleItem[mainMenu]{
 			ItemTitle: "Apply Changes",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
+					slog.Error(errors.ErrorFailedAddMod, slog.Any("err", err))
 					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 					currentModel.error = errorComponent
 					return currentModel, cmd
@@ -112,7 +128,7 @@ func NewMainMenu(root components.RootModel) tea.Model {
 			ItemTitle: "Save",
 			Activate: func(msg tea.Msg, currentModel mainMenu) (tea.Model, tea.Cmd) {
 				if err := root.GetGlobal().Save(); err != nil {
-					log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
+					slog.Error(errors.ErrorFailedAddMod, slog.Any("err", err))
 					errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
 					currentModel.error = errorComponent
 					return currentModel, cmd
@@ -212,6 +228,6 @@ func (m mainMenu) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, header, err, m.list.View())
 	}
 
-	m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header)-1)
+	m.list.SetSize(m.list.Width(), m.root.Size().Height-lipgloss.Height(header))
 	return lipgloss.JoinVertical(lipgloss.Left, header, m.list.View())
 }

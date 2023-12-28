@@ -4,8 +4,6 @@ linters-settings:
       - .Errorf(
       - errors.New(
       - errors.Unwrap(
-      - .Wrap(
-      - .Wrapf(
       - .WithMessage(
       - .WithMessagef(
       - .WithStack(
@@ -50,7 +48,6 @@ linters:
     - contextcheck
     - durationcheck
     - errorlint
-    - goconst
     - goimports
     - revive
     - misspell
@@ -59,5 +56,4 @@ linters:
     - wrapcheck
     - gci
     - gocritic
-    - gofumpt
     - nonamedreturns

@@ -4,6 +4,7 @@ package mods
 
 import (
 	"context"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +18,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/rs/zerolog/log"
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
@@ -96,7 +96,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 	model.help.Width = root.Size().Width
 
 	go func() {
-		fullMod, err := ficsit.GetMod(context.TODO(), root.GetAPIClient(), mod.Reference)
+		fullMod, err := root.GetProvider().GetMod(context.TODO(), mod.Reference)
 		if err != nil {
 			model.modError <- err.Error()
 			return
@@ -114,7 +114,7 @@ func NewModInfo(root components.RootModel, parent tea.Model, mod utils.Mod) tea.
 }
 
 func (m modInfo) Init() tea.Cmd {
-	return tea.Batch(utils.Ticker(), spinner.Tick)
+	return tea.Batch(utils.Ticker(), m.spinner.Tick)
 }
 
 func (m modInfo) CalculateSizes(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
@@ -217,6 +217,27 @@ func (m modInfo) renderModInfo() string {
 	sidebar += utils.LabelStyle.Render("EXP Compat: ") + m.renderCompatInfo(mod.Compatibility.EXP.State) + "\n"
 	sidebar += "\n"
 	sidebar += utils.LabelStyle.Render("Authors:") + "\n"
+
+  converter := md.NewConverter("", true, nil)
+  converter.AddRules(md.Rule{
+    Filter: []string{"#text"},
+    Replacement: func(content string, selec *goquery.Selection, options *md.Options) *string {
+      text := selec.Text()
+      return &text
+    },
+  })
+
+  markdownDescription, err := converter.ConvertString(mod.Full_description)
+  if err != nil {
+    slog.Error("failed to convert html to markdown", slog.Any("err", err))
+    markdownDescription = mod.Full_description
+  }
+
+  description, err := glamour.Render(markdownDescription, "dark")
+  if err != nil {
+    slog.Error("failed to render markdown", slog.Any("err", err))
+    description = mod.Full_description
+  }
 
 	for _, author := range mod.Authors {
 		sidebar += "\n"

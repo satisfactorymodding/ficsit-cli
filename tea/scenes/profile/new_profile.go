@@ -33,13 +33,13 @@ func (k keyMap) FullHelp() [][]key.Binding {
 }
 
 type newProfile struct {
-	input  textinput.Model
 	root   components.RootModel
 	parent tea.Model
 	error  *components.ErrorComponent
-	title  string
 	help   help.Model
+	title  string
 	keys   keyMap
+	input  textinput.Model
 }
 
 func NewNewProfile(root components.RootModel, parent tea.Model) tea.Model {

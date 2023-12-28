@@ -1,13 +1,13 @@
 package mods
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/rs/zerolog/log"
 
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/errors"
@@ -53,7 +53,7 @@ func NewModVersion(root components.RootModel, parent tea.Model, mod utils.Mod) t
 				Activate: func(msg tea.Msg, currentModel modVersionMenu) (tea.Model, tea.Cmd) {
 					err := root.GetCurrentProfile().AddMod(mod.Reference, ">=0.0.0")
 					if err != nil {
-						log.Error().Err(err).Msg(errors.ErrorFailedAddMod)
+						slog.Error(errors.ErrorFailedAddMod, slog.Any("err", err))
 						cmd := currentModel.list.NewStatusMessage(errors.ErrorFailedAddMod)
 						return currentModel, cmd
 					}

@@ -44,6 +44,23 @@ func (h headerComponent) View() string {
 	} else {
 		out += "None"
 	}
+	out += "\n"
+
+	out += h.labelStyle.Render("Vanilla: ")
+	if h.root.GetCurrentInstallation() != nil {
+		if h.root.GetCurrentInstallation().Vanilla {
+			out += "On"
+		} else {
+			out += "Off"
+		}
+	} else {
+		out += "N/A"
+	}
+
+	if h.root.GetProvider().IsOffline() {
+		out += "\n"
+		out += h.labelStyle.Render("Offline")
+	}
 
 	return lipgloss.NewStyle().Margin(1, 0).Render(out)
 }

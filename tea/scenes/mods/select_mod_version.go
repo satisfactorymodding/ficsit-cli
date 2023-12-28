@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 	"github.com/satisfactorymodding/ficsit-cli/tea/components"
 	"github.com/satisfactorymodding/ficsit-cli/tea/scenes/keys"
 	"github.com/satisfactorymodding/ficsit-cli/tea/utils"
@@ -53,45 +52,26 @@ func NewModVersionList(root components.RootModel, parent tea.Model, mod utils.Mo
 
 	go func() {
 		items := make([]list.Item, 0)
-		allVersions := make([]ficsit.ModVersionsModVersionsVersion, 0)
-		offset := 0
-		for {
-			versions, err := ficsit.ModVersions(context.TODO(), root.GetAPIClient(), mod.Reference, ficsit.VersionFilter{
-				Limit:    100,
-				Offset:   offset,
-				Order:    ficsit.OrderDesc,
-				Order_by: ficsit.VersionFieldsCreatedAt,
+		versions, err := root.GetProvider().ModVersionsWithDependencies(context.TODO(), mod.Reference)
+		if err != nil {
+			m.err <- err.Error()
+			return
+		}
+
+		for _, version := range versions {
+			tempVersion := version
+			items = append(items, utils.SimpleItem[selectModVersionList]{
+				ItemTitle: tempVersion.Version,
+				Activate: func(msg tea.Msg, currentModel selectModVersionList) (tea.Model, tea.Cmd) {
+					err := root.GetCurrentProfile().AddMod(mod.Reference, tempVersion.Version)
+					if err != nil {
+						errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
+						currentModel.error = errorComponent
+						return currentModel, cmd
+					}
+					return currentModel.parent, nil
+				},
 			})
-			if err != nil {
-				m.err <- err.Error()
-				return
-			}
-
-			if len(versions.Mod.Versions) == 0 {
-				break
-			}
-
-			allVersions = append(allVersions, versions.Mod.Versions...)
-
-			for i := 0; i < len(versions.Mod.Versions); i++ {
-				currentOffset := offset
-				currentI := i
-				items = append(items, utils.SimpleItem[selectModVersionList]{
-					ItemTitle: versions.Mod.Versions[i].Version,
-					Activate: func(msg tea.Msg, currentModel selectModVersionList) (tea.Model, tea.Cmd) {
-						version := allVersions[currentOffset+currentI]
-						err := root.GetCurrentProfile().AddMod(mod.Reference, version.Version)
-						if err != nil {
-							errorComponent, cmd := components.NewErrorComponent(err.Error(), time.Second*5)
-							currentModel.error = errorComponent
-							return currentModel, cmd
-						}
-						return currentModel.parent, nil
-					},
-				})
-			}
-
-			offset += len(versions.Mod.Versions)
 		}
 
 		m.items <- items

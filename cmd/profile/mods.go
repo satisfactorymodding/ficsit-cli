@@ -1,7 +1,8 @@
 package profile
 
 import (
-	"github.com/pkg/errors"
+	"errors"
+
 	"github.com/spf13/cobra"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
