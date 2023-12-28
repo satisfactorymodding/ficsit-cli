@@ -27,6 +27,7 @@ require (
 	github.com/satisfactorymodding/ficsit-resolver v0.0.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.1
+	goftp.io/server/v2 v2.0.1
 	golang.org/x/crypto v0.16.0
 	golang.org/x/sync v0.5.0
 )
@@ -51,6 +52,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
