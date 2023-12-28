@@ -7,7 +7,14 @@
     // words - list of words to be always considered correct
     "words": [
         "ficsit",
+        "gofumpt",
         "Goland",
+        "golangci",
+        "goquery",
+        "graphqurl",
+        "mvdan",
+        "pgdn",
+        "pgup",
         "wordwrap"
     ],
     // flagWords - list of words to be always considered incorrect

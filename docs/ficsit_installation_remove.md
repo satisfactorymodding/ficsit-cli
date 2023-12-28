@@ -17,12 +17,12 @@ ficsit installation remove <path> [flags]
 ```
       --api-base string             URL for API (default "https://api.ficsit.app")
       --api-key string              API key to use when sending requests
-      --cache-dir string            The cache directory (default "/home/vilsol/.cache/ficsit")
+      --cache-dir string            The cache directory (default "/home/{{Username}}/.cache/ficsit")
       --concurrent-downloads int    Maximum number of concurrent downloads (default 5)
       --dry-run                     Dry-run. Do not save any changes
       --graphql-api string          Path for GraphQL API (default "/v2/query")
       --installations-file string   The installations file (default "installations.json")
-      --local-dir string            The local directory (default "/home/vilsol/.local/share/ficsit")
+      --local-dir string            The local directory (default "/home/{{Username}}/.local/share/ficsit")
       --log string                  The log level to output (default "info")
       --log-file string             File to output logs to
       --offline                     Whether to only use local data

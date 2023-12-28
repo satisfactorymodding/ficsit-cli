@@ -90,6 +90,18 @@ Run `ficsit help` to see a list of available commands.
 * [Go 1.21](https://go.dev/doc/install)
 * IDE of Choice. Goland or VSCode suggested.
 
+### Code Generation
+
+If you update any of the GraphQL queries, run this to update generated code:
+
+```bash
+(echo "y") | npx graphqurl https://api.ficsit.app/v2/query --introspect -H 'content-type: application/json' > schema.graphql
+go generate -tags tools -x ./...
+```
+
+If this command fails due to a mismatched schema,
+you may need to use the url `https://api.ficsit.dev/v2/query` instead.
+
 ## Building
 
 ```bash
@@ -97,3 +109,23 @@ go build
 ```
 
 Will produce `ficsit-cli.exe` in the repo root directory.
+
+### Linting
+
+Install `golangci-lint` via the directions [here](https://golangci-lint.run/usage/install/#local-installation),
+but make sure to install the version specified in `.github/workflows/push.yaml` instead of whatever it suggests.
+
+Then, to run it, use:
+
+```bash
+golangci-lint run --fix
+```
+
+### Updating generated docs
+
+The files within `./docs` are generated using cobra, use the following to update
+them.
+
+```bash
+go run tools.go
+```
