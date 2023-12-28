@@ -5,11 +5,12 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"path/filepath"
 )
 
 type Disk interface {
 	// Exists checks if the provided file or directory exists
-	Exists(path string) error
+	Exists(path string) (bool, error)
 
 	// Read returns the entire file as a byte buffer
 	//
@@ -30,12 +31,6 @@ type Disk interface {
 	// Returns error if provided path is not a directory
 	ReadDir(path string) ([]Entry, error)
 
-	// IsNotExist returns true if provided error is a not-exist type error
-	IsNotExist(err error) bool
-
-	// IsExist returns true if provided error is a does-exist type error
-	IsExist(err error) bool
-
 	// Open opens provided path for writing
 	Open(path string, flag int) (io.WriteCloser, error)
 }
@@ -53,13 +48,18 @@ func FromPath(path string) (Disk, error) {
 
 	switch parsed.Scheme {
 	case "ftp":
-		slog.Info("connecting to ftp", slog.String("path", path))
+		slog.Info("connecting to ftp")
 		return newFTP(path)
 	case "sftp":
-		slog.Info("connecting to sftp", slog.String("path", path))
+		slog.Info("connecting to sftp")
 		return newSFTP(path)
 	}
 
 	slog.Info("using local disk", slog.String("path", path))
 	return newLocal(path)
+}
+
+// clean returns a unix-style path
+func clean(path string) string {
+	return filepath.ToSlash(filepath.Clean(path))
 }

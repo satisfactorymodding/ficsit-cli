@@ -14,49 +14,6 @@ import (
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 )
 
-type GenericProgress struct {
-	Completed int64
-	Total     int64
-}
-
-func (gp GenericProgress) Percentage() float64 {
-	if gp.Total == 0 {
-		return 0
-	}
-	return float64(gp.Completed) / float64(gp.Total)
-}
-
-type Progresser struct {
-	io.Reader
-	Updates chan<- GenericProgress
-	Total   int64
-	Running int64
-}
-
-func (pt *Progresser) Read(p []byte) (int, error) {
-	n, err := pt.Reader.Read(p)
-	pt.Running += int64(n)
-
-	if err == nil {
-		if pt.Updates != nil {
-			select {
-			case pt.Updates <- GenericProgress{Completed: pt.Running, Total: pt.Total}:
-			default:
-			}
-		}
-	}
-
-	if err == io.EOF {
-		return n, io.EOF
-	}
-
-	if err != nil {
-		return 0, fmt.Errorf("failed to read: %w", err)
-	}
-
-	return n, nil
-}
-
 func SHA256Data(f io.Reader) (string, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -68,22 +25,29 @@ func SHA256Data(f io.Reader) (string, error) {
 
 func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan<- GenericProgress, d disk.Disk) error {
 	hashFile := filepath.Join(location, ".smm")
-	hashBytes, err := d.Read(hashFile)
+
+	exists, err := d.Exists(hashFile)
 	if err != nil {
-		if !d.IsNotExist(err) {
+		return err
+	}
+
+	if exists {
+		hashBytes, err := d.Read(hashFile)
+		if err != nil {
 			return fmt.Errorf("failed to read .smm mod hash file: %w", err)
 		}
-	} else {
+
 		if hash == string(hashBytes) {
 			return nil
 		}
 	}
 
-	if err := d.MkDir(location); err != nil {
-		if !d.IsExist(err) {
-			return fmt.Errorf("failed to create mod directory: %s: %w", location, err)
-		}
+	exists, err = d.Exists(location)
+	if err != nil {
+		return err
+	}
 
+	if exists {
 		if err := d.Remove(location); err != nil {
 			return fmt.Errorf("failed to remove directory: %s: %w", location, err)
 		}
@@ -175,13 +139,12 @@ func writeZipFile(outFileLocation string, file *zip.File, d disk.Disk, updates c
 	}
 	defer inFile.Close()
 
-	progressInReader := &Progresser{
-		Reader:  inFile,
+	progressInWriter := &Progresser{
 		Total:   int64(file.UncompressedSize64),
 		Updates: updates,
 	}
 
-	if _, err := io.Copy(outFile, progressInReader); err != nil {
+	if _, err := io.Copy(io.MultiWriter(outFile, progressInWriter), inFile); err != nil {
 		return fmt.Errorf("failed to write to file: %s: %w", outFileLocation, err)
 	}
 

@@ -203,27 +203,27 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 
 	foundExecutable := false
 
-	err = d.Exists(filepath.Join(i.BasePath(), "FactoryGame.exe"))
-	if err != nil {
-		if !d.IsNotExist(err) {
+	exists, err := d.Exists(filepath.Join(i.BasePath(), "FactoryGame.exe"))
+	if !exists {
+		if err != nil {
 			return fmt.Errorf("failed reading FactoryGame.exe: %w", err)
 		}
 	} else {
 		foundExecutable = true
 	}
 
-	err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.sh"))
-	if err != nil {
-		if !d.IsNotExist(err) {
+	exists, err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.sh"))
+	if !exists {
+		if err != nil {
 			return fmt.Errorf("failed reading FactoryServer.sh: %w", err)
 		}
 	} else {
 		foundExecutable = true
 	}
 
-	err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.exe"))
-	if err != nil {
-		if !d.IsNotExist(err) {
+	exists, err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.exe"))
+	if !exists {
+		if err != nil {
 			return fmt.Errorf("failed reading FactoryServer.exe: %w", err)
 		}
 	} else {
@@ -269,16 +269,23 @@ func (i *Installation) LockFile(ctx *GlobalContext) (*resolver.LockFile, error) 
 		return nil, err
 	}
 
+	exists, err := d.Exists(lockfilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, nil
+	}
+
 	var lockFile *resolver.LockFile
 	lockFileJSON, err := d.Read(lockfilePath)
 	if err != nil {
-		if !d.IsNotExist(err) {
-			return nil, fmt.Errorf("failed reading lockfile: %w", err)
-		}
-	} else {
-		if err := json.Unmarshal(lockFileJSON, &lockFile); err != nil {
-			return nil, fmt.Errorf("failed parsing lockfile: %w", err)
-		}
+		return nil, fmt.Errorf("failed reading lockfile: %w", err)
+	}
+
+	if err := json.Unmarshal(lockFileJSON, &lockFile); err != nil {
+		return nil, fmt.Errorf("failed parsing lockfile: %w", err)
 	}
 
 	return lockFile, nil
@@ -296,7 +303,11 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *resolver.Lock
 	}
 
 	lockfileDir := filepath.Dir(lockfilePath)
-	if err := d.Exists(lockfileDir); d.IsNotExist(err) {
+	if exists, err := d.Exists(lockfileDir); !exists {
+		if err != nil {
+			return err
+		}
+
 		if err := d.MkDir(lockfileDir); err != nil {
 			return fmt.Errorf("failed creating lockfile directory: %w", err)
 		}
@@ -315,6 +326,8 @@ func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *resolver.Lock
 }
 
 func (i *Installation) Wipe() error {
+	slog.Info("wiping installation", slog.String("path", i.Path))
+
 	d, err := i.GetDisk()
 	if err != nil {
 		return err
@@ -412,8 +425,12 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		if entry.IsDir() {
 			if _, ok := lockfile.Mods[entry.Name()]; !ok {
 				modDir := filepath.Join(modsDirectory, entry.Name())
-				err := d.Exists(filepath.Join(modDir, ".smm"))
-				if err == nil {
+				exists, err := d.Exists(filepath.Join(modDir, ".smm"))
+				if err != nil {
+					return err
+				}
+
+				if exists {
 					slog.Info("deleting mod", slog.String("mod_reference", entry.Name()))
 					if err := d.Remove(modDir); err != nil {
 						return fmt.Errorf("failed to delete mod directory: %w", err)
@@ -479,16 +496,28 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		})
 	}
 
+	if err := errg.Wait(); err != nil {
+		return fmt.Errorf("failed to install mods: %w", err)
+	}
+
 	if updates != nil {
+		if i.Vanilla {
+			updates <- InstallUpdate{
+				Type: InstallUpdateTypeOverall,
+				Progress: utils.GenericProgress{
+					Completed: 1,
+					Total:     1,
+				},
+			}
+		}
+
 		go func() {
 			channelUsers.Wait()
 			close(updates)
 		}()
 	}
 
-	if err := errg.Wait(); err != nil {
-		return fmt.Errorf("failed to install mods: %w", err)
-	}
+	slog.Info("installation completed", slog.String("path", i.Path))
 
 	return nil
 }
@@ -534,11 +563,14 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 func downloadAndExtractMod(modReference string, version string, link string, hash string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) error {
 	var downloadUpdates chan utils.GenericProgress
 
+	var wg sync.WaitGroup
 	if updates != nil {
 		// Forward the inner updates as InstallUpdates
 		downloadUpdates = make(chan utils.GenericProgress)
 
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for up := range downloadUpdates {
 				updates <- InstallUpdate{
 					Item: InstallUpdateItem{
@@ -562,7 +594,6 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 
 	var extractUpdates chan utils.GenericProgress
 
-	var wg sync.WaitGroup
 	if updates != nil {
 		// Forward the inner updates as InstallUpdates
 		extractUpdates = make(chan utils.GenericProgress)
@@ -652,11 +683,17 @@ func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
 	}
 
 	fullPath := filepath.Join(i.BasePath(), platform.VersionPath)
+	exists, err := d.Exists(fullPath)
+	if err != nil {
+		return 0, err
+	}
+
+	if !exists {
+		return 0, errors.New("game version file does not exist")
+	}
+
 	file, err := d.Read(fullPath)
 	if err != nil {
-		if d.IsNotExist(err) {
-			return 0, fmt.Errorf("could not find game version file: %w", err)
-		}
 		return 0, fmt.Errorf("failed reading version file: %w", err)
 	}
 
@@ -680,12 +717,12 @@ func (i *Installation) GetPlatform(ctx *GlobalContext) (*Platform, error) {
 
 	for _, platform := range platforms {
 		fullPath := filepath.Join(i.BasePath(), platform.VersionPath)
-		err := d.Exists(fullPath)
-		if err != nil {
-			if d.IsNotExist(err) {
-				continue
+		exists, err := d.Exists(fullPath)
+		if !exists {
+			if err != nil {
+				return nil, fmt.Errorf("failed detecting version file: %w", err)
 			}
-			return nil, fmt.Errorf("failed detecting version file: %w", err)
+			continue
 		}
 		return &platform, nil
 	}

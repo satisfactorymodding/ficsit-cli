@@ -4,11 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/spf13/viper"
 
@@ -84,7 +87,11 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 	outer:
 		for {
 			select {
-			case update := <-upstreamUpdates:
+			case update, ok := <-upstreamUpdates:
+				if !ok {
+					break outer
+				}
+
 				for _, u := range group.updates {
 					u <- update
 				}
@@ -94,11 +101,29 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 		}
 	}()
 
-	size, err := downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
+	var size int64
+
+	err := retry.Do(func() error {
+		var err error
+		size, err = downloadInternal(cacheKey, location, hash, url, upstreamUpdates, downloadSemaphore)
+		if err != nil {
+			return fmt.Errorf("internal download error: %w", err)
+		}
+		return nil
+	},
+		retry.Attempts(5),
+		retry.Delay(time.Second),
+		retry.DelayType(retry.FixedDelay),
+		retry.OnRetry(func(n uint, err error) {
+			if n > 0 {
+				slog.Info("retrying download", slog.Uint64("n", uint64(n)), slog.String("cacheKey", cacheKey))
+			}
+		}),
+	)
 	if err != nil {
 		group.err = err
 		close(group.wait)
-		return nil, 0, err
+		return nil, 0, err // nolint
 	}
 
 	close(upstreamWaiter)
@@ -175,15 +200,16 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 	}
 
 	progresser := &utils.Progresser{
-		Reader:  resp.Body,
 		Total:   resp.ContentLength,
 		Updates: updates,
 	}
 
-	_, err = io.Copy(out, progresser)
+	_, err = io.Copy(io.MultiWriter(out, progresser), resp.Body)
 	if err != nil {
 		return 0, fmt.Errorf("failed writing file to disk: %w", err)
 	}
+
+	_ = out.Sync()
 
 	if updates != nil {
 		updates <- utils.GenericProgress{Completed: resp.ContentLength, Total: resp.ContentLength}
