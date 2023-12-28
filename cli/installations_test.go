@@ -7,9 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"goftp.io/server/v2"
-	"goftp.io/server/v2/driver/file"
-
 	"github.com/MarvinJWendt/testza"
 	"goftp.io/server/v2"
 	"goftp.io/server/v2/driver/file"
