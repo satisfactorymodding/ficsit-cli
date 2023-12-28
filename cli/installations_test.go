@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/MarvinJWendt/testza"
+	"goftp.io/server/v2"
+	"goftp.io/server/v2/driver/file"
 
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
@@ -97,11 +99,30 @@ func TestAddFTPInstallation(t *testing.T) {
 
 	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
 	if serverLocation != "" {
+		driver, err := file.NewDriver(serverLocation)
+		testza.AssertNoError(t, err)
+
+		s, err := server.NewServer(&server.Options{
+			Driver: driver,
+			Auth: &server.SimpleAuth{
+				Name:     "user",
+				Password: "pass",
+			},
+			Port: 2121,
+			Perm: server.NewSimplePerm("root", "root"),
+		})
+		testza.AssertNoError(t, err)
+		defer testza.AssertNoError(t, s.Shutdown())
+
+		go func() {
+			testza.AssertNoError(t, s.ListenAndServe())
+		}()
+
 		time.Sleep(time.Second)
 		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
 		time.Sleep(time.Second)
 
-		installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/server", profileName)
+		installation, err := ctx.Installations.AddInstallation(ctx, "ftp://user:pass@localhost:2121/", profileName)
 		testza.AssertNoError(t, err)
 		testza.AssertNotNil(t, installation)
 
