@@ -99,6 +99,9 @@ If you update any of the GraphQL queries, run this to update generated code:
 go generate -tags tools -x ./...
 ```
 
+If this command fails due to a mismatched schema,
+you may need to use the url `https://api.ficsit.dev/v2/query` instead.
+
 ## Building
 
 ```bash
@@ -123,6 +126,6 @@ golangci-lint run --fix
 The files within `./docs` are generated using cobra, use the following to update
 them.
 
-```
+```bash
 go run tools.go
 ```
