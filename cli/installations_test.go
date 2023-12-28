@@ -1,15 +1,19 @@
 package cli
 
 import (
-	"goftp.io/server/v2"
-	"goftp.io/server/v2/driver/file"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
 
+	"goftp.io/server/v2"
+	"goftp.io/server/v2/driver/file"
+
 	"github.com/MarvinJWendt/testza"
+	"goftp.io/server/v2"
+	"goftp.io/server/v2/driver/file"
+
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
 
