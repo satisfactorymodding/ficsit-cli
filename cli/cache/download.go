@@ -143,22 +143,12 @@ func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- ut
 func downloadInternal(cacheKey string, location string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (int64, error) {
 	stat, err := os.Stat(location)
 	if err == nil {
-		existingHash := ""
-
-		if hash != "" {
-			f, err := os.Open(location)
-			if err != nil {
-				return 0, fmt.Errorf("failed to open file: %s: %w", location, err)
-			}
-			defer f.Close()
-
-			existingHash, err = utils.SHA256Data(f)
-			if err != nil {
-				return 0, fmt.Errorf("could not compute hash for file: %s: %w", location, err)
-			}
+		matches, err := compareHash(hash, location)
+		if err != nil {
+			return 0, err
 		}
 
-		if hash == existingHash {
+		if matches {
 			return stat.Size(), nil
 		}
 
@@ -221,4 +211,23 @@ func downloadInternal(cacheKey string, location string, hash string, url string,
 	}
 
 	return resp.ContentLength, nil
+}
+
+func compareHash(hash string, location string) (bool, error) {
+	existingHash := ""
+
+	if hash != "" {
+		f, err := os.Open(location)
+		if err != nil {
+			return false, fmt.Errorf("failed to open file: %s: %w", location, err)
+		}
+		defer f.Close()
+
+		existingHash, err = utils.SHA256Data(f)
+		if err != nil {
+			return false, fmt.Errorf("could not compute hash for file: %s: %w", location, err)
+		}
+	}
+
+	return hash == existingHash, nil
 }
