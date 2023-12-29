@@ -483,7 +483,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 
 			// Only install if a link is provided, otherwise assume mod is already installed
 			if target.Link != "" {
-				err := downloadAndExtractMod(modReference, version.Version, target.Link, target.Hash, modsDirectory, updates, downloadSemaphore, d)
+				err := downloadAndExtractMod(modReference, version.Version, target.Link, target.Hash, platform.TargetName, modsDirectory, updates, downloadSemaphore, d)
 				if err != nil {
 					return fmt.Errorf("failed to install %s@%s: %w", modReference, version.Version, err)
 				}
@@ -560,7 +560,7 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 	return nil
 }
 
-func downloadAndExtractMod(modReference string, version string, link string, hash string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) error {
+func downloadAndExtractMod(modReference string, version string, link string, hash string, target string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) error {
 	var downloadUpdates chan utils.GenericProgress
 
 	var wg sync.WaitGroup
@@ -585,7 +585,7 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 	}
 
 	slog.Info("downloading mod", slog.String("mod_reference", modReference), slog.String("version", version), slog.String("link", link))
-	reader, size, err := cache.DownloadOrCache(modReference+"_"+version+".zip", hash, link, downloadUpdates, downloadSemaphore)
+	reader, size, err := cache.DownloadOrCache(modReference+"_"+version+"_"+target+".zip", hash, link, downloadUpdates, downloadSemaphore)
 	if err != nil {
 		return fmt.Errorf("failed to download %s from: %s: %w", modReference, link, err)
 	}
