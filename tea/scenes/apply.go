@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize"
 	"github.com/muesli/reflow/wrap"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
@@ -272,12 +273,20 @@ func (m apply) View() string {
 							lipgloss.Left,
 							m.sub.ViewAs(p.downloadProgress.Percentage()),
 							" - ",
+							humanize.Bytes(uint64(p.downloadProgress.Completed)),
+							"/",
+							humanize.Bytes(uint64(p.downloadProgress.Total)),
+							" - ",
 							lipgloss.NewStyle().Render(modReference+" (Downloading)"),
 						)))
 					} else {
 						strs = append(strs, lipgloss.NewStyle().MarginLeft(1).Render(lipgloss.JoinHorizontal(
 							lipgloss.Left,
 							m.sub.ViewAs(p.extractProgress.Percentage()),
+							" - ",
+							humanize.Bytes(uint64(p.extractProgress.Completed)),
+							"/",
+							humanize.Bytes(uint64(p.extractProgress.Total)),
 							" - ",
 							lipgloss.NewStyle().Render(modReference+" (Extracting)"),
 						)))
