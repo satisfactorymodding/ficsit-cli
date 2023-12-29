@@ -15,6 +15,7 @@ require (
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/charmbracelet/lipgloss v0.9.1
 	github.com/charmbracelet/x/exp/teatest v0.0.0-20231215171016-7ba2b450712d
+	github.com/dustin/go-humanize v1.0.1
 	github.com/jackc/puddle/v2 v2.2.1
 	github.com/jlaffaye/ftp v0.2.0
 	github.com/lmittmann/tint v1.0.3

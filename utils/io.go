@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/disk"
 )
@@ -69,15 +68,6 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 	}
 
 	totalExtracted := int64(0)
-	totalExtractedPtr := &totalExtracted
-
-	channelUsers := sync.WaitGroup{}
-
-	if updates != nil {
-		defer func() {
-			channelUsers.Wait()
-		}()
-	}
 
 	for _, file := range reader.File {
 		if !file.FileInfo().IsDir() {
@@ -87,15 +77,18 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 				return fmt.Errorf("failed to create mod directory: %s: %w", location, err)
 			}
 
+			channelUsers := sync.WaitGroup{}
+
 			var fileUpdates chan GenericProgress
 			if updates != nil {
 				fileUpdates = make(chan GenericProgress)
 				channelUsers.Add(1)
+				beforeProgress := totalExtracted
 				go func() {
 					defer channelUsers.Done()
 					for fileUpdate := range fileUpdates {
 						updates <- GenericProgress{
-							Completed: atomic.LoadInt64(totalExtractedPtr) + fileUpdate.Completed,
+							Completed: beforeProgress + fileUpdate.Completed,
 							Total:     totalSize,
 						}
 					}
@@ -103,10 +96,13 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 			}
 
 			if err := writeZipFile(outFileLocation, file, d, fileUpdates); err != nil {
+				channelUsers.Wait()
 				return err
 			}
 
-			atomic.AddInt64(totalExtractedPtr, int64(file.UncompressedSize64))
+			channelUsers.Wait()
+
+			totalExtracted += int64(file.UncompressedSize64)
 		}
 	}
 
