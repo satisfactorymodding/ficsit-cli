@@ -87,9 +87,14 @@ func loadHashCache() {
 		return
 	}
 
-	if err := json.Unmarshal(hashCacheJSON, &hashCache); err != nil {
+	var plainCache map[string]hashInfo
+	if err := json.Unmarshal(hashCacheJSON, &plainCache); err != nil {
 		slog.Warn("failed to unmarshal hash cache, recreating", slog.Any("err", err))
 		return
+	}
+
+	for k, v := range plainCache {
+		hashCache.Store(k, v)
 	}
 }
 
