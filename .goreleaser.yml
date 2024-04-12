@@ -35,9 +35,6 @@ builds:
     goarm:
       - 7
 
-signs:
-  - artifacts: checksum
-
 universal_binaries:
   - replace: true
     ids:
