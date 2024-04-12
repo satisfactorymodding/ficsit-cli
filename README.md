@@ -85,7 +85,11 @@ The app needs to know where the game is installed. On Steam, this will be
 
     C:\Program Files (x86)\Steam\steamapps\common\Satisfactory
 
-For MacOS and Crossover use (Assuming your bottle is named "Steam"):
+When running on Windows, it should auto-detect this path and you have nothing to worry about.   
+
+But this won't be the case When running on MacOS with Satisfactory installed in Crossover.
+In this case you have to add the installation manually.
+The path to a crossover-installed game, assuming a bottle named "Steam" will be
 
     ~/Library/Application\ Support/CrossOver/Bottles/Steam/drive_c/Program\ Files\ \(x86\)/Steam/steamapps/common/Satisfactory
 
@@ -93,7 +97,7 @@ The command to add an installation is then:
 
     ficsit-cli installation add <path>
 
-    
+
 ## Troubleshooting
 
 * Profile and installation records are located in `%APPDATA%\ficsit\`
