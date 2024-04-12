@@ -11,7 +11,6 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
     goarch:
       - amd64
       - arm
@@ -27,6 +26,7 @@ builds:
       - CGO_ENABLED=0
     goos:
       - windows
+      - darwin
     goarch:
       - amd64
       - arm
@@ -35,10 +35,13 @@ builds:
     goarm:
       - 7
 
+signs:
+  - artifacts: checksum
+
 universal_binaries:
   - replace: true
     ids:
-      - with-upx
+      - without-upx
 
 archives:
   - format: binary
