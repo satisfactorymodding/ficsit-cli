@@ -63,8 +63,7 @@ A CLI tool for managing mods for the game Satisfactory
   </tr>
   <tr>
     <th>macOS</th>
-    <td colspan="2" style="text-align: center"><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_darwin_all">darwin_all</a></td>
-    <td colspan="2" style="text-align: center">Build your own</a></td>
+    <td colspan="4" style="text-align: center"><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_darwin_all">darwin_all</a></td>
     <td>N/A</td>
   </tr>
 </table>
