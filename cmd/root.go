@@ -132,7 +132,7 @@ func init() {
 	case "linux":
 		baseLocalDir = filepath.Join(os.Getenv("HOME"), ".local", "share")
 	case "darwin":
-		baseLocalDir = filepath.Join(os.Getenv("HOME"), ".ficsit-cli")	
+		baseLocalDir = filepath.Join(os.Getenv("HOME"), "Library", "Application Support")	
 	default:
 		panic("unsupported platform: " + runtime.GOOS)
 	}
