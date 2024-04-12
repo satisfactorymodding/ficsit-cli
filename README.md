@@ -63,7 +63,8 @@ A CLI tool for managing mods for the game Satisfactory
   </tr>
   <tr>
     <th>macOS</th>
-    <td colspan="4" style="text-align: center"><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_darwin_all">darwin_all</a></td>
+    <td colspan="2" style="text-align: center"><a href="https://github.com/Vilsol/ficsit-cli/releases/latest/download/ficsit_darwin_all">darwin_all</a></td>
+    <td colspan="2" style="text-align: center">Build your own</a></td>
     <td>N/A</td>
   </tr>
 </table>
@@ -78,6 +79,21 @@ To launch the interactive CLI, run the executable without any arguments.
 
 Run `ficsit help` to see a list of available commands.
 
+## Game Installations
+
+The app needs to know where the game is installed. On Steam, this will be
+
+    C:\Program Files (x86)\Steam\steamapps\common\Satisfactory
+
+For MacOS and Crossover use (Assuming your bottle is named "Steam"):
+
+    ~/Library/Application\ Support/CrossOver/Bottles/Steam/drive_c/Program\ Files\ \(x86\)/Steam/steamapps/common/Satisfactory
+
+The command to add an installation is then:
+
+    ficsit-cli installation add <path>
+
+    
 ## Troubleshooting
 
 * Profile and installation records are located in `%APPDATA%\ficsit\`
