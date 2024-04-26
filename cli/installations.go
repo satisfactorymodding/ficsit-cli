@@ -674,10 +674,6 @@ type gameVersionFile struct {
 }
 
 func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
-	if err := i.Validate(ctx); err != nil {
-		return 0, fmt.Errorf("failed to validate installation: %w", err)
-	}
-
 	platform, err := i.GetPlatform(ctx)
 	if err != nil {
 		return 0, err
@@ -689,14 +685,6 @@ func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
 	}
 
 	fullPath := filepath.Join(i.BasePath(), platform.VersionPath)
-	exists, err := d.Exists(fullPath)
-	if err != nil {
-		return 0, err
-	}
-
-	if !exists {
-		return 0, errors.New("game version file does not exist")
-	}
 
 	file, err := d.Read(fullPath)
 	if err != nil {
