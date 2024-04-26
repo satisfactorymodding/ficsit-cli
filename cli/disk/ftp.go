@@ -3,12 +3,14 @@ package disk
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"log/slog"
+	"net/textproto"
 	"net/url"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
@@ -91,7 +93,94 @@ func testFTP(u *url.URL, options ...ftp.DialOption) (*ftp.ServerConn, bool, erro
 	return c, false, nil
 }
 
-func (l *ftpDisk) Exists(path string) (bool, error) {
+func (l *ftpDisk) existsWithLock(res *puddle.Resource[*ftp.ServerConn], p string) (bool, error) {
+	slog.Debug("checking if file exists", slog.String("path", clean(p)), slog.String("schema", "ftp"))
+
+	var protocolError *textproto.Error
+
+	_, err := res.Value().GetEntry(clean(p))
+	if err == nil {
+		return true, nil
+	}
+
+	if errors.As(err, &protocolError) {
+		switch protocolError.Code {
+		case ftp.StatusFileUnavailable:
+			return false, nil
+		case ftp.StatusNotImplemented:
+			// GetEntry uses MLST, which might not be supported by the server.
+			// Even though in this case the error is not coming from the server,
+			// the ftp library still returns it as a protocol error.
+		default:
+			// We won't handle any other kind of error, such as
+			// * temporary errors (4xx) - should be retried after a while, so we won't deal with the delay
+			// * connection errors (x2x) - can't really do anything about them
+			// * authentication errors (x3x) - can't do anything about them
+			return false, fmt.Errorf("failed to get path info: %w", err)
+		}
+	} else {
+		// This is a non-protocol error, so we can't be sure what it means.
+		return false, fmt.Errorf("failed to get path info: %w", err)
+	}
+
+	// In case MLST is not supported, we can try to LIST the target path.
+	// We can be sure that List() will actually execute LIST and not MLSD,
+	// since MLST was not supported in the previous step.
+	entries, err := res.Value().List(clean(p))
+	if err == nil {
+		if len(entries) > 0 {
+			// Some server implementations return an empty list for a nonexistent path,
+			// so we cannot be sure that no error means a directory exists unless it also contains some items.
+			// For files, when they exist, they will be listed as a single entry.
+			// TODO: so far the servers (just one) this was happening on also listed . and .. for valid dirs, because it was using `LIST -a`. Is that behaviour consistent that we can rely on it?
+			return true, nil
+		}
+	} else {
+		if errors.As(err, &protocolError) {
+			switch protocolError.Code {
+			case ftp.StatusFileUnavailable:
+				return false, nil
+			default:
+				// We won't handle any other kind of error, see above.
+				return false, fmt.Errorf("failed to list path: %w", err)
+			}
+		}
+		// This is a non-protocol error, see above.
+		return false, fmt.Errorf("failed to list path: %w", err)
+	}
+
+	// If we got here, either the path is an empty directory,
+	// or it does not exist and the server is a weird implementation.
+
+	// List the parent directory to determine if the path exists
+	dir, err := l.readDirLock(res, path.Dir(clean(p)))
+	if err == nil {
+		found := false
+		for _, entry := range dir {
+			if entry.Name() == path.Base(clean(p)) {
+				found = true
+				break
+			}
+		}
+
+		return found, nil
+	}
+
+	if errors.As(err, &protocolError) {
+		switch protocolError.Code {
+		case ftp.StatusFileUnavailable:
+			return false, nil
+		default:
+			// We won't handle any other kind of error, see above.
+			return false, fmt.Errorf("failed to list path: %w", err)
+		}
+	}
+
+	// This is a non-protocol error, see above.
+	return false, fmt.Errorf("failed to list path: %w", err)
+}
+
+func (l *ftpDisk) Exists(p string) (bool, error) {
 	res, err := l.acquire()
 	if err != nil {
 		return false, err
@@ -99,49 +188,7 @@ func (l *ftpDisk) Exists(path string) (bool, error) {
 
 	defer res.Release()
 
-	slog.Debug("checking if file exists", slog.String("path", clean(path)), slog.String("schema", "ftp"))
-
-	split := strings.Split(clean(path)[1:], "/")
-	for _, s := range split[:len(split)-1] {
-		dir, err := l.readDirLock(res, "")
-		if err != nil {
-			return false, err
-		}
-
-		currentDir, _ := res.Value().CurrentDir()
-
-		foundDir := false
-		for _, entry := range dir {
-			if entry.IsDir() && entry.Name() == s {
-				foundDir = true
-				break
-			}
-		}
-
-		if !foundDir {
-			return false, nil
-		}
-
-		slog.Debug("entering directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
-		if err := res.Value().ChangeDir(s); err != nil {
-			return false, fmt.Errorf("failed to enter directory: %w", err)
-		}
-	}
-
-	dir, err := l.readDirLock(res, "")
-	if err != nil {
-		return false, fmt.Errorf("failed listing directory: %w", err)
-	}
-
-	found := false
-	for _, entry := range dir {
-		if entry.Name() == clean(filepath.Base(path)) {
-			found = true
-			break
-		}
-	}
-
-	return found, nil
+	return l.existsWithLock(res, p)
 }
 
 func (l *ftpDisk) Read(path string) ([]byte, error) {
