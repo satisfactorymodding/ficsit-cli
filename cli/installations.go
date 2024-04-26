@@ -239,26 +239,18 @@ var (
 	matchAllCap     = regexp.MustCompile(`([a-z\d])([A-Z])`)
 )
 
-func (i *Installation) LockFilePath(ctx *GlobalContext) (string, error) {
-	platform, err := i.GetPlatform(ctx)
-	if err != nil {
-		return "", err
-	}
-
+func (i *Installation) lockFilePath(ctx *GlobalContext, platform *Platform) string {
 	lockFileName := ctx.Profiles.Profiles[i.Profile].Name
 	lockFileName = matchFirstCap.ReplaceAllString(lockFileName, "${1}_${2}")
 	lockFileName = matchAllCap.ReplaceAllString(lockFileName, "${1}_${2}")
 	lockFileName = lockFileCleaner.ReplaceAllLiteralString(lockFileName, "-")
 	lockFileName = strings.ToLower(lockFileName) + "-lock.json"
 
-	return filepath.Join(i.BasePath(), platform.LockfilePath, lockFileName), nil
+	return filepath.Join(i.BasePath(), platform.LockfilePath, lockFileName)
 }
 
-func (i *Installation) LockFile(ctx *GlobalContext) (*resolver.LockFile, error) {
-	lockfilePath, err := i.LockFilePath(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (i *Installation) lockfile(ctx *GlobalContext, platform *Platform) (*resolver.LockFile, error) {
+	lockfilePath := i.lockFilePath(ctx, platform)
 
 	d, err := i.GetDisk()
 	if err != nil {
@@ -287,11 +279,8 @@ func (i *Installation) LockFile(ctx *GlobalContext) (*resolver.LockFile, error) 
 	return lockFile, nil
 }
 
-func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *resolver.LockFile) error {
-	lockfilePath, err := i.LockFilePath(ctx)
-	if err != nil {
-		return err
-	}
+func (i *Installation) writeLockFile(ctx *GlobalContext, platform *Platform, lockfile *resolver.LockFile) error {
+	lockfilePath := i.lockFilePath(ctx, platform)
 
 	d, err := i.GetDisk()
 	if err != nil {
@@ -337,15 +326,15 @@ func (i *Installation) Wipe() error {
 	return nil
 }
 
-func (i *Installation) ResolveProfile(ctx *GlobalContext) (*resolver.LockFile, error) {
-	lockFile, err := i.LockFile(ctx)
+func (i *Installation) resolveProfile(ctx *GlobalContext, platform *Platform) (*resolver.LockFile, error) {
+	lockFile, err := i.lockfile(ctx, platform)
 	if err != nil {
 		return nil, err
 	}
 
 	depResolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
 
-	gameVersion, err := i.GetGameVersion(ctx)
+	gameVersion, err := i.getGameVersion(platform)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect game version: %w", err)
 	}
@@ -355,11 +344,35 @@ func (i *Installation) ResolveProfile(ctx *GlobalContext) (*resolver.LockFile, e
 		return nil, fmt.Errorf("could not resolve mods: %w", err)
 	}
 
-	if err := i.WriteLockFile(ctx, lockfile); err != nil {
+	if err := i.writeLockFile(ctx, platform, lockfile); err != nil {
 		return nil, fmt.Errorf("failed to write lockfile: %w", err)
 	}
 
 	return lockfile, nil
+}
+
+func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return i.getGameVersion(platform)
+}
+
+func (i *Installation) LockFile(ctx *GlobalContext) (*resolver.LockFile, error) {
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return i.lockfile(ctx, platform)
+}
+
+func (i *Installation) WriteLockFile(ctx *GlobalContext, lockfile *resolver.LockFile) error {
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return err
+	}
+	return i.writeLockFile(ctx, platform, lockfile)
 }
 
 type InstallUpdateType string
@@ -383,10 +396,6 @@ type InstallUpdateItem struct {
 }
 
 func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate) error {
-	if err := i.Validate(ctx); err != nil {
-		return fmt.Errorf("failed to validate installation: %w", err)
-	}
-
 	platform, err := i.GetPlatform(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to detect platform: %w", err)
@@ -396,7 +405,7 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 
 	if !i.Vanilla {
 		var err error
-		lockfile, err = i.ResolveProfile(ctx)
+		lockfile, err = i.resolveProfile(ctx, platform)
 		if err != nil {
 			return fmt.Errorf("failed to resolve lockfile: %w", err)
 		}
@@ -529,18 +538,19 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 }
 
 func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
-	if err := i.Validate(ctx); err != nil {
-		return fmt.Errorf("failed to validate installation: %w", err)
+	platform, err := i.GetPlatform(ctx)
+	if err != nil {
+		return err
 	}
 
-	lockFile, err := i.LockFile(ctx)
+	lockFile, err := i.lockfile(ctx, platform)
 	if err != nil {
 		return fmt.Errorf("failed to read lock file: %w", err)
 	}
 
 	resolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
 
-	gameVersion, err := i.GetGameVersion(ctx)
+	gameVersion, err := i.getGameVersion(platform)
 	if err != nil {
 		return fmt.Errorf("failed to detect game version: %w", err)
 	}
@@ -559,7 +569,7 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 		return fmt.Errorf("failed to resolve dependencies: %w", err)
 	}
 
-	if err := i.WriteLockFile(ctx, newLockFile); err != nil {
+	if err := i.writeLockFile(ctx, platform, newLockFile); err != nil {
 		return fmt.Errorf("failed to write lock file: %w", err)
 	}
 
@@ -673,12 +683,7 @@ type gameVersionFile struct {
 	IsPromotedBuild      int    `json:"IsPromotedBuild"`
 }
 
-func (i *Installation) GetGameVersion(ctx *GlobalContext) (int, error) {
-	platform, err := i.GetPlatform(ctx)
-	if err != nil {
-		return 0, err
-	}
-
+func (i *Installation) getGameVersion(platform *Platform) (int, error) {
 	d, err := i.GetDisk()
 	if err != nil {
 		return 0, err
