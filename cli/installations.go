@@ -421,23 +421,33 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		return fmt.Errorf("failed to read mods directory: %w", err)
 	}
 
+	var deleteWait errgroup.Group
 	for _, entry := range dir {
 		if entry.IsDir() {
 			if _, ok := lockfile.Mods[entry.Name()]; !ok {
-				modDir := filepath.Join(modsDirectory, entry.Name())
-				exists, err := d.Exists(filepath.Join(modDir, ".smm"))
-				if err != nil {
-					return err
-				}
-
-				if exists {
-					slog.Info("deleting mod", slog.String("mod_reference", entry.Name()))
-					if err := d.Remove(modDir); err != nil {
-						return fmt.Errorf("failed to delete mod directory: %w", err)
+				modName := entry.Name()
+				modDir := filepath.Join(modsDirectory, modName)
+				deleteWait.Go(func() error {
+					exists, err := d.Exists(filepath.Join(modDir, ".smm"))
+					if err != nil {
+						return err
 					}
-				}
+
+					if exists {
+						slog.Info("deleting mod", slog.String("mod_reference", modName))
+						if err := d.Remove(modDir); err != nil {
+							return fmt.Errorf("failed to delete mod directory: %w", err)
+						}
+					}
+
+					return nil
+				})
 			}
 		}
+	}
+
+	if err := deleteWait.Wait(); err != nil {
+		return fmt.Errorf("failed to remove old mods: %w", err)
 	}
 
 	slog.Info("starting installation", slog.Int("concurrency", viper.GetInt("concurrent-downloads")), slog.String("path", i.Path))
