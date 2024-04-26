@@ -183,6 +183,8 @@ func (i *Installations) DeleteInstallation(installPath string) error {
 	return nil
 }
 
+var rootExecutables = []string{"FactoryGame.exe", "FactoryServer.sh", "FactoryServer.exe"}
+
 func (i *Installation) Validate(ctx *GlobalContext) error {
 	found := false
 	for _, p := range ctx.Profiles.Profiles {
@@ -203,31 +205,25 @@ func (i *Installation) Validate(ctx *GlobalContext) error {
 
 	foundExecutable := false
 
-	exists, err := d.Exists(filepath.Join(i.BasePath(), "FactoryGame.exe"))
-	if !exists {
-		if err != nil {
-			return fmt.Errorf("failed reading FactoryGame.exe: %w", err)
-		}
-	} else {
-		foundExecutable = true
+	var checkWait errgroup.Group
+
+	for _, executable := range rootExecutables {
+		e := executable
+		checkWait.Go(func() error {
+			exists, err := d.Exists(filepath.Join(i.BasePath(), e))
+			if !exists {
+				if err != nil {
+					return fmt.Errorf("failed reading %s: %w", e, err)
+				}
+			} else {
+				foundExecutable = true
+			}
+			return nil
+		})
 	}
 
-	exists, err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.sh"))
-	if !exists {
-		if err != nil {
-			return fmt.Errorf("failed reading FactoryServer.sh: %w", err)
-		}
-	} else {
-		foundExecutable = true
-	}
-
-	exists, err = d.Exists(filepath.Join(i.BasePath(), "FactoryServer.exe"))
-	if !exists {
-		if err != nil {
-			return fmt.Errorf("failed reading FactoryServer.exe: %w", err)
-		}
-	} else {
-		foundExecutable = true
+	if err = checkWait.Wait(); err != nil {
+		return err //nolint:wrapcheck
 	}
 
 	if !foundExecutable {
