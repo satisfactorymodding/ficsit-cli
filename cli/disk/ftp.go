@@ -11,6 +11,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -312,7 +313,14 @@ func (l *ftpDisk) ReadDir(path string) ([]Entry, error) {
 
 	defer res.Release()
 
-	return l.readDirLock(res, path)
+	entries, err := l.readDirLock(res, path)
+	if err != nil {
+		return nil, err
+	}
+	entries = slices.DeleteFunc(entries, func(i Entry) bool {
+		return i.Name() == "." || i.Name() == ".."
+	})
+	return entries, nil
 }
 
 func (l *ftpDisk) readDirLock(res *puddle.Resource[*ftp.ServerConn], path string) ([]Entry, error) {
