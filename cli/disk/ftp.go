@@ -250,7 +250,7 @@ func (l *ftpDisk) Remove(path string) error {
 	return nil
 }
 
-func (l *ftpDisk) MkDir(path string) error {
+func (l *ftpDisk) MkDir(p string) error {
 	res, err := l.acquire()
 	if err != nil {
 		return err
@@ -258,34 +258,47 @@ func (l *ftpDisk) MkDir(path string) error {
 
 	defer res.Release()
 
-	split := strings.Split(clean(path)[1:], "/")
-	for _, s := range split {
-		dir, err := l.readDirLock(res, "")
+	lastExistingDir := clean(p)
+	for lastExistingDir != "/" && lastExistingDir != "." {
+		foundDir, err := l.existsWithLock(res, lastExistingDir)
 		if err != nil {
 			return err
 		}
 
-		currentDir, _ := res.Value().CurrentDir()
-
-		foundDir := false
-		for _, entry := range dir {
-			if entry.IsDir() && entry.Name() == s {
-				foundDir = true
-				break
-			}
+		if foundDir {
+			break
 		}
 
-		if !foundDir {
-			slog.Debug("making directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
-			if err := res.Value().MakeDir(s); err != nil {
-				return fmt.Errorf("failed to make directory: %w", err)
-			}
+		lastExistingDir = path.Dir(lastExistingDir)
+	}
+
+	remainingDirs := clean(p)
+
+	if lastExistingDir != "/" && lastExistingDir != "." {
+		remainingDirs = strings.TrimPrefix(remainingDirs, lastExistingDir)
+	}
+
+	if len(remainingDirs) == 0 {
+		// Already exists
+		return nil
+	}
+
+	if err := res.Value().ChangeDir(lastExistingDir); err != nil {
+		return fmt.Errorf("failed to enter directory: %w", err)
+	}
+
+	split := strings.Split(clean(remainingDirs)[1:], "/")
+	for _, s := range split {
+		slog.Debug("making directory", slog.String("dir", s), slog.String("cwd", lastExistingDir), slog.String("schema", "ftp"))
+		if err := res.Value().MakeDir(s); err != nil {
+			return fmt.Errorf("failed to make directory: %w", err)
 		}
 
-		slog.Debug("entering directory", slog.String("dir", s), slog.String("cwd", currentDir), slog.String("schema", "ftp"))
+		slog.Debug("entering directory", slog.String("dir", s), slog.String("cwd", lastExistingDir), slog.String("schema", "ftp"))
 		if err := res.Value().ChangeDir(s); err != nil {
 			return fmt.Errorf("failed to enter directory: %w", err)
 		}
+		lastExistingDir = path.Join(lastExistingDir, s)
 	}
 
 	return nil
