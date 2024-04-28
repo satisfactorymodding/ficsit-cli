@@ -138,15 +138,11 @@ func (l *ftpDisk) existsWithLock(res *puddle.Resource[*ftp.ServerConn], p string
 		}
 	} else {
 		if errors.As(err, &protocolError) {
-			switch protocolError.Code {
-			case ftp.StatusFileUnavailable:
+			if protocolError.Code == ftp.StatusFileUnavailable {
 				return false, nil
-			default:
-				// We won't handle any other kind of error, see above.
-				return false, fmt.Errorf("failed to list path: %w", err)
 			}
 		}
-		// This is a non-protocol error, see above.
+		// We won't handle any other kind of error, see above.
 		return false, fmt.Errorf("failed to list path: %w", err)
 	}
 
@@ -168,17 +164,13 @@ func (l *ftpDisk) existsWithLock(res *puddle.Resource[*ftp.ServerConn], p string
 	}
 
 	if errors.As(err, &protocolError) {
-		switch protocolError.Code {
-		case ftp.StatusFileUnavailable:
+		if protocolError.Code == ftp.StatusFileUnavailable {
 			return false, nil
-		default:
-			// We won't handle any other kind of error, see above.
-			return false, fmt.Errorf("failed to list path: %w", err)
 		}
 	}
 
-	// This is a non-protocol error, see above.
-	return false, fmt.Errorf("failed to list path: %w", err)
+	// We won't handle any other kind of error, see above.
+	return false, fmt.Errorf("failed to list parent path: %w", err)
 }
 
 func (l *ftpDisk) Exists(p string) (bool, error) {
