@@ -130,3 +130,4 @@ schema.graphql
 *.log
 .direnv
 /SatisfactoryDedicatedServer
+/ficsit-cli

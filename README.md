@@ -78,6 +78,27 @@ To launch the interactive CLI, run the executable without any arguments.
 
 Run `ficsit help` to see a list of available commands.
 
+## Game Installations
+
+The app needs to know where the game is installed.
+Unlike SMM, fixit-cli will **not** auto-detect your installation.
+
+For a default Steam installation on Windows, this path will be
+
+    "C:\Program Files (x86)\Steam\steamapps\common\Satisfactory"
+
+For a game installed to the default path under crossover in MacOS, assuming a bottle named "Steam",
+the install location will be:
+
+    "${HOME}/Library/Application Support/CrossOver/Bottles/Steam/drive_c/Program Files (x86)/Steam/steamapps/common/Satisfactory"
+
+The command to add an installation is then:
+
+    ficsit-cli installation add <path-including-quotes>
+
+See [Modding FAQ|https://docs.ficsit.app/satisfactory-modding/latest/faq.html#Files_GameInstall] for more information,
+including the path on Epic and how to find non-default paths.
+
 ## Troubleshooting
 
 * Profile and installation records are located in `%APPDATA%\ficsit\`
