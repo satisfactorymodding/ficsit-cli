@@ -6,6 +6,7 @@ import (
 
 	"github.com/Khan/genqlient/graphql"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
+	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
@@ -84,8 +85,8 @@ func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID str
 		targets := make([]resolver.Target, len(modVersion.Targets))
 		for j, target := range modVersion.Targets {
 			targets[j] = resolver.Target{
-				VersionID:  target.VersionID,
 				TargetName: resolver.TargetName(target.TargetName),
+				Link:       viper.GetString("api-base") + target.Link,
 				Hash:       target.Hash,
 				Size:       target.Size,
 			}
@@ -94,6 +95,7 @@ func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID str
 		modVersions[i] = resolver.ModVersion{
 			ID:           modVersion.ID,
 			Version:      modVersion.Version,
+			GameVersion:  modVersion.GameVersion,
 			Dependencies: dependencies,
 			Targets:      targets,
 		}

@@ -7,7 +7,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
-	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
@@ -29,7 +28,7 @@ func newModel(global *cli.GlobalContext) *rootModel {
 			Width:  20,
 			Height: 14,
 		},
-		dependencyResolver: resolver.NewDependencyResolver(global.Provider, viper.GetString("api-base")),
+		dependencyResolver: resolver.NewDependencyResolver(global.Provider),
 	}
 
 	m.headerComponent = components.NewHeaderComponent(m)
@@ -69,6 +68,10 @@ func (m *rootModel) GetAPIClient() graphql.Client {
 
 func (m *rootModel) GetProvider() provider.Provider {
 	return m.global.Provider
+}
+
+func (m *rootModel) GetResolver() resolver.DependencyResolver {
+	return m.dependencyResolver
 }
 
 func (m *rootModel) Size() tea.WindowSizeMsg {

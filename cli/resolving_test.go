@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"log/slog"
 	"math"
 	"os"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/MarvinJWendt/testza"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
-	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cfg"
 )
@@ -43,9 +41,9 @@ func TestUpdateMods(t *testing.T) {
 
 	ctx.Provider = MockProvider{}
 
-	depResolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
+	depResolver := resolver.NewDependencyResolver(ctx.Provider)
 
-	oldLockfile, err := depResolver.ResolveModDependencies(context.Background(), map[string]string{
+	oldLockfile, err := depResolver.ResolveModDependencies(map[string]string{
 		"FicsitRemoteMonitoring": "0.9.8",
 	}, nil, math.MaxInt, nil)
 

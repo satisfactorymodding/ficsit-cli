@@ -3,6 +3,7 @@ package components
 import (
 	"github.com/Khan/genqlient/graphql"
 	tea "github.com/charmbracelet/bubbletea"
+	resolver "github.com/satisfactorymodding/ficsit-resolver"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli"
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
@@ -19,6 +20,7 @@ type RootModel interface {
 
 	GetAPIClient() graphql.Client
 	GetProvider() provider.Provider
+	GetResolver() resolver.DependencyResolver
 
 	Size() tea.WindowSizeMsg
 	SetSize(size tea.WindowSizeMsg)

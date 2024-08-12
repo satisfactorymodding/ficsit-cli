@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -299,7 +298,7 @@ func (p *Profile) Resolve(resolver resolver.DependencyResolver, lockFile *resolv
 		}
 	}
 
-	resultLockfile, err := resolver.ResolveModDependencies(context.TODO(), toResolve, lockFile, gameVersion, p.RequiredTargets)
+	resultLockfile, err := resolver.ResolveModDependencies(toResolve, lockFile, gameVersion, p.RequiredTargets)
 	if err != nil {
 		return nil, fmt.Errorf("failed resolving profile dependencies: %w", err)
 	}
