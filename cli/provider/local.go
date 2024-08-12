@@ -28,10 +28,6 @@ func (p LocalProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit
 	mods := make([]ficsit.ModsModsGetModsModsMod, 0)
 
 	cachedMods.Range(func(modReference string, files []cache.File) bool {
-		if modReference == "SML" {
-			return true
-		}
-
 		if len(filter.References) > 0 {
 			skip := true
 
@@ -125,25 +121,6 @@ func (p LocalProvider) GetMod(_ context.Context, modReference string) (*ficsit.G
 			Source_url:       "",
 		},
 	}, nil
-}
-
-func (p LocalProvider) SMLVersions(_ context.Context) ([]resolver.SMLVersion, error) {
-	cachedSMLFiles, err := cache.GetCacheMod("SML")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cache: %w", err)
-	}
-
-	smlVersions := make([]resolver.SMLVersion, 0)
-
-	for _, smlFile := range cachedSMLFiles {
-		smlVersions = append(smlVersions, resolver.SMLVersion{
-			ID:                  "SML:" + smlFile.Plugin.SemVersion,
-			Version:             smlFile.Plugin.SemVersion,
-			SatisfactoryVersion: 0, // TODO: where can this be obtained from?
-		})
-	}
-
-	return smlVersions, nil
 }
 
 func (p LocalProvider) ModVersionsWithDependencies(_ context.Context, modID string) ([]resolver.ModVersion, error) {

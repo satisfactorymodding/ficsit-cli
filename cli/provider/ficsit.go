@@ -33,34 +33,6 @@ func (p FicsitProvider) ModVersions(context context.Context, modReference string
 	return ficsit.ModVersions(context, p.client, modReference, filter)
 }
 
-func (p FicsitProvider) SMLVersions(context context.Context) ([]resolver.SMLVersion, error) {
-	response, err := ficsit.SMLVersions(context, p.client)
-	if err != nil {
-		return nil, err
-	}
-
-	smlVersions := make([]resolver.SMLVersion, len(response.SmlVersions.Sml_versions))
-	for i, version := range response.GetSmlVersions().Sml_versions {
-		targets := make([]resolver.SMLVersionTarget, len(version.Targets))
-
-		for j, target := range version.Targets {
-			targets[j] = resolver.SMLVersionTarget{
-				TargetName: resolver.TargetName(target.TargetName),
-				Link:       target.Link,
-			}
-		}
-
-		smlVersions[i] = resolver.SMLVersion{
-			ID:                  version.Id,
-			Version:             version.Version,
-			SatisfactoryVersion: version.Satisfactory_version,
-			Targets:             targets,
-		}
-	}
-
-	return smlVersions, nil
-}
-
 func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID string) ([]resolver.ModVersion, error) {
 	response, err := ficsit.GetAllModVersions(modID)
 	if err != nil {
