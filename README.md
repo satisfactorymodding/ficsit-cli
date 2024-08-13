@@ -1,4 +1,6 @@
-<img align="right" width="310" src="./.github/screenshot.png" />
+<!-- markdownlint-disable MD033 -->
+<!-- markdownlint-disable MD041 -->
+<img align="right" width="310" src="./.github/screenshot.png" alt="ficsit-cli screenshot" />
 
 # ficsit-cli [![push](https://github.com/Vilsol/ficsit-cli/actions/workflows/push.yaml/badge.svg)](https://github.com/Vilsol/ficsit-cli/actions/workflows/push.yaml) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/vilsol/ficsit-cli) ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/vilsol/ficsit-cli) [![GitHub license](https://img.shields.io/github/license/Vilsol/ficsit-cli)](https://github.com/Vilsol/ficsit-cli/blob/master/LICENSE) ![GitHub all releases](https://img.shields.io/github/downloads/vilsol/ficsit-cli/total)
 
