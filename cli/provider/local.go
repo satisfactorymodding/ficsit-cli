@@ -133,8 +133,9 @@ func (p LocalProvider) ModVersionsWithDependencies(_ context.Context, modID stri
 
 	for _, modFile := range cachedModFiles {
 		versions = append(versions, resolver.ModVersion{
-			ID:      modID + ":" + modFile.Plugin.SemVersion,
-			Version: modFile.Plugin.SemVersion,
+			ID:          modID + ":" + modFile.Plugin.SemVersion,
+			Version:     modFile.Plugin.SemVersion,
+			GameVersion: modFile.Plugin.GameVersion,
 		})
 	}
 
