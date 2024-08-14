@@ -9,6 +9,7 @@ type AllVersionsResponse struct {
 type ModVersion struct {
 	ID           string       `json:"id"`
 	Version      string       `json:"version"`
+	GameVersion  string       `json:"game_version"`
 	Dependencies []Dependency `json:"dependencies"`
 	Targets      []Target     `json:"targets"`
 }
@@ -22,6 +23,7 @@ type Dependency struct {
 type Target struct {
 	VersionID  string `json:"version_id"`
 	TargetName string `json:"target_name"`
+	Link       string `json:"link"`
 	Hash       string `json:"hash"`
 	Size       int64  `json:"size"`
 }

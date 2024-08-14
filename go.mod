@@ -25,7 +25,7 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/sahilm/fuzzy v0.1.1-0.20230530133925-c48e322e2a8f
 	github.com/samber/slog-multi v1.0.2
-	github.com/satisfactorymodding/ficsit-resolver v0.0.2
+	github.com/satisfactorymodding/ficsit-resolver v0.0.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.1
 	goftp.io/server/v2 v2.0.1

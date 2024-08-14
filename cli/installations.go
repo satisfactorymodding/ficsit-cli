@@ -332,7 +332,7 @@ func (i *Installation) resolveProfile(ctx *GlobalContext, platform *Platform) (*
 		return nil, err
 	}
 
-	depResolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
+	depResolver := resolver.NewDependencyResolver(ctx.Provider)
 
 	gameVersion, err := i.getGameVersion(platform)
 	if err != nil {
@@ -548,7 +548,7 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 		return fmt.Errorf("failed to read lock file: %w", err)
 	}
 
-	resolver := resolver.NewDependencyResolver(ctx.Provider, viper.GetString("api-base"))
+	resolver := resolver.NewDependencyResolver(ctx.Provider)
 
 	gameVersion, err := i.getGameVersion(platform)
 	if err != nil {

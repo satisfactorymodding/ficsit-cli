@@ -5,6 +5,7 @@ type UPlugin struct {
 	FriendlyName string    `json:"FriendlyName"`
 	Description  string    `json:"Description"`
 	CreatedBy    string    `json:"CreatedBy"`
+	GameVersion  string    `json:"GameVersion"`
 	Plugins      []Plugins `json:"Plugins"`
 }
 type Plugins struct {
