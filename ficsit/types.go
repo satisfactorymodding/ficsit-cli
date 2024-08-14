@@ -675,72 +675,6 @@ const (
 	OrderDesc Order = "desc"
 )
 
-// SMLVersionsResponse is returned by SMLVersions on success.
-type SMLVersionsResponse struct {
-	SmlVersions SMLVersionsSmlVersionsGetSMLVersions `json:"smlVersions"`
-}
-
-// GetSmlVersions returns SMLVersionsResponse.SmlVersions, and is useful for accessing the field via an interface.
-func (v *SMLVersionsResponse) GetSmlVersions() SMLVersionsSmlVersionsGetSMLVersions {
-	return v.SmlVersions
-}
-
-// SMLVersionsSmlVersionsGetSMLVersions includes the requested fields of the GraphQL type GetSMLVersions.
-type SMLVersionsSmlVersionsGetSMLVersions struct {
-	Count        int                                                          `json:"count"`
-	Sml_versions []SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion `json:"sml_versions"`
-}
-
-// GetCount returns SMLVersionsSmlVersionsGetSMLVersions.Count, and is useful for accessing the field via an interface.
-func (v *SMLVersionsSmlVersionsGetSMLVersions) GetCount() int { return v.Count }
-
-// GetSml_versions returns SMLVersionsSmlVersionsGetSMLVersions.Sml_versions, and is useful for accessing the field via an interface.
-func (v *SMLVersionsSmlVersionsGetSMLVersions) GetSml_versions() []SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion {
-	return v.Sml_versions
-}
-
-// SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion includes the requested fields of the GraphQL type SMLVersion.
-type SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion struct {
-	Id                   string                                                                              `json:"id"`
-	Version              string                                                                              `json:"version"`
-	Satisfactory_version int                                                                                 `json:"satisfactory_version"`
-	Targets              []SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget `json:"targets"`
-}
-
-// GetId returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion.Id, and is useful for accessing the field via an interface.
-func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion) GetId() string { return v.Id }
-
-// GetVersion returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion.Version, and is useful for accessing the field via an interface.
-func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion) GetVersion() string {
-	return v.Version
-}
-
-// GetSatisfactory_version returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion.Satisfactory_version, and is useful for accessing the field via an interface.
-func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion) GetSatisfactory_version() int {
-	return v.Satisfactory_version
-}
-
-// GetTargets returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion.Targets, and is useful for accessing the field via an interface.
-func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersion) GetTargets() []SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget {
-	return v.Targets
-}
-
-// SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget includes the requested fields of the GraphQL type SMLVersionTarget.
-type SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget struct {
-	TargetName TargetName `json:"targetName"`
-	Link       string     `json:"link"`
-}
-
-// GetTargetName returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget.TargetName, and is useful for accessing the field via an interface.
-func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget) GetTargetName() TargetName {
-	return v.TargetName
-}
-
-// GetLink returns SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget.Link, and is useful for accessing the field via an interface.
-func (v *SMLVersionsSmlVersionsGetSMLVersionsSml_versionsSMLVersionTargetsSMLVersionTarget) GetLink() string {
-	return v.Link
-}
-
 type TargetName string
 
 const (
@@ -1256,46 +1190,6 @@ func Mods(
 	var err error
 
 	var data ModsResponse
-	resp := &graphql.Response{Data: &data}
-
-	err = client.MakeRequest(
-		ctx,
-		req,
-		resp,
-	)
-
-	return &data, err
-}
-
-// The query or mutation executed by SMLVersions.
-const SMLVersions_Operation = `
-query SMLVersions {
-	smlVersions: getSMLVersions(filter: {limit:100}) {
-		count
-		sml_versions {
-			id
-			version
-			satisfactory_version
-			targets {
-				targetName
-				link
-			}
-		}
-	}
-}
-`
-
-func SMLVersions(
-	ctx context.Context,
-	client graphql.Client,
-) (*SMLVersionsResponse, error) {
-	req := &graphql.Request{
-		OpName: "SMLVersions",
-		Query:  SMLVersions_Operation,
-	}
-	var err error
-
-	var data SMLVersionsResponse
 	resp := &graphql.Response{Data: &data}
 
 	err = client.MakeRequest(

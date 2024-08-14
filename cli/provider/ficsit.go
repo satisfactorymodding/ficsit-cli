@@ -6,6 +6,7 @@ import (
 
 	"github.com/Khan/genqlient/graphql"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
+	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
@@ -32,34 +33,6 @@ func (p FicsitProvider) ModVersions(context context.Context, modReference string
 	return ficsit.ModVersions(context, p.client, modReference, filter)
 }
 
-func (p FicsitProvider) SMLVersions(context context.Context) ([]resolver.SMLVersion, error) {
-	response, err := ficsit.SMLVersions(context, p.client)
-	if err != nil {
-		return nil, err
-	}
-
-	smlVersions := make([]resolver.SMLVersion, len(response.SmlVersions.Sml_versions))
-	for i, version := range response.GetSmlVersions().Sml_versions {
-		targets := make([]resolver.SMLVersionTarget, len(version.Targets))
-
-		for j, target := range version.Targets {
-			targets[j] = resolver.SMLVersionTarget{
-				TargetName: resolver.TargetName(target.TargetName),
-				Link:       target.Link,
-			}
-		}
-
-		smlVersions[i] = resolver.SMLVersion{
-			ID:                  version.Id,
-			Version:             version.Version,
-			SatisfactoryVersion: version.Satisfactory_version,
-			Targets:             targets,
-		}
-	}
-
-	return smlVersions, nil
-}
-
 func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID string) ([]resolver.ModVersion, error) {
 	response, err := ficsit.GetAllModVersions(modID)
 	if err != nil {
@@ -84,8 +57,8 @@ func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID str
 		targets := make([]resolver.Target, len(modVersion.Targets))
 		for j, target := range modVersion.Targets {
 			targets[j] = resolver.Target{
-				VersionID:  target.VersionID,
 				TargetName: resolver.TargetName(target.TargetName),
+				Link:       viper.GetString("api-base") + target.Link,
 				Hash:       target.Hash,
 				Size:       target.Size,
 			}
@@ -94,6 +67,7 @@ func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID str
 		modVersions[i] = resolver.ModVersion{
 			ID:           modVersion.ID,
 			Version:      modVersion.Version,
+			GameVersion:  modVersion.GameVersion,
 			Dependencies: dependencies,
 			Targets:      targets,
 		}

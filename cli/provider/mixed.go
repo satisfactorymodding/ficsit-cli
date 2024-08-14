@@ -36,13 +36,6 @@ func (p MixedProvider) GetMod(context context.Context, modReference string) (*fi
 	return p.onlineProvider.GetMod(context, modReference)
 }
 
-func (p MixedProvider) SMLVersions(context context.Context) ([]resolver.SMLVersion, error) {
-	if p.Offline {
-		return p.offlineProvider.SMLVersions(context) // nolint
-	}
-	return p.onlineProvider.SMLVersions(context) // nolint
-}
-
 func (p MixedProvider) ModVersionsWithDependencies(context context.Context, modID string) ([]resolver.ModVersion, error) {
 	if p.Offline {
 		return p.offlineProvider.ModVersionsWithDependencies(context, modID) // nolint
