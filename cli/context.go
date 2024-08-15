@@ -46,7 +46,7 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 			return nil, fmt.Errorf("failed to initialize installations: %w", err)
 		}
 
-		_, err = cache.LoadCache()
+		_, err = cache.LoadCacheMods()
 		if err != nil {
 			return nil, fmt.Errorf("failed to load cache: %w", err)
 		}

@@ -19,6 +19,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1
 	github.com/jlaffaye/ftp v0.2.0
 	github.com/lmittmann/tint v1.0.3
+	github.com/mircearoata/pubgrub-go v0.3.3
 	github.com/muesli/reflow v0.3.0
 	github.com/pkg/sftp v1.13.6
 	github.com/pterm/pterm v0.12.71
@@ -72,7 +73,6 @@ require (
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.26 // indirect
-	github.com/mircearoata/pubgrub-go v0.3.3 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

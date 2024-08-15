@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -21,14 +20,14 @@ func NewLocalProvider() LocalProvider {
 }
 
 func (p LocalProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit.ModsResponse, error) {
-	cachedMods, err := cache.GetCache()
+	cachedMods, err := cache.GetCacheMods()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cache: %w", err)
 	}
 
 	mods := make([]ficsit.ModsModsGetModsModsMod, 0)
 
-	cachedMods.Range(func(modReference string, files []cache.File) bool {
+	cachedMods.Range(func(modReference string, cachedMod cache.Mod) bool {
 		if len(filter.References) > 0 {
 			skip := true
 
@@ -46,7 +45,7 @@ func (p LocalProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit
 
 		mods = append(mods, ficsit.ModsModsGetModsModsMod{
 			Id:                modReference,
-			Name:              files[0].Plugin.FriendlyName,
+			Name:              cachedMod.Name,
 			Mod_reference:     modReference,
 			Last_version_date: time.Now(),
 			Created_at:        time.Now(),
@@ -89,18 +88,14 @@ func (p LocalProvider) Mods(_ context.Context, filter ficsit.ModFilter) (*ficsit
 }
 
 func (p LocalProvider) GetMod(_ context.Context, modReference string) (*ficsit.GetModResponse, error) {
-	cachedModFiles, err := cache.GetCacheMod(modReference)
+	cachedMod, err := cache.GetCacheMod(modReference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cache: %w", err)
 	}
 
-	if len(cachedModFiles) == 0 {
-		return nil, errors.New("mod not found")
-	}
-
 	authors := make([]ficsit.GetModModAuthorsUserMod, 0)
 
-	for _, author := range strings.Split(cachedModFiles[0].Plugin.CreatedBy, ",") {
+	for _, author := range strings.Split(cachedMod.Author, ",") {
 		authors = append(authors, ficsit.GetModModAuthorsUserMod{
 			Role: "Unknown",
 			User: ficsit.GetModModAuthorsUserModUser{
@@ -112,7 +107,7 @@ func (p LocalProvider) GetMod(_ context.Context, modReference string) (*ficsit.G
 	return &ficsit.GetModResponse{
 		Mod: ficsit.GetModMod{
 			Id:               modReference,
-			Name:             cachedModFiles[0].Plugin.FriendlyName,
+			Name:             cachedMod.Name,
 			Mod_reference:    modReference,
 			Created_at:       time.Now(),
 			Views:            0,
@@ -136,18 +131,14 @@ func (p LocalProvider) ModVersionsWithDependencies(_ context.Context, modID stri
 }
 
 func (p LocalProvider) GetModName(_ context.Context, modReference string) (*resolver.ModName, error) {
-	cachedModFiles, err := cache.GetCacheMod(modReference)
+	cachedMod, err := cache.GetCacheMod(modReference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cache: %w", err)
 	}
 
-	if len(cachedModFiles) == 0 {
-		return nil, errors.New("mod not found")
-	}
-
 	return &resolver.ModName{
 		ID:           modReference,
-		Name:         cachedModFiles[0].Plugin.FriendlyName,
+		Name:         cachedMod.Name,
 		ModReference: modReference,
 	}, nil
 }
