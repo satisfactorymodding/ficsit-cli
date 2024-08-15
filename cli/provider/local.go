@@ -10,6 +10,7 @@ import (
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
+	"github.com/satisfactorymodding/ficsit-cli/cli/localregistry"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
@@ -124,22 +125,14 @@ func (p LocalProvider) GetMod(_ context.Context, modReference string) (*ficsit.G
 }
 
 func (p LocalProvider) ModVersionsWithDependencies(_ context.Context, modID string) ([]resolver.ModVersion, error) {
-	cachedModFiles, err := cache.GetCacheMod(modID)
+	modVersions, err := localregistry.GetModVersions(modID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cache: %w", err)
+		return nil, fmt.Errorf("failed to get local mod versions: %w", err)
 	}
 
-	versions := make([]resolver.ModVersion, 0)
+	// TODO: only list as available the versions that have at least one target cached
 
-	for _, modFile := range cachedModFiles {
-		versions = append(versions, resolver.ModVersion{
-			ID:          modID + ":" + modFile.Plugin.SemVersion,
-			Version:     modFile.Plugin.SemVersion,
-			GameVersion: modFile.Plugin.GameVersion,
-		})
-	}
-
-	return versions, nil
+	return modVersions, nil
 }
 
 func (p LocalProvider) GetModName(_ context.Context, modReference string) (*resolver.ModName, error) {
