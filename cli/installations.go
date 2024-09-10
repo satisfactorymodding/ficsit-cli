@@ -183,7 +183,7 @@ func (i *Installations) DeleteInstallation(installPath string) error {
 	return nil
 }
 
-var rootExecutables = []string{"FactoryGame.exe", "FactoryServer.sh", "FactoryServer.exe"}
+var rootExecutables = []string{"FactoryGame.exe", "FactoryServer.sh", "FactoryServer.exe", "FactoryGameSteam.exe"}
 
 func (i *Installation) Validate(ctx *GlobalContext) error {
 	found := false
