@@ -30,10 +30,6 @@ func (p FicsitProvider) GetMod(context context.Context, modReference string) (*f
 	return ficsit.GetMod(context, p.client, modReference)
 }
 
-func (p FicsitProvider) ModVersions(context context.Context, modReference string, filter ficsit.VersionFilter) (*ficsit.ModVersionsResponse, error) {
-	return ficsit.ModVersions(context, p.client, modReference, filter)
-}
-
 func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID string) ([]resolver.ModVersion, error) {
 	response, err := ficsit.GetAllModVersions(modID)
 	if err != nil {
