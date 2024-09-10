@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -19,7 +20,12 @@ var dbWriteMutex = sync.Mutex{}
 
 func Init() error {
 	dbPath := filepath.Join(viper.GetString("cache-dir"), "registry.db")
-	var err error
+
+	err := os.MkdirAll(filepath.Dir(dbPath), 0o777)
+	if err != nil {
+		return fmt.Errorf("failed to create local registry directory: %w", err)
+	}
+
 	db, err = sql.Open("sqlite", dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
