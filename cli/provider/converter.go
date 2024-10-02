@@ -30,10 +30,11 @@ func convertFicsitVersionsToResolver(versions []ficsit.ModVersion) []resolver.Mo
 		}
 
 		modVersions[i] = resolver.ModVersion{
-			Version:      modVersion.Version,
-			GameVersion:  modVersion.GameVersion,
-			Dependencies: dependencies,
-			Targets:      targets,
+			Version:          modVersion.Version,
+			GameVersion:      modVersion.GameVersion,
+			Dependencies:     dependencies,
+			Targets:          targets,
+			RequiredOnRemote: modVersion.RequiredOnRemote,
 		}
 	}
 	return modVersions

@@ -7,11 +7,12 @@ type AllVersionsResponse struct {
 }
 
 type ModVersion struct {
-	ID           string       `json:"id"`
-	Version      string       `json:"version"`
-	GameVersion  string       `json:"game_version"`
-	Dependencies []Dependency `json:"dependencies"`
-	Targets      []Target     `json:"targets"`
+	ID               string       `json:"id"`
+	Version          string       `json:"version"`
+	GameVersion      string       `json:"game_version"`
+	Dependencies     []Dependency `json:"dependencies"`
+	Targets          []Target     `json:"targets"`
+	RequiredOnRemote bool         `json:"required_on_remote"`
 }
 
 type Dependency struct {
