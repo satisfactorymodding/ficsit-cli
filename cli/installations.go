@@ -429,7 +429,13 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 	var deleteWait errgroup.Group
 	for _, entry := range dir {
 		if entry.IsDir() {
-			if _, ok := lockfile.Mods[entry.Name()]; !ok {
+			modName := entry.Name()
+			mod, hasMod := lockfile.Mods[modName]
+			if hasMod {
+				_, hasTarget := mod.Targets[platform.TargetName]
+				hasMod = hasTarget
+			}
+			if !hasMod {
 				modName := entry.Name()
 				modDir := filepath.Join(modsDirectory, modName)
 				deleteWait.Go(func() error {

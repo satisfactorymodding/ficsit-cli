@@ -94,6 +94,48 @@ func TestServerOnlyMod(t *testing.T) {
 	}
 }
 
+func TestRemoveWhenNotSupported(t *testing.T) {
+	ctx, err := InitCLI(false)
+	testza.AssertNoError(t, err)
+
+	err = ctx.Wipe()
+	testza.AssertNoError(t, err)
+
+	ctx.Provider = MockProvider{}
+
+	profileName := "ClientOnlyModTest"
+	profile, err := ctx.Profiles.AddProfile(profileName)
+	profile.RequiredTargets = []resolver.TargetName{resolver.TargetNameWindows, resolver.TargetNameWindowsServer, resolver.TargetNameLinuxServer}
+	testza.AssertNoError(t, err)
+	testza.AssertNoError(t, profile.AddMod("LaterClientOnlyMod", "0.0.1"))
+
+	serverLocation := os.Getenv("SF_DEDICATED_SERVER")
+	if serverLocation != "" {
+		time.Sleep(time.Second)
+		testza.AssertNoError(t, os.RemoveAll(filepath.Join(serverLocation, "FactoryGame", "Mods")))
+		time.Sleep(time.Second)
+
+		installation, err := ctx.Installations.AddInstallation(ctx, serverLocation, profileName)
+		testza.AssertNoError(t, err)
+		testza.AssertNotNil(t, installation)
+
+		err = installation.Install(ctx, installWatcher())
+		testza.AssertNoError(t, err)
+
+		_, err = os.Stat(filepath.Join(serverLocation, "FactoryGame", "Mods", "LaterClientOnlyMod"))
+		testza.AssertNoError(t, err)
+
+		testza.AssertNoError(t, profile.AddMod("LaterClientOnlyMod", "0.0.2"))
+
+		err = installation.Install(ctx, installWatcher())
+		testza.AssertNoError(t, err)
+
+		_, err = os.Stat(filepath.Join(serverLocation, "FactoryGame", "Mods", "LaterClientOnlyMod"))
+		testza.AssertNotNil(t, err)
+		testza.AssertErrorIs(t, err, os.ErrNotExist)
+	}
+}
+
 func TestUpdateMods(t *testing.T) {
 	ctx, err := InitCLI(false)
 	testza.AssertNoError(t, err)

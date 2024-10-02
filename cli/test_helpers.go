@@ -209,6 +209,35 @@ func (m MockProvider) ModVersionsWithDependencies(ctx context.Context, modID str
 				RequiredOnRemote: false,
 			},
 		}, nil
+	case "LaterClientOnlyMod":
+		return []resolver.ModVersion{
+			{
+				Version: "0.0.1",
+				Dependencies: []resolver.Dependency{
+					{
+						ModID:     "SML",
+						Condition: "^3.6.0",
+						Optional:  false,
+					},
+				},
+				Targets:          commonTargets,
+				RequiredOnRemote: true,
+			},
+			{
+				Version: "0.0.2",
+				Dependencies: []resolver.Dependency{
+					{
+						ModID:     "SML",
+						Condition: "^3.6.0",
+						Optional:  false,
+					},
+				},
+				Targets: []resolver.Target{
+					windowsTarget,
+				},
+				RequiredOnRemote: false,
+			},
+		}, nil
 	}
 
 	return m.MockProvider.ModVersionsWithDependencies(ctx, modID) // nolint
