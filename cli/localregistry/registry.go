@@ -36,37 +36,14 @@ func Init() error {
 		PRAGMA journal_mode = WAL;
 		PRAGMA foreign_keys = ON;
 		PRAGMA busy_timeout = 5000;
-
-		CREATE TABLE IF NOT EXISTS "versions" (
-		    "id" TEXT NOT NULL PRIMARY KEY,
-			"mod_reference"	TEXT NOT NULL,
-			"version"	TEXT NOT NULL,
-			"game_version"	TEXT NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS "mod_reference" ON "versions" ("mod_reference");
-		CREATE UNIQUE INDEX IF NOT EXISTS "mod_version" ON "versions" ("mod_reference", "version");
-		
-		CREATE TABLE IF NOT EXISTS "dependencies" (
-		    "version_id" TEXT NOT NULL,
-		    "dependency" TEXT NOT NULL,
-		    "condition" TEXT NOT NULL,
-		    "optional" INT NOT NULL,
-		    FOREIGN KEY ("version_id") REFERENCES "versions" ("id") ON DELETE CASCADE,
-		    PRIMARY KEY ("version_id", "dependency")
-		);
-
-		CREATE TABLE IF NOT EXISTS "targets" (
-		    "version_id" TEXT NOT NULL,
-		    "target_name" TEXT NOT NULL,
-		    "link" TEXT NOT NULL,
-		    "hash" TEXT NOT NULL,
-		    "size" INT NOT NULL,
-		    FOREIGN KEY ("version_id") REFERENCES "versions" ("id") ON DELETE CASCADE,
-		    PRIMARY KEY ("version_id", "target_name")
-	 	);
 	`)
 	if err != nil {
-		return fmt.Errorf("failed to setup tables: %w", err)
+		return fmt.Errorf("failed to setup connection pragmas: %w", err)
+	}
+
+	err = applyMigrations(db)
+	if err != nil {
+		return fmt.Errorf("failed to apply migrations: %w", err)
 	}
 
 	return nil
