@@ -71,7 +71,7 @@ func Add(modReference string, modVersions []ficsit.ModVersion) {
 	for _, modVersion := range modVersions {
 		l := slog.With(slog.String("mod", modReference), slog.String("version", modVersion.Version))
 
-		_, err = tx.Exec("INSERT INTO versions (id, mod_reference, version, game_version) VALUES (?, ?, ?, ?)", modVersion.ID, modReference, modVersion.Version, modVersion.GameVersion)
+		_, err = tx.Exec("INSERT INTO versions (id, mod_reference, version, game_version, required_on_remote) VALUES (?, ?, ?, ?, ?)", modVersion.ID, modReference, modVersion.Version, modVersion.GameVersion, modVersion.RequiredOnRemote)
 		if err != nil {
 			l.Error("failed to insert mod version into local registry", slog.Any("err", err))
 			return
@@ -100,7 +100,7 @@ func Add(modReference string, modVersions []ficsit.ModVersion) {
 }
 
 func GetModVersions(modReference string) ([]ficsit.ModVersion, error) {
-	versionRows, err := db.Query("SELECT id, version, game_version FROM versions WHERE mod_reference = ?", modReference)
+	versionRows, err := db.Query("SELECT id, version, game_version, required_on_remote FROM versions WHERE mod_reference = ?", modReference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch mod versions from local registry: %w", err)
 	}
@@ -109,7 +109,7 @@ func GetModVersions(modReference string) ([]ficsit.ModVersion, error) {
 	var versions []ficsit.ModVersion
 	for versionRows.Next() {
 		var version ficsit.ModVersion
-		err = versionRows.Scan(&version.ID, &version.Version, &version.GameVersion)
+		err = versionRows.Scan(&version.ID, &version.Version, &version.GameVersion, &version.RequiredOnRemote)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan version row: %w", err)
 		}

@@ -7,6 +7,7 @@ import (
 
 var migrations = []func(*sql.Tx) error{
 	initialSetup,
+	addRequiredOnRemote,
 }
 
 func applyMigrations(db *sql.DB) error {
@@ -87,6 +88,18 @@ func initialSetup(tx *sql.Tx) error {
 
 	if err != nil {
 		return fmt.Errorf("failed to create initial tables: %w", err)
+	}
+
+	return nil
+}
+
+func addRequiredOnRemote(tx *sql.Tx) error {
+	_, err := tx.Exec(`
+		ALTER TABLE "versions" ADD COLUMN "required_on_remote" INT NOT NULL DEFAULT 1;
+	`)
+
+	if err != nil {
+		return fmt.Errorf("failed to add required_on_remote column: %w", err)
 	}
 
 	return nil
