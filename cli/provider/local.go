@@ -127,7 +127,7 @@ func (p LocalProvider) ModVersionsWithDependencies(_ context.Context, modID stri
 
 	// TODO: only list as available the versions that have at least one target cached
 
-	return modVersions, nil
+	return convertFicsitVersionsToResolver(modVersions), nil
 }
 
 func (p LocalProvider) GetModName(_ context.Context, modReference string) (*resolver.ModName, error) {

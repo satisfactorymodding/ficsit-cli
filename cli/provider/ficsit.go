@@ -6,7 +6,6 @@ import (
 
 	"github.com/Khan/genqlient/graphql"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
-	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/localregistry"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
@@ -40,39 +39,9 @@ func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID str
 		return nil, errors.New(response.Error.Message)
 	}
 
-	modVersions := make([]resolver.ModVersion, len(response.Data))
-	for i, modVersion := range response.Data {
-		dependencies := make([]resolver.Dependency, len(modVersion.Dependencies))
-		for j, dependency := range modVersion.Dependencies {
-			dependencies[j] = resolver.Dependency{
-				ModID:     dependency.ModID,
-				Condition: dependency.Condition,
-				Optional:  dependency.Optional,
-			}
-		}
+	localregistry.Add(modID, response.Data)
 
-		targets := make([]resolver.Target, len(modVersion.Targets))
-		for j, target := range modVersion.Targets {
-			targets[j] = resolver.Target{
-				TargetName: resolver.TargetName(target.TargetName),
-				Link:       viper.GetString("api-base") + target.Link,
-				Hash:       target.Hash,
-				Size:       target.Size,
-			}
-		}
-
-		modVersions[i] = resolver.ModVersion{
-			ID:           modVersion.ID,
-			Version:      modVersion.Version,
-			GameVersion:  modVersion.GameVersion,
-			Dependencies: dependencies,
-			Targets:      targets,
-		}
-	}
-
-	localregistry.Add(modID, modVersions)
-
-	return modVersions, err
+	return convertFicsitVersionsToResolver(response.Data), nil
 }
 
 func (p FicsitProvider) GetModName(context context.Context, modReference string) (*resolver.ModName, error) {

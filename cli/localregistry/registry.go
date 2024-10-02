@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	resolver "github.com/satisfactorymodding/ficsit-resolver"
 	"github.com/spf13/viper"
+
+	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 
 	// sqlite driver
 	_ "modernc.org/sqlite"
@@ -49,7 +50,7 @@ func Init() error {
 	return nil
 }
 
-func Add(modReference string, modVersions []resolver.ModVersion) {
+func Add(modReference string, modVersions []ficsit.ModVersion) {
 	dbWriteMutex.Lock()
 	defer dbWriteMutex.Unlock()
 
@@ -98,16 +99,16 @@ func Add(modReference string, modVersions []resolver.ModVersion) {
 	}
 }
 
-func GetModVersions(modReference string) ([]resolver.ModVersion, error) {
+func GetModVersions(modReference string) ([]ficsit.ModVersion, error) {
 	versionRows, err := db.Query("SELECT id, version, game_version FROM versions WHERE mod_reference = ?", modReference)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch mod versions from local registry: %w", err)
 	}
 	defer versionRows.Close()
 
-	var versions []resolver.ModVersion
+	var versions []ficsit.ModVersion
 	for versionRows.Next() {
-		var version resolver.ModVersion
+		var version ficsit.ModVersion
 		err = versionRows.Scan(&version.ID, &version.Version, &version.GameVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan version row: %w", err)
@@ -133,8 +134,8 @@ func GetModVersions(modReference string) ([]resolver.ModVersion, error) {
 	return versions, nil
 }
 
-func getVersionDependencies(versionID string) ([]resolver.Dependency, error) {
-	var dependencies []resolver.Dependency
+func getVersionDependencies(versionID string) ([]ficsit.Dependency, error) {
+	var dependencies []ficsit.Dependency
 	dependencyRows, err := db.Query("SELECT dependency, condition, optional FROM dependencies WHERE version_id = ?", versionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch dependencies from local registry: %w", err)
@@ -142,7 +143,7 @@ func getVersionDependencies(versionID string) ([]resolver.Dependency, error) {
 	defer dependencyRows.Close()
 
 	for dependencyRows.Next() {
-		var dependency resolver.Dependency
+		var dependency ficsit.Dependency
 		err = dependencyRows.Scan(&dependency.ModID, &dependency.Condition, &dependency.Optional)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan dependency row: %w", err)
@@ -153,8 +154,8 @@ func getVersionDependencies(versionID string) ([]resolver.Dependency, error) {
 	return dependencies, nil
 }
 
-func getVersionTargets(versionID string) ([]resolver.Target, error) {
-	var targets []resolver.Target
+func getVersionTargets(versionID string) ([]ficsit.Target, error) {
+	var targets []ficsit.Target
 	targetRows, err := db.Query("SELECT target_name, link, hash, size FROM targets WHERE version_id = ?", versionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch targets from local registry: %w", err)
@@ -162,7 +163,7 @@ func getVersionTargets(versionID string) ([]resolver.Target, error) {
 	defer targetRows.Close()
 
 	for targetRows.Next() {
-		var target resolver.Target
+		var target ficsit.Target
 		err = targetRows.Scan(&target.TargetName, &target.Link, &target.Hash, &target.Size)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan target row: %w", err)
