@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/satisfactorymodding/ficsit-cli/cli/cache"
+	"github.com/satisfactorymodding/ficsit-cli/cli/localregistry"
 	"github.com/satisfactorymodding/ficsit-cli/cli/provider"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
@@ -45,9 +46,14 @@ func InitCLI(apiOnly bool) (*GlobalContext, error) {
 			return nil, fmt.Errorf("failed to initialize installations: %w", err)
 		}
 
-		_, err = cache.LoadCache()
+		_, err = cache.LoadCacheMods()
 		if err != nil {
 			return nil, fmt.Errorf("failed to load cache: %w", err)
+		}
+
+		err = localregistry.Init()
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize local registry: %w", err)
 		}
 
 		globalContext = &GlobalContext{

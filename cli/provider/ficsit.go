@@ -8,6 +8,7 @@ import (
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
 	"github.com/spf13/viper"
 
+	"github.com/satisfactorymodding/ficsit-cli/cli/localregistry"
 	"github.com/satisfactorymodding/ficsit-cli/ficsit"
 )
 
@@ -27,10 +28,6 @@ func (p FicsitProvider) Mods(context context.Context, filter ficsit.ModFilter) (
 
 func (p FicsitProvider) GetMod(context context.Context, modReference string) (*ficsit.GetModResponse, error) {
 	return ficsit.GetMod(context, p.client, modReference)
-}
-
-func (p FicsitProvider) ModVersions(context context.Context, modReference string, filter ficsit.VersionFilter) (*ficsit.ModVersionsResponse, error) {
-	return ficsit.ModVersions(context, p.client, modReference, filter)
 }
 
 func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID string) ([]resolver.ModVersion, error) {
@@ -72,6 +69,8 @@ func (p FicsitProvider) ModVersionsWithDependencies(_ context.Context, modID str
 			Targets:      targets,
 		}
 	}
+
+	localregistry.Add(modID, modVersions)
 
 	return modVersions, err
 }

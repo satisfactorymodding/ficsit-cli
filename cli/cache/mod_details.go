@@ -12,43 +12,44 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mircearoata/pubgrub-go/pubgrub/semver"
 	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/spf13/viper"
 )
 
 const IconFilename = "Resources/Icon128.png" // This is the path UE expects for the icon
 
-type File struct {
-	Icon         *string
-	ModReference string
-	Hash         string
-	Plugin       UPlugin
-	Size         int64
+type Mod struct {
+	ModReference  string
+	Name          string
+	Author        string
+	Icon          *string
+	LatestVersion string
 }
 
-var loadedCache *xsync.MapOf[string, []File]
+var loadedMods *xsync.MapOf[string, Mod]
 
-func GetCache() (*xsync.MapOf[string, []File], error) {
-	if loadedCache != nil {
-		return loadedCache, nil
+func GetCacheMods() (*xsync.MapOf[string, Mod], error) {
+	if loadedMods != nil {
+		return loadedMods, nil
 	}
-	return LoadCache()
+	return LoadCacheMods()
 }
 
-func GetCacheMod(mod string) ([]File, error) {
-	cache, err := GetCache()
+func GetCacheMod(mod string) (Mod, error) {
+	cache, err := GetCacheMods()
 	if err != nil {
-		return nil, err
+		return Mod{}, err
 	}
 	value, _ := cache.Load(mod)
 	return value, nil
 }
 
-func LoadCache() (*xsync.MapOf[string, []File], error) {
-	loadedCache = xsync.NewMapOf[string, []File]()
+func LoadCacheMods() (*xsync.MapOf[string, Mod], error) {
+	loadedMods = xsync.NewMapOf[string, Mod]()
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	if _, err := os.Stat(downloadCache); os.IsNotExist(err) {
-		return loadedCache, nil
+		return loadedMods, nil
 	}
 
 	items, err := os.ReadDir(downloadCache)
@@ -60,32 +61,45 @@ func LoadCache() (*xsync.MapOf[string, []File], error) {
 		if item.IsDir() {
 			continue
 		}
-		if item.Name() == integrityFilename {
-			continue
-		}
 
 		_, err = addFileToCache(item.Name())
 		if err != nil {
 			slog.Error("failed to add file to cache", slog.String("file", item.Name()), slog.Any("err", err))
 		}
 	}
-	return loadedCache, nil
+	return loadedMods, nil
 }
 
-func addFileToCache(filename string) (*File, error) {
+func addFileToCache(filename string) (*Mod, error) {
 	cacheFile, err := readCacheFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read cache file: %w", err)
 	}
 
-	loadedCache.Compute(cacheFile.ModReference, func(oldValue []File, _ bool) ([]File, bool) {
-		return append(oldValue, *cacheFile), false
+	loadedMods.Compute(cacheFile.ModReference, func(oldValue Mod, loaded bool) (Mod, bool) {
+		if !loaded {
+			return *cacheFile, false
+		}
+		oldVersion, err := semver.NewVersion(oldValue.LatestVersion)
+		if err != nil {
+			slog.Error("failed to parse version", slog.String("version", oldValue.LatestVersion), slog.Any("err", err))
+			return *cacheFile, false
+		}
+		newVersion, err := semver.NewVersion(cacheFile.LatestVersion)
+		if err != nil {
+			slog.Error("failed to parse version", slog.String("version", cacheFile.LatestVersion), slog.Any("err", err))
+			return oldValue, false
+		}
+		if newVersion.Compare(oldVersion) > 0 {
+			return *cacheFile, false
+		}
+		return oldValue, false
 	})
 
 	return cacheFile, nil
 }
 
-func readCacheFile(filename string) (*File, error) {
+func readCacheFile(filename string) (*Mod, error) {
 	downloadCache := filepath.Join(viper.GetString("cache-dir"), "downloadCache")
 	path := filepath.Join(downloadCache, filename)
 	stat, err := os.Stat(path)
@@ -132,11 +146,6 @@ func readCacheFile(filename string) (*File, error) {
 
 	modReference := strings.TrimSuffix(upluginFile.Name, ".uplugin")
 
-	hash, err := getFileHash(filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file hash: %w", err)
-	}
-
 	var iconFile *zip.File
 	for _, file := range reader.File {
 		if file.Name == IconFilename {
@@ -160,11 +169,11 @@ func readCacheFile(filename string) (*File, error) {
 		icon = &iconData
 	}
 
-	return &File{
-		ModReference: modReference,
-		Hash:         hash,
-		Size:         size,
-		Icon:         icon,
-		Plugin:       uplugin,
+	return &Mod{
+		ModReference:  modReference,
+		Name:          uplugin.FriendlyName,
+		Author:        uplugin.CreatedBy,
+		Icon:          icon,
+		LatestVersion: uplugin.SemVersion,
 	}, nil
 }
