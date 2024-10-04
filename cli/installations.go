@@ -429,7 +429,13 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 	var deleteWait errgroup.Group
 	for _, entry := range dir {
 		if entry.IsDir() {
-			if _, ok := lockfile.Mods[entry.Name()]; !ok {
+			modName := entry.Name()
+			mod, hasMod := lockfile.Mods[modName]
+			if hasMod {
+				_, hasTarget := mod.Targets[platform.TargetName]
+				hasMod = hasTarget
+			}
+			if !hasMod {
 				modName := entry.Name()
 				modDir := filepath.Join(modsDirectory, modName)
 				deleteWait.Go(func() error {
@@ -493,7 +499,10 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 
 			target, ok := version.Targets[platform.TargetName]
 			if !ok {
-				return fmt.Errorf("%s@%s not available for %s", modReference, version.Version, platform.TargetName)
+				// The resolver validates that the resulting lockfile mods can be installed on the sides where they are required
+				// so if the mod is missing this target, it means it is not required on this target
+				slog.Info("skipping mod not available for target", slog.String("mod_reference", modReference), slog.String("version", version.Version), slog.String("target", platform.TargetName))
+				return nil
 			}
 
 			// Only install if a link is provided, otherwise assume mod is already installed
