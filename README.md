@@ -24,7 +24,7 @@ A CLI tool for managing mods for the game [Satisfactory](https://www.satisfactor
     <td><a href="https://github.com/satisfactorymodding/ficsit-cli/releases/latest/download/ficsit_windows_amd64.exe">amd64</a></td>
     <td><a href="https://github.com/satisfactorymodding/ficsit-cli/releases/latest/download/ficsit_windows_386.exe">386</a></td>
     <td><a href="https://github.com/satisfactorymodding/ficsit-cli/releases/latest/download/ficsit_windows_arm64.exe">arm64</a></td>
-    <td><a href="https://github.com/satisfactorymodding/ficsit-cli/releases/latest/download/ficsit_windows_armv7.exe">armv7</a></td>
+    <td>N/A</td>
     <td>N/A</td>
   </tr>
   <tr>
