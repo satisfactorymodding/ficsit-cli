@@ -156,8 +156,8 @@ github.com/microcosm-cc/bluemonday v1.0.26 h1:xbqSvqzQMeEHCqMi64VAs4d8uy6Mequs3r
 github.com/microcosm-cc/bluemonday v1.0.26/go.mod h1:JyzOCs9gkyQyjs+6h10UEVSe02CGwkhd72Xdqh78TWs=
 github.com/minio/minio-go/v6 v6.0.46/go.mod h1:qD0lajrGW49lKZLtXKtCB4X/qkMf0a5tBvN2PaZg7Gg=
 github.com/minio/sha256-simd v0.1.1/go.mod h1:B5e1o+1/KgNmWrSQK08Y6Z1Vb5pwIktudl0J58iy0KM=
-github.com/mircearoata/pubgrub-go v0.3.3 h1:XGwL8Xh5GX+mbnvWItbM/lVJxAq3NZtfUtbJ/hUf2ig=
-github.com/mircearoata/pubgrub-go v0.3.3/go.mod h1:9oWL9ZXdjFYvnGl95qiM1dTciFNx1MN8fUnG3SUwDi8=
+github.com/mircearoata/pubgrub-go v0.3.4 h1:jfbBvnnxA/d6Q73oUl1/j0MaZ9YK+izE0FuIbMB7teY=
+github.com/mircearoata/pubgrub-go v0.3.4/go.mod h1:9oWL9ZXdjFYvnGl95qiM1dTciFNx1MN8fUnG3SUwDi8=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=

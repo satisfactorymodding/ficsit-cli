@@ -19,7 +19,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1
 	github.com/jlaffaye/ftp v0.2.0
 	github.com/lmittmann/tint v1.0.3
-	github.com/mircearoata/pubgrub-go v0.3.3
+	github.com/mircearoata/pubgrub-go v0.3.4
 	github.com/muesli/reflow v0.3.0
 	github.com/pkg/sftp v1.13.6
 	github.com/pterm/pterm v0.12.71
