@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
@@ -173,8 +174,8 @@ func (p *Profiles) Save() error {
 	}
 
 	profilesFile := filepath.Join(viper.GetString("local-dir"), viper.GetString("profiles-file"))
-
-	slog.Info("saving profiles", slog.String("path", profilesFile))
+	re := regexp.MustCompile(`(Users\\).*(\\)`)
+	slog.Info("saving profiles", slog.String("path", re.ReplaceAllString(profilesFile, `Users\\*****\\`)))
 
 	profilesJSON, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
