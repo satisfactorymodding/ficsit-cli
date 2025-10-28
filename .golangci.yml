@@ -42,7 +42,6 @@ linters:
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
     - bidichk
     - contextcheck
