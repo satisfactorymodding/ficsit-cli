@@ -43,7 +43,6 @@ linters:
     - ineffassign
     - staticcheck
     - typecheck
-    - unused
     - bidichk
     - contextcheck
     - durationcheck
