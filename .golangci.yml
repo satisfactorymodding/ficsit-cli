@@ -12,7 +12,7 @@ linters-settings:
       - github.com/satisfactorymodding/ficsit-cli/*
 
   govet:
-    check-shadowing: true
+    check-shadowing: false
     enable-all: true
     disable:
       - shadow
