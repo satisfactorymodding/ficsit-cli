@@ -177,7 +177,7 @@ func (p *Profiles) Save() error {
 	re := regexp.MustCompile(`(Users\\).*(\\)`)
 	interimString := re.ReplaceAllString(profilesFile, `Users\*****\`)
 	re := regexp.MustCompile(`(home/).*(/)`)
-	slog.Info("saving profiles", slog.String("path", re.ReplaceAllString(profilesFile, `home/*****/`)))
+	slog.Info("saving profiles", slog.String("path", re.ReplaceAllString(interimString, `home/*****/`)))
 
 	profilesJSON, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
