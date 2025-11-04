@@ -175,7 +175,9 @@ func (p *Profiles) Save() error {
 
 	profilesFile := filepath.Join(viper.GetString("local-dir"), viper.GetString("profiles-file"))
 	re := regexp.MustCompile(`(Users\\).*(\\)`)
-	slog.Info("saving profiles", slog.String("path", re.ReplaceAllString(profilesFile, `Users\*****\`)))
+	interimString := re.ReplaceAllString(profilesFile, `Users\*****\`)
+	re := regexp.MustCompile(`(home/).*(/)`)
+	slog.Info("saving profiles", slog.String("path", re.ReplaceAllString(profilesFile, `home/*****/`)))
 
 	profilesJSON, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
