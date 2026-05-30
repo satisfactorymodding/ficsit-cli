@@ -639,8 +639,18 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		}()
 	}
 
+	// TODO determine GameFeature or not from mod data
+	isGameFeaturePlugin := false
+
+	var location string
+	if isGameFeaturePlugin {
+		location = filepath.Join(modsDirectory, "GameFeatures", modReference)
+	} else {
+		location = filepath.Join(modsDirectory, modReference)
+	}
+
 	slog.Info("extracting mod", slog.String("mod_reference", modReference), slog.String("version", version), slog.String("link", link))
-	if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), hash, extractUpdates, d); err != nil {
+	if err := utils.ExtractMod(reader, size, location, hash, extractUpdates, d); err != nil {
 		return fmt.Errorf("could not extract %s: %w", modReference, err)
 	}
 
