@@ -6,8 +6,8 @@ type UPlugin struct {
 	Description  string    `json:"Description"`
 	CreatedBy    string    `json:"CreatedBy"`
 	GameVersion  string    `json:"GameVersion"`
-	GameFeature  bool      `json:"GameFeature"`
 	Plugins      []Plugins `json:"Plugins"`
+	GameFeature  bool      `json:"GameFeature"`
 }
 type Plugins struct {
 	Name       string `json:"Name"`
