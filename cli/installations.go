@@ -716,13 +716,25 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 }
 
 func getExtractLocation(reader *zip.Reader, modReference string) (string, error) {
-	upluginFile, err := reader.Open(fmt.Sprintf("%s.uplugin", modReference))
-	if err != nil {
-		return "", fmt.Errorf("failed to find uplugin file in zip: %w", err)
+	var upluginFile *zip.File
+	for _, file := range reader.File {
+		if strings.HasSuffix(file.Name, ".uplugin") {
+			upluginFile = file
+			break
+		}
+	}
+	if upluginFile == nil {
+		return "", errors.New("no uplugin file found in zip")
 	}
 
+	upluginReader, err := upluginFile.Open()
+	if err != nil {
+		return "", fmt.Errorf("failed to open uplugin file: %w", err)
+	}
+	defer upluginReader.Close()
+
 	var uplugin cache.UPlugin
-	data, err := io.ReadAll(upluginFile)
+	data, err := io.ReadAll(upluginReader)
 	if err != nil {
 		return "", fmt.Errorf("failed to read uplugin file: %w", err)
 	}
