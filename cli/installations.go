@@ -716,6 +716,7 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 }
 
 func getExtractLocation(reader *zip.Reader, modReference string) (string, error) {
+	// TODO improve tests so this can use ModReference.uplugin instead of finding one https://github.com/satisfactorymodding/ficsit-cli/issues/84
 	var upluginFile *zip.File
 	for _, file := range reader.File {
 		if strings.HasSuffix(file.Name, ".uplugin") {
