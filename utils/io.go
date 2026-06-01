@@ -22,7 +22,7 @@ func SHA256Data(f io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates chan<- GenericProgress, d disk.Disk) error {
+func ExtractMod(reader *zip.Reader, location string, hash string, updates chan<- GenericProgress, d disk.Disk) error {
 	hashFile := filepath.Join(location, ".smm")
 
 	exists, err := d.Exists(hashFile)
@@ -54,11 +54,6 @@ func ExtractMod(f io.ReaderAt, size int64, location string, hash string, updates
 		if err := d.MkDir(location); err != nil {
 			return fmt.Errorf("failed to create mod directory: %s: %w", location, err)
 		}
-	}
-
-	reader, err := zip.NewReader(f, size)
-	if err != nil {
-		return fmt.Errorf("failed to read file as zip: %w", err)
 	}
 
 	totalSize := int64(0)
