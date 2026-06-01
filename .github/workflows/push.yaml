@@ -80,7 +80,10 @@ jobs:
         uses: CyberAndrii/setup-steamcmd@v1
 
       - name: Install Satisfactory Dedicated Server
-        run: steamcmd +login anonymous +force_install_dir ${{ github.workspace }}/SatisfactoryDedicatedServer +app_update 1690800 validate +quit
+        run: |
+          # Run steamcmd twice to work around some weird caching/out of order execution issue that causes steamcmd to fail to download the app on the first try
+          steamcmd +login anonymous +app_info_update 1 validate +quit
+          steamcmd +force_install_dir "${{ github.workspace }}/SatisfactoryDedicatedServer" +login anonymous +app_update 1690800 validate +quit
 
       - name: Change directory permissions
         if: ${{ matrix.os == 'ubuntu-latest' }}
