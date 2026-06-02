@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/url"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/puzpuzpuz/xsync/v3"
 	resolver "github.com/satisfactorymodding/ficsit-resolver"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -395,6 +398,8 @@ type InstallUpdateItem struct {
 	Version string
 }
 
+var modRoots = []string{"", "GameFeatures"}
+
 func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate) error {
 	platform, err := i.GetPlatform(ctx)
 	if err != nil {
@@ -421,44 +426,9 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		return fmt.Errorf("failed creating Mods directory: %w", err)
 	}
 
-	dir, err := d.ReadDir(modsDirectory)
+	oldModLocations, err := getExistingMods(d, modsDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to read mods directory: %w", err)
-	}
-
-	var deleteWait errgroup.Group
-	for _, entry := range dir {
-		if entry.IsDir() {
-			modName := entry.Name()
-			mod, hasMod := lockfile.Mods[modName]
-			if hasMod {
-				_, hasTarget := mod.Targets[platform.TargetName]
-				hasMod = hasTarget
-			}
-			if !hasMod {
-				modName := entry.Name()
-				modDir := filepath.Join(modsDirectory, modName)
-				deleteWait.Go(func() error {
-					exists, err := d.Exists(filepath.Join(modDir, ".smm"))
-					if err != nil {
-						return err
-					}
-
-					if exists {
-						slog.Info("deleting mod", slog.String("mod_reference", modName))
-						if err := d.Remove(modDir); err != nil {
-							return fmt.Errorf("failed to delete mod directory: %w", err)
-						}
-					}
-
-					return nil
-				})
-			}
-		}
-	}
-
-	if err := deleteWait.Wait(); err != nil {
-		return fmt.Errorf("failed to remove old mods: %w", err)
+		return fmt.Errorf("failed to get existing mods: %w", err)
 	}
 
 	slog.Info("starting installation", slog.Int("concurrency", viper.GetInt("concurrent-downloads")), slog.String("path", i.Path))
@@ -490,6 +460,8 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 		}()
 	}
 
+	newModLocations := xsync.NewMapOfPresized[string, string](len(lockfile.Mods))
+
 	for modReference, version := range lockfile.Mods {
 		channelUsers.Add(1)
 		modReference := modReference
@@ -507,10 +479,11 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 
 			// Only install if a link is provided, otherwise assume mod is already installed
 			if target.Link != "" {
-				err := downloadAndExtractMod(modReference, version.Version, target.Link, target.Hash, platform.TargetName, modsDirectory, updates, downloadSemaphore, d)
+				location, err := downloadAndExtractMod(modReference, version.Version, target.Link, target.Hash, platform.TargetName, modsDirectory, updates, downloadSemaphore, d)
 				if err != nil {
 					return fmt.Errorf("failed to install %s@%s: %w", modReference, version.Version, err)
 				}
+				newModLocations.Store(modReference, location)
 			}
 
 			if modComplete != nil {
@@ -522,6 +495,38 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 
 	if err := errg.Wait(); err != nil {
 		return fmt.Errorf("failed to install mods: %w", err)
+	}
+
+	newModLocations.Range(func(mod, location string) bool {
+		oldLocation, ok := oldModLocations[mod]
+		if !ok {
+			return true
+		}
+		delete(oldLocation, location)
+		if len(oldLocation) == 0 {
+			delete(oldModLocations, mod)
+		}
+		return true
+	})
+
+	var deleteWait errgroup.Group
+	for modName, modLocations := range oldModLocations {
+		for modLocation := range modLocations {
+			modDir := filepath.Join(modsDirectory, modLocation)
+			deleteWait.Go(func() error {
+				slog.Info("deleting mod", slog.String("mod_reference", modName))
+
+				if err := d.Remove(modDir); err != nil {
+					return fmt.Errorf("failed to delete mod directory: %w", err)
+				}
+
+				return nil
+			})
+		}
+	}
+
+	if err := deleteWait.Wait(); err != nil {
+		return fmt.Errorf("failed to remove old mods: %w", err)
 	}
 
 	if updates != nil {
@@ -544,6 +549,44 @@ func (i *Installation) Install(ctx *GlobalContext, updates chan<- InstallUpdate)
 	slog.Info("installation completed", slog.String("path", i.Path))
 
 	return nil
+}
+
+func getExistingMods(d disk.Disk, modsDirectory string) (map[string]map[string]bool, error) {
+	existingModDirectories := map[string]map[string]bool{}
+
+	for _, modRoot := range modRoots {
+		exists, err := d.Exists(filepath.Join(modsDirectory, modRoot))
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if %s exists: %w", modRoot, err)
+		}
+		if !exists {
+			continue
+		}
+
+		dir, err := d.ReadDir(filepath.Join(modsDirectory, modRoot))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %s directory: %w", modRoot, err)
+		}
+
+		for _, entry := range dir {
+			if entry.IsDir() {
+				location := filepath.Join(modRoot, entry.Name())
+				markerPath := filepath.Join(modsDirectory, location, ".smm")
+				ok, err := d.Exists(markerPath)
+				if err != nil {
+					return nil, fmt.Errorf("failed to check if %s exists: %w", markerPath, err)
+				}
+				if ok {
+					if existingModDirectories[entry.Name()] == nil {
+						existingModDirectories[entry.Name()] = map[string]bool{}
+					}
+					existingModDirectories[entry.Name()][location] = true
+				}
+			}
+		}
+	}
+
+	return existingModDirectories, nil
 }
 
 func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
@@ -585,7 +628,7 @@ func (i *Installation) UpdateMods(ctx *GlobalContext, mods []string) error {
 	return nil
 }
 
-func downloadAndExtractMod(modReference string, version string, link string, hash string, target string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) error {
+func downloadAndExtractMod(modReference string, version string, link string, hash string, target string, modsDirectory string, updates chan<- InstallUpdate, downloadSemaphore chan int, d disk.Disk) (string, error) {
 	var downloadUpdates chan utils.GenericProgress
 
 	var wg sync.WaitGroup
@@ -612,7 +655,7 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 	slog.Info("downloading mod", slog.String("mod_reference", modReference), slog.String("version", version), slog.String("link", link))
 	reader, size, err := cache.DownloadOrCache(modReference+"_"+version+"_"+target+".zip", hash, link, downloadUpdates, downloadSemaphore)
 	if err != nil {
-		return fmt.Errorf("failed to download %s from: %s: %w", modReference, link, err)
+		return "", fmt.Errorf("failed to download %s from: %s: %w", modReference, link, err)
 	}
 
 	defer reader.Close()
@@ -639,9 +682,19 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 		}()
 	}
 
-	slog.Info("extracting mod", slog.String("mod_reference", modReference), slog.String("version", version), slog.String("link", link))
-	if err := utils.ExtractMod(reader, size, filepath.Join(modsDirectory, modReference), hash, extractUpdates, d); err != nil {
-		return fmt.Errorf("could not extract %s: %w", modReference, err)
+	zipReader, err := zip.NewReader(reader, size)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file as zip: %w", err)
+	}
+
+	location, err := getExtractLocation(zipReader, modReference)
+	if err != nil {
+		return "", fmt.Errorf("failed to determine extract location: %w", err)
+	}
+
+	slog.Info("extracting mod", slog.String("mod_reference", modReference), slog.String("version", version), slog.String("link", link), slog.String("location", location))
+	if err := utils.ExtractMod(zipReader, filepath.Join(modsDirectory, location), hash, extractUpdates, d); err != nil {
+		return "", fmt.Errorf("could not extract %s: %w", modReference, err)
 	}
 
 	if updates != nil {
@@ -659,7 +712,42 @@ func downloadAndExtractMod(modReference string, version string, link string, has
 
 	wg.Wait()
 
-	return nil
+	return location, nil
+}
+
+func getExtractLocation(reader *zip.Reader, modReference string) (string, error) {
+	// TODO improve tests so this can use ModReference.uplugin instead of finding one https://github.com/satisfactorymodding/ficsit-cli/issues/84
+	var upluginFile *zip.File
+	for _, file := range reader.File {
+		if strings.HasSuffix(file.Name, ".uplugin") {
+			upluginFile = file
+			break
+		}
+	}
+	if upluginFile == nil {
+		return "", errors.New("no uplugin file found in zip")
+	}
+
+	upluginReader, err := upluginFile.Open()
+	if err != nil {
+		return "", fmt.Errorf("failed to open uplugin file: %w", err)
+	}
+	defer upluginReader.Close()
+
+	var uplugin cache.UPlugin
+	data, err := io.ReadAll(upluginReader)
+	if err != nil {
+		return "", fmt.Errorf("failed to read uplugin file: %w", err)
+	}
+	if err := json.Unmarshal(data, &uplugin); err != nil {
+		return "", fmt.Errorf("failed to unmarshal uplugin file: %w", err)
+	}
+
+	if uplugin.GameFeature {
+		return filepath.Join("GameFeatures", modReference), nil
+	}
+
+	return modReference, nil
 }
 
 func (i *Installation) SetProfile(ctx *GlobalContext, profile string) error {
