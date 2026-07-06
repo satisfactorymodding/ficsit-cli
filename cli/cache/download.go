@@ -26,7 +26,7 @@ type downloadGroup struct {
 	size    int64
 }
 
-var downloadSync = *xsync.NewMapOf[string, *downloadGroup]()
+var downloadSync = xsync.NewMapOf[string, *downloadGroup]()
 
 func DownloadOrCache(cacheKey string, hash string, url string, updates chan<- utils.GenericProgress, downloadSemaphore chan int) (*os.File, int64, error) {
 	group, loaded := downloadSync.LoadOrCompute(cacheKey, func() *downloadGroup {
